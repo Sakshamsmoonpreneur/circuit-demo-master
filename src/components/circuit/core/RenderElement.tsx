@@ -21,7 +21,13 @@ export default function RenderElement({
       id={element.id}
     >
       {element.type === "lightbulb" && (
-        <Lightbulb id={element.id} x={0} y={0} children={undefined} isLitOn={element.isLitOn} />
+        <Lightbulb
+          id={element.id}
+          x={0}
+          y={0}
+          children={undefined}
+          current={element.properties?.current ?? 0}
+        />
       )}
       {element.type === "battery" && (
         <Battery id={element.id} x={0} y={0} children={undefined} />
@@ -50,7 +56,7 @@ export default function RenderElement({
             }
           }}
 
-        // TODO: Add interaction handlers here
+          // TODO: Add interaction handlers here
         />
       ))}
     </Group>

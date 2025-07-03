@@ -6,7 +6,11 @@ export type CircuitElement = {
   y: number;
   nodes: Node[];
   type: string;
-  isLitOn?: boolean; // Optional property for lightbulb elements
+  properties?: {
+    current?: number;
+    voltage?: number;
+    resistance?: number;
+  };
 };
 
 export type Wire = {
