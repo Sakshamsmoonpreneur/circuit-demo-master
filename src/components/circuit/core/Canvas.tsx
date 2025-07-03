@@ -35,8 +35,20 @@ export default function Canvas() {
         x: 100,
         y: 100,
         nodes: [
-          { id: "lightbulb1-node-1", x: 10, y: 40, parentId: "lightbulb-1", fill: "red" },
-          { id: "lightbulb1-node-2", x: 30, y: 40, parentId: "lightbulb-1", fill: "green" },
+          {
+            id: "lightbulb1-node-1",
+            x: 10,
+            y: 40,
+            parentId: "lightbulb-1",
+            fill: "red",
+          },
+          {
+            id: "lightbulb1-node-2",
+            x: 30,
+            y: 40,
+            parentId: "lightbulb-1",
+            fill: "green",
+          },
         ],
       },
       {
@@ -45,8 +57,20 @@ export default function Canvas() {
         x: 200,
         y: 150,
         nodes: [
-          { id: "battery-node-1", x: 10, y: -2, parentId: "battery-1", fill: "red" },
-          { id: "battery-node-2", x: 30, y: -2, parentId: "battery-1", fill: "green" },
+          {
+            id: "battery-node-1",
+            x: 10,
+            y: -2,
+            parentId: "battery-1",
+            fill: "red",
+          },
+          {
+            id: "battery-node-2",
+            x: 30,
+            y: -2,
+            parentId: "battery-1",
+            fill: "green",
+          },
         ],
       },
       // Add more elements as needed
@@ -178,7 +202,7 @@ export default function Canvas() {
 
     const clickedEnd =
       dist(clickPos, { x: fromNode.x, y: fromNode.y }) <
-        dist(clickPos, { x: toNode.x, y: toNode.y })
+      dist(clickPos, { x: toNode.x, y: toNode.y })
         ? "from"
         : "to";
 
@@ -209,7 +233,6 @@ export default function Canvas() {
 
     return [start.x, start.y, end.x, end.y];
   }
-
 
   function handleNodeClick(nodeId: string) {
     if (editingWire) {
@@ -250,37 +273,48 @@ export default function Canvas() {
       return prevElements.map((el) => {
         if (el.type !== "lightbulb") return el;
 
-        const redNode = el.nodes.find((n) => n.fill === "red");
-        const greenNode = el.nodes.find((n) => n.fill === "green");
-        if (!redNode || !greenNode) return el;
+        const [nodeA, nodeB] = el.nodes;
+        if (!nodeA || !nodeB) return el;
 
-        const isRedConnected = wiresSnapshot.some((w) => {
-          const fromNode = getNodeById(w.fromNodeId);
-          const toNode = getNodeById(w.toNodeId);
-          return (
-            (w.fromNodeId === redNode.id && fromNode?.fill === "red" && toNode?.fill === "red") ||
-            (w.toNodeId === redNode.id && toNode?.fill === "red" && fromNode?.fill === "red")
-          );
-        });
+        // Helper to find which battery + node a node is connected to
+        const getConnectedBatteryInfo = (
+          nodeId: string
+        ): { batteryId: string; batteryNodeId: string } | null => {
+          for (const wire of wiresSnapshot) {
+            const isFrom = wire.fromNodeId === nodeId;
+            const isTo = wire.toNodeId === nodeId;
 
-        const isGreenConnected = wiresSnapshot.some((w) => {
-          const fromNode = getNodeById(w.fromNodeId);
-          const toNode = getNodeById(w.toNodeId);
-          return (
-            (w.fromNodeId === greenNode.id && fromNode?.fill === "green" && toNode?.fill === "green") ||
-            (w.toNodeId === greenNode.id && toNode?.fill === "green" && fromNode?.fill === "green")
-          );
-        });
+            if (!isFrom && !isTo) continue;
+
+            const otherNodeId = isFrom ? wire.toNodeId : wire.fromNodeId;
+            const otherElement = getNodeParent(otherNodeId);
+
+            if (otherElement?.type === "battery") {
+              return {
+                batteryId: otherElement.id,
+                batteryNodeId: otherNodeId,
+              };
+            }
+          }
+          return null;
+        };
+
+        const nodeAConn = getConnectedBatteryInfo(nodeA.id);
+        const nodeBConn = getConnectedBatteryInfo(nodeB.id);
+
+        const isSameBattery =
+          nodeAConn &&
+          nodeBConn &&
+          nodeAConn.batteryId === nodeBConn.batteryId &&
+          nodeAConn.batteryNodeId !== nodeBConn.batteryNodeId;
 
         return {
           ...el,
-          isLitOn: isRedConnected && isGreenConnected,
+          properties: { current: isSameBattery ? 1 : 0 },
         };
       });
     });
   }
-
-
 
   return (
     <div className="flex flex-row items-center justify-center h-screen w-screen">
@@ -318,13 +352,13 @@ export default function Canvas() {
                 key={wire.id}
                 points={points}
                 stroke={
-                  getNodeById(wire.fromNodeId)?.fill === 'red' &&
-                    getNodeById(wire.toNodeId)?.fill === 'red'
-                    ? 'red'
-                    : getNodeById(wire.fromNodeId)?.fill === 'green' &&
-                      getNodeById(wire.toNodeId)?.fill === 'green'
-                      ? 'green'
-                      : '#2c3e50'
+                  getNodeById(wire.fromNodeId)?.fill === "red" &&
+                  getNodeById(wire.toNodeId)?.fill === "red"
+                    ? "red"
+                    : getNodeById(wire.fromNodeId)?.fill === "green" &&
+                      getNodeById(wire.toNodeId)?.fill === "green"
+                    ? "green"
+                    : "#2c3e50"
                 }
                 strokeWidth={3}
                 hitStrokeWidth={15}
@@ -334,7 +368,6 @@ export default function Canvas() {
                   handleWireClick(e, wire.id, from, to);
                 }}
               />
-
             );
           })}
 
