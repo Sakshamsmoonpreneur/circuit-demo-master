@@ -1,10 +1,9 @@
-"use client";
 import {
   BaseElement,
   BaseElementProps,
 } from "@/components/circuit/core/BaseElement";
 import { useEffect, useState } from "react";
-import { Image } from "react-konva";
+import { Group, Circle, Image } from "react-konva";
 
 interface LightbulbProps extends BaseElementProps {
   current?: number;
@@ -15,17 +14,31 @@ export default function Lightbulb(props: LightbulbProps) {
 
   useEffect(() => {
     const image = new window.Image();
-    console.log(props.current);
-    image.src =
-      props.current && props.current > 0
-        ? "/circuit_elements/bulb-onn.svg"
-        : "/circuit_elements/bulb-off.svg";
+    image.src = "/circuit_elements/bulb-off.svg"; // Always use the "off" bulb
     image.onload = () => setImg(image);
-  }, [props.current]);
+  }, []);
+
+  // Normalize brightness between 0 and 1
+  const brightness = Math.min(1, (props.current ?? 0) / 1.5); // Adjust denominator for how quickly it maxes out
 
   return (
     <BaseElement {...props}>
-      {img && <Image image={img} width={40} height={40} />}
+      <Group>
+        {/* Glow layer */}
+        {brightness > 0 && (
+          <Circle
+            x={20}
+            y={20}
+            radius={20 + 10 * brightness}
+            fill="yellow"
+            opacity={0.2 + 0.4 * brightness}
+            shadowBlur={10 + 30 * brightness}
+          />
+        )}
+
+        {/* Bulb image */}
+        {img && <Image image={img} width={40} height={40} />}
+      </Group>
     </BaseElement>
   );
 }
