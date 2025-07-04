@@ -3,6 +3,7 @@ import { Circle, Group } from "react-konva";
 import Lightbulb from "../elements/Lightbulb";
 import { KonvaEventObject } from "konva/lib/Node";
 import Battery from "../elements/Battery";
+import Resistor from "../elements/Resistor";
 
 export default function RenderElement({
   element,
@@ -26,11 +27,14 @@ export default function RenderElement({
           x={0}
           y={0}
           children={undefined}
-          current={element.properties?.current ?? 0}
+          current={element.computed?.current ?? 0}
         />
       )}
       {element.type === "battery" && (
         <Battery id={element.id} x={0} y={0} children={undefined} />
+      )}
+      {element.type === "resistor" && (
+        <Resistor id={element.id} x={0} y={0} children={undefined} />
       )}
 
       {/* render the nodes for the element */}

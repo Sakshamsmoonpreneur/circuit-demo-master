@@ -10,6 +10,8 @@ import {
 } from "@/common/types/circuit";
 import RenderElement from "./RenderElement";
 import { DebugBox } from "@/components/debug/DebugBox";
+import createElement from "./createElement"; // Adjust the import path as necessary
+import solveCircuit from "./CircuitSolver";
 
 export default function Canvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -26,116 +28,75 @@ export default function Canvas() {
   >(null);
   const [editingWire, setEditingWire] = useState<EditingWire | null>(null);
 
-  useEffect(() => {
-    // Initialize with some elements
+  function resetState() {
     const initialElements: CircuitElement[] = [
-      {
-        id: "lightbulb-1",
+      createElement({
         type: "lightbulb",
-        x: 100,
-        y: 100,
-        nodes: [
-          {
-            id: "lightbulb1-node-1",
-            x: 10,
-            y: 40,
-            parentId: "lightbulb-1",
-            fill: "red",
-          },
-          {
-            id: "lightbulb1-node-2",
-            x: 30,
-            y: 40,
-            parentId: "lightbulb-1",
-            fill: "green",
-          },
-        ],
-      },
-      {
-        id: "battery-1",
+        idNumber: 1,
+        pos: { x: 100, y: 100 },
+        properties: { voltage: 0, resistance: 10 },
+      }),
+      createElement({
         type: "battery",
-        x: 200,
-        y: 150,
-        nodes: [
-          {
-            id: "battery-node-1",
-            x: 10,
-            y: -2,
-            parentId: "battery-1",
-            fill: "red",
-          },
-          {
-            id: "battery-node-2",
-            x: 30,
-            y: -2,
-            parentId: "battery-1",
-            fill: "green",
-          },
-        ],
-      },
-      // Add more elements as needed
-    ];
+        idNumber: 1,
+        pos: { x: 300, y: 150 },
+        properties: { voltage: 9, resistance: 0 },
+      }),
+    ].filter((el): el is CircuitElement => el !== null);
 
     setElements(initialElements);
+    setWires([]);
+    setWireCounter(0);
+    setCreatingWireStartNode(null);
+    setEditingWire(null);
+  }
+
+  useEffect(() => {
+    resetState();
   }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "l" || e.key === "l") {
-        const newId = `lightbulb-${elements.length + 1}`;
-
-        const newLightbulb: CircuitElement = {
-          id: newId,
+      if (e.key === "L" || e.key === "l") {
+        const newLightbulb: CircuitElement | null = createElement({
           type: "lightbulb",
-          x: mousePos.x,
-          y: mousePos.y,
-          nodes: [
-            {
-              id: `${newId}-node-1`,
-              x: 10,
-              y: 40,
-              parentId: newId,
-              fill: "red", // Optional fill color for the node
-            },
-            {
-              id: `${newId}-node-2`,
-              x: 30,
-              y: 40,
-              parentId: newId,
-              fill: "green", // Optional fill color for the node
-            },
-          ],
-        };
+          idNumber: elements.length + 1,
+          pos: { x: mousePos.x, y: mousePos.y },
+          properties: { voltage: 0, resistance: 10 },
+        });
+
+        if (!newLightbulb) return;
 
         setElements((prev) => [...prev, newLightbulb]);
       }
-      if (e.key === "b" || e.key === "b") {
-        const newId = `battery-${elements.length + 1}`;
-
-        const newBattery: CircuitElement = {
-          id: newId,
+      if (e.key === "B" || e.key === "b") {
+        const newBattery: CircuitElement | null = createElement({
           type: "battery",
-          x: mousePos.x,
-          y: mousePos.y,
-          nodes: [
-            {
-              id: `${newId}-node-1`,
-              x: 10,
-              y: -2,
-              parentId: newId,
-              fill: "red", // Optional fill color for the node
-            },
-            {
-              id: `${newId}-node-2`,
-              x: 30,
-              y: -2,
-              parentId: newId,
-              fill: "green", // Optional fill color for the node
-            },
-          ],
-        };
+          idNumber: elements.length + 1,
+          pos: { x: mousePos.x, y: mousePos.y },
+          properties: { voltage: 9, resistance: 0 },
+        });
+
+        if (!newBattery) return;
 
         setElements((prev) => [...prev, newBattery]);
+      }
+      // resistor
+      if (e.key === "R" || e.key === "r") {
+        const newResistor: CircuitElement | null = createElement({
+          type: "resistor",
+          idNumber: elements.length + 1,
+          pos: { x: mousePos.x, y: mousePos.y },
+          properties: { voltage: 0, resistance: 10 },
+        });
+
+        if (!newResistor) return;
+
+        setElements((prev) => [...prev, newResistor]);
+      }
+      // reset the circuit
+      if (e.key === "Escape") {
+        resetState();
       }
     };
 
@@ -165,7 +126,7 @@ export default function Canvas() {
     if (editingWire) {
       const updated = wires.filter((w) => w.id !== editingWire.wireId);
       setWires(updated);
-      updateBulbStates(updated); // 👈 Update light status after wire deletion
+      computeCircuit(updated); // 👈 Update light status after wire deletion
       setEditingWire(null);
     }
 
@@ -263,57 +224,13 @@ export default function Canvas() {
 
       setWires(updatedWires);
       setWireCounter((c) => c + 1);
-      updateBulbStates(updatedWires);
+      computeCircuit(updatedWires);
       setCreatingWireStartNode(null);
     }
   }
 
-  function updateBulbStates(wiresSnapshot: Wire[]) {
-    setElements((prevElements) => {
-      return prevElements.map((el) => {
-        if (el.type !== "lightbulb") return el;
-
-        const [nodeA, nodeB] = el.nodes;
-        if (!nodeA || !nodeB) return el;
-
-        // Helper to find which battery + node a node is connected to
-        const getConnectedBatteryInfo = (
-          nodeId: string
-        ): { batteryId: string; batteryNodeId: string } | null => {
-          for (const wire of wiresSnapshot) {
-            const isFrom = wire.fromNodeId === nodeId;
-            const isTo = wire.toNodeId === nodeId;
-
-            if (!isFrom && !isTo) continue;
-
-            const otherNodeId = isFrom ? wire.toNodeId : wire.fromNodeId;
-            const otherElement = getNodeParent(otherNodeId);
-
-            if (otherElement?.type === "battery") {
-              return {
-                batteryId: otherElement.id,
-                batteryNodeId: otherNodeId,
-              };
-            }
-          }
-          return null;
-        };
-
-        const nodeAConn = getConnectedBatteryInfo(nodeA.id);
-        const nodeBConn = getConnectedBatteryInfo(nodeB.id);
-
-        const isSameBattery =
-          nodeAConn &&
-          nodeBConn &&
-          nodeAConn.batteryId === nodeBConn.batteryId &&
-          nodeAConn.batteryNodeId !== nodeBConn.batteryNodeId;
-
-        return {
-          ...el,
-          properties: { current: isSameBattery ? 1 : 0 },
-        };
-      });
-    });
+  function computeCircuit(wiresSnapshot: Wire[]) {
+    setElements((prevElements) => solveCircuit(prevElements, wiresSnapshot));
   }
 
   return (
