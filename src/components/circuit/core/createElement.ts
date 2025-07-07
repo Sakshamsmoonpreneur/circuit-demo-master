@@ -1,13 +1,7 @@
 import { CircuitElement } from "@/common/types/circuit";
+import { CircuitElementProps } from "@/common/types/circuit";
 
-type Props = {
-  type: string;
-  idNumber: number;
-  pos: { x: number; y: number };
-  properties?: { resistance?: number; voltage?: number };
-};
-
-export default function createElement(props: Props): CircuitElement | null {
+export default function createElement(props: CircuitElementProps): CircuitElement | null {
   const id = props.type + "-" + props.idNumber;
 
   const batteryElement = {
@@ -51,12 +45,14 @@ export default function createElement(props: Props): CircuitElement | null {
         x: 10,
         y: 40,
         parentId: id,
+        fill: "red",
       },
       {
         id: id + "-node-2",
         x: 30,
         y: 40,
         parentId: id,
+        fill: "green",
       },
     ],
     properties: {
@@ -76,15 +72,17 @@ export default function createElement(props: Props): CircuitElement | null {
     nodes: [
       {
         id: id + "-node-1",
-        x: 10,
+        x: 2,
         y: 40,
         parentId: id,
+        fill: "red",
       },
       {
         id: id + "-node-2",
-        x: 30,
+        x: 40,
         y: 40,
         parentId: id,
+        fill: "green",
       },
     ],
     properties: {

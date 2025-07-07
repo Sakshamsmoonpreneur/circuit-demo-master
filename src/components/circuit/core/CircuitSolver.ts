@@ -5,7 +5,9 @@ export default function solveCircuit(
   wiresSnapshot: Wire[]
 ): CircuitElement[] {
   const nodeMap = new Map<string, Node>();
+  const elementMap = new Map<string, CircuitElement>();
   for (const el of elements) {
+    elementMap.set(el.id, el);
     for (const node of el.nodes) {
       nodeMap.set(node.id, node);
     }
@@ -19,7 +21,7 @@ export default function solveCircuit(
     adjacency.get(wire.toNodeId)!.push(wire.fromNodeId);
   }
 
-  // ✅ Connect battery terminals internally
+  // ✅ Add internal battery node connection
   for (const el of elements) {
     if (el.type === "battery" && el.nodes.length === 2) {
       const [a, b] = el.nodes;
@@ -30,7 +32,7 @@ export default function solveCircuit(
     }
   }
 
-  function findReachable(start: string): Set<string> {
+  function findConnectedComponent(start: string): Set<string> {
     const visited = new Set<string>();
     const queue: string[] = [start];
 
@@ -38,7 +40,6 @@ export default function solveCircuit(
       const current = queue.shift()!;
       if (visited.has(current)) continue;
       visited.add(current);
-
       const neighbors = adjacency.get(current) ?? [];
       for (const neighbor of neighbors) {
         if (!visited.has(neighbor)) {
@@ -50,20 +51,24 @@ export default function solveCircuit(
     return visited;
   }
 
-  // Find active nodes by checking all batteries
-  const activeNodes = new Set<string>();
-  const batteries = elements.filter((e) => e.type === "battery");
+  const batteryLoops: {
+    battery: CircuitElement;
+    nodeIds: Set<string>;
+    positiveId: string;
+    negativeId: string;
+  }[] = [];
 
-  for (const battery of batteries) {
+  for (const battery of elements.filter((e) => e.type === "battery")) {
     if (battery.nodes.length < 2) continue;
-    const [posNode, negNode] = battery.nodes;
-
-    const reachableFromPos = findReachable(posNode.id);
-
-    if (reachableFromPos.has(negNode.id)) {
-      for (const nodeId of reachableFromPos) {
-        activeNodes.add(nodeId);
-      }
+    const [pos, neg] = battery.nodes;
+    const reachableFromPos = findConnectedComponent(pos.id);
+    if (reachableFromPos.has(neg.id)) {
+      batteryLoops.push({
+        battery,
+        nodeIds: reachableFromPos,
+        positiveId: pos.id,
+        negativeId: neg.id,
+      });
     }
   }
 
@@ -72,21 +77,51 @@ export default function solveCircuit(
       (el.type === "lightbulb" || el.type === "resistor") &&
       el.nodes.length === 2
     ) {
-      const [a, b] = el.nodes;
+      const [n1, n2] = el.nodes;
 
-      if (activeNodes.has(a.id) && activeNodes.has(b.id)) {
-        const resistance = el.properties?.resistance ?? 10;
-        const voltage = batteries[0]?.properties?.voltage ?? 5;
-        const current = voltage / resistance;
+      for (const loop of batteryLoops) {
+        const { battery, nodeIds, positiveId, negativeId } = loop;
 
-        return {
-          ...el,
-          computed: {
-            current,
-            voltage,
-            power: voltage * current,
-          },
-        };
+        if (
+          nodeIds.has(n1.id) &&
+          nodeIds.has(n2.id)
+        ) {
+          // ✅ Make sure n1 and n2 are not both connected to the same terminal
+          const n1ConnectedToPositive = findConnectedComponent(positiveId).has(n1.id);
+          const n1ConnectedToNegative = findConnectedComponent(negativeId).has(n1.id);
+          const n2ConnectedToPositive = findConnectedComponent(positiveId).has(n2.id);
+          const n2ConnectedToNegative = findConnectedComponent(negativeId).has(n2.id);
+
+          const validConnection =
+            (n1ConnectedToPositive && n2ConnectedToNegative) ||
+            (n2ConnectedToPositive && n1ConnectedToNegative);
+
+          if (!validConnection) continue;
+
+          // ✅ Calculate total resistance of all components in this loop
+          const connectedElements = elements.filter((e) =>
+            e.nodes.every((n) => nodeIds.has(n.id))
+          );
+
+          const totalResistance = connectedElements.reduce((sum, e) => {
+            if (e.type === "resistor" || e.type === "lightbulb") {
+              return sum + (e.properties?.resistance ?? 1);
+            }
+            return sum;
+          }, 0);
+
+          const voltage = battery.properties?.voltage ?? 0;
+          const current = voltage / (totalResistance || 1); // Avoid divide-by-zero
+
+          return {
+            ...el,
+            computed: {
+              current,
+              voltage,
+              power: voltage * current,
+            },
+          };
+        }
       }
     }
 

@@ -41,3 +41,10 @@ export type EditingWire = {
   wireId: string;
   end: "from" | "to";
 };
+
+export type CircuitElementProps = {
+  type: string;
+  idNumber: number;
+  pos: { x: number; y: number };
+  properties?: { resistance?: number; voltage?: number };
+};

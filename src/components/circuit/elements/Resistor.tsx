@@ -6,7 +6,7 @@ import {
 import { useEffect, useState } from "react";
 import { Image } from "react-konva";
 
-interface ResistorProps extends BaseElementProps {}
+interface ResistorProps extends BaseElementProps { }
 
 export default function Resistor(props: ResistorProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);

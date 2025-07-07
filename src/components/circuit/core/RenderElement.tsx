@@ -34,7 +34,7 @@ export default function RenderElement({
         <Battery id={element.id} x={0} y={0} children={undefined} />
       )}
       {element.type === "resistor" && (
-        <Resistor id={element.id} x={0} y={0} children={undefined} />
+        <Resistor id={element.id} x={1} y={22} children={undefined} />
       )}
 
       {/* render the nodes for the element */}
@@ -60,7 +60,7 @@ export default function RenderElement({
             }
           }}
 
-          // TODO: Add interaction handlers here
+        // TODO: Add interaction handlers here
         />
       ))}
     </Group>

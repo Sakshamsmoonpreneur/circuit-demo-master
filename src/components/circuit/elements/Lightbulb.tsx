@@ -11,7 +11,6 @@ interface LightbulbProps extends BaseElementProps {
 
 export default function Lightbulb(props: LightbulbProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
-
   useEffect(() => {
     const image = new window.Image();
     image.src = "/circuit_elements/bulb-off.svg"; // Always use the "off" bulb
@@ -19,8 +18,9 @@ export default function Lightbulb(props: LightbulbProps) {
   }, []);
 
   // Normalize brightness between 0 and 1
-  const brightness = Math.min(1, (props.current ?? 0) / 1.5); // Adjust denominator for how quickly it maxes out
-
+  // const brightness = Math.min(1, (props.current ?? 0) / 1.5); // Adjust denominator for how quickly it maxes out
+  const brightness = Math.round((props.current ?? 0) / 2); // Adjust denominator for how quickly it maxes out
+  console.log('brightness' + brightness)
   return (
     <BaseElement {...props}>
       <Group>

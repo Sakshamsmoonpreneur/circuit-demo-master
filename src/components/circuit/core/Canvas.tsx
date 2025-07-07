@@ -12,6 +12,7 @@ import RenderElement from "./RenderElement";
 import { DebugBox } from "@/components/debug/DebugBox";
 import createElement from "./createElement"; // Adjust the import path as necessary
 import solveCircuit from "./CircuitSolver";
+import { json } from "stream/consumers";
 
 export default function Canvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -33,15 +34,15 @@ export default function Canvas() {
       createElement({
         type: "lightbulb",
         idNumber: 1,
-        pos: { x: 100, y: 100 },
-        properties: { voltage: 0, resistance: 10 },
+        pos: { x: 300, y: 125 },
+        properties: { voltage: 0, resistance: 1 },
       }),
       createElement({
         type: "battery",
         idNumber: 1,
-        pos: { x: 300, y: 150 },
-        properties: { voltage: 9, resistance: 0 },
-      }),
+        pos: { x: 300, y: 350 },
+        properties: { voltage: 30, resistance: 1 },
+      })
     ].filter((el): el is CircuitElement => el !== null);
 
     setElements(initialElements);
@@ -62,7 +63,7 @@ export default function Canvas() {
           type: "lightbulb",
           idNumber: elements.length + 1,
           pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 0, resistance: 10 },
+          properties: { voltage: 0, resistance: 20 },
         });
 
         if (!newLightbulb) return;
@@ -74,7 +75,7 @@ export default function Canvas() {
           type: "battery",
           idNumber: elements.length + 1,
           pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 9, resistance: 0 },
+          properties: { voltage: 20, resistance: 10 },
         });
 
         if (!newBattery) return;
@@ -140,8 +141,6 @@ export default function Canvas() {
     const x = e.target.x();
     const y = e.target.y();
 
-    console.log(`Element ${id} moved to (${x}, ${y})`);
-
     setElements((prev) =>
       prev.map((element) =>
         element.id === id ? { ...element, x, y } : element
@@ -163,7 +162,7 @@ export default function Canvas() {
 
     const clickedEnd =
       dist(clickPos, { x: fromNode.x, y: fromNode.y }) <
-      dist(clickPos, { x: toNode.x, y: toNode.y })
+        dist(clickPos, { x: toNode.x, y: toNode.y })
         ? "from"
         : "to";
 
@@ -253,29 +252,17 @@ export default function Canvas() {
             if (!points) return null;
 
             return (
-              // <Line
-              //   key={wire.id}
-              //   points={points}
-              //   stroke="#2c3e50"
-              //   strokeWidth={3}
-              //   hitStrokeWidth={15}
-              //   onClick={(e) => {
-              //     const from = getNodeById(wire.fromNodeId)!;
-              //     const to = getNodeById(wire.toNodeId)!;
-              //     handleWireClick(e, wire.id, from, to);
-              //   }}
-              // />
               <Line
                 key={wire.id}
                 points={points}
                 stroke={
                   getNodeById(wire.fromNodeId)?.fill === "red" &&
-                  getNodeById(wire.toNodeId)?.fill === "red"
+                    getNodeById(wire.toNodeId)?.fill === "red"
                     ? "red"
                     : getNodeById(wire.fromNodeId)?.fill === "green" &&
                       getNodeById(wire.toNodeId)?.fill === "green"
-                    ? "green"
-                    : "#2c3e50"
+                      ? "green"
+                      : "black"
                 }
                 strokeWidth={3}
                 hitStrokeWidth={15}
@@ -302,8 +289,8 @@ export default function Canvas() {
               return (
                 <Line
                   points={[startNodeX, startNodeY, mousePos.x, mousePos.y]}
-                  stroke="#e74c3c"
-                  strokeWidth={3}
+                  stroke="black"
+                  strokeWidth={2}
                   dash={[10, 5]}
                   pointerEvents="none"
                 />
