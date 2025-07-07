@@ -112,7 +112,6 @@ export default function solveCircuit(
 
           const voltage = battery.properties?.voltage ?? 0;
           const current = voltage / (totalResistance || 1); // Avoid divide-by-zero
-
           return {
             ...el,
             computed: {

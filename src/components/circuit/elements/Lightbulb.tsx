@@ -20,7 +20,6 @@ export default function Lightbulb(props: LightbulbProps) {
   // Normalize brightness between 0 and 1
   // const brightness = Math.min(1, (props.current ?? 0) / 1.5); // Adjust denominator for how quickly it maxes out
   const brightness = Math.round((props.current ?? 0) / 2); // Adjust denominator for how quickly it maxes out
-  console.log('brightness' + brightness)
   return (
     <BaseElement {...props}>
       <Group>

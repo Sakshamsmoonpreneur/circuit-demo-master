@@ -13,8 +13,9 @@ import { DebugBox } from "@/components/debug/DebugBox";
 import createElement from "./createElement"; // Adjust the import path as necessary
 import solveCircuit from "./CircuitSolver";
 import { json } from "stream/consumers";
+import Palette from "../elements/Palette";
 
-export default function Canvas() {
+export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
@@ -23,6 +24,8 @@ export default function Canvas() {
   const [elements, setElements] = useState<CircuitElement[]>([]);
   const [wires, setWires] = useState<Wire[]>([]);
   const [wireCounter, setWireCounter] = useState(0);
+  const [showPalette, setShowPalette] = useState(true);
+  const [showDebugBox, setShowDebugBox] = useState(true);
 
   const [creatingWireStartNode, setCreatingWireStartNode] = useState<
     string | null
@@ -30,22 +33,23 @@ export default function Canvas() {
   const [editingWire, setEditingWire] = useState<EditingWire | null>(null);
 
   function resetState() {
-    const initialElements: CircuitElement[] = [
-      createElement({
-        type: "lightbulb",
-        idNumber: 1,
-        pos: { x: 300, y: 125 },
-        properties: { voltage: 0, resistance: 1 },
-      }),
-      createElement({
-        type: "battery",
-        idNumber: 1,
-        pos: { x: 300, y: 350 },
-        properties: { voltage: 30, resistance: 1 },
-      })
-    ].filter((el): el is CircuitElement => el !== null);
+    // const initialElements: CircuitElement[] = [
+    //   createElement({
+    //     type: "lightbulb",
+    //     idNumber: 1,
+    //     pos: { x: 300, y: 125 },
+    //     properties: { voltage: 0, resistance: 1 },
+    //   }),
+    //   createElement({
+    //     type: "battery",
+    //     idNumber: 1,
+    //     pos: { x: 300, y: 350 },
+    //     properties: { voltage: 30, resistance: 1 },
+    //   })
+    // ].filter((el): el is CircuitElement => el !== null);
 
-    setElements(initialElements);
+    // setElements(initialElements);
+    setElements([]);
     setWires([]);
     setWireCounter(0);
     setCreatingWireStartNode(null);
@@ -63,7 +67,7 @@ export default function Canvas() {
           type: "lightbulb",
           idNumber: elements.length + 1,
           pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 0, resistance: 20 },
+          properties: { voltage: 0, resistance: 1 },
         });
 
         if (!newLightbulb) return;
@@ -75,7 +79,7 @@ export default function Canvas() {
           type: "battery",
           idNumber: elements.length + 1,
           pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 20, resistance: 10 },
+          properties: { voltage: 30, resistance: 1 },
         });
 
         if (!newBattery) return;
@@ -232,81 +236,148 @@ export default function Canvas() {
     setElements((prevElements) => solveCircuit(prevElements, wiresSnapshot));
   }
 
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+
+    const elementData = e.dataTransfer.getData("application/element-type");
+    if (!elementData) return;
+
+    const element = JSON.parse(elementData);
+
+    const stageX = e.clientX;
+    const stageY = e.clientY;
+
+    const canvasOffset = document
+      .getElementById("canvas-stage") // optional: give your Stage a container ID
+      ?.getBoundingClientRect();
+
+    const canvasX = stageX - (canvasOffset?.left ?? 0);
+    const canvasY = stageY - (canvasOffset?.top ?? 0);
+
+    const newElement = createElement({
+      type: element.type,
+      idNumber: elements.length + 1,
+      pos: { x: canvasX, y: canvasY },
+      properties: element.defaultProps,
+    });
+
+    if (!newElement) return;
+    setElements((prev) => [...prev, newElement]);
+  }
+
+
+
   return (
-    <div className="flex flex-row items-center justify-center h-screen w-screen">
-      <DebugBox
-        data={{ mousePos, elements, wires }}
-        className="w-full !h-screen"
-      />
-
-      <Stage
-        width={window.innerWidth * 0.75}
-        height={window.innerHeight}
-        onMouseMove={handleStageMouseMove}
-        onClick={handleStageClick}
+    <div
+      className="flex flex-row items-center justify-between h-screen w-screen relative"
+      onDrop={handleDrop}
+      onDragOver={(e) => e.preventDefault()}
+    >
+      {/* Debug Box Panel */}
+      <div
+        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
+          }`}
       >
-        <Layer>
-          {/* Render all wires */}
-          {wires.map((wire) => {
-            const points = getWirePoints(wire);
-            if (!points) return null;
+        <button
+          className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
+          onClick={() => setShowDebugBox((prev) => !prev)}
+        >
+          {showDebugBox ? "⇠" : "⇢"}
+        </button>
+        {showDebugBox && (
+          <DebugBox
+            data={{ mousePos, elements, wires }}
+            className="w-full h-full p-4"
+          />
+        )}
+      </div>
 
-            return (
-              <Line
-                key={wire.id}
-                points={points}
-                stroke={
-                  getNodeById(wire.fromNodeId)?.fill === "red" &&
-                    getNodeById(wire.toNodeId)?.fill === "red"
-                    ? "red"
-                    : getNodeById(wire.fromNodeId)?.fill === "green" &&
-                      getNodeById(wire.toNodeId)?.fill === "green"
-                      ? "green"
-                      : "black"
-                }
-                strokeWidth={3}
-                hitStrokeWidth={15}
-                onClick={(e) => {
-                  const from = getNodeById(wire.fromNodeId)!;
-                  const to = getNodeById(wire.toNodeId)!;
-                  handleWireClick(e, wire.id, from, to);
-                }}
-              />
-            );
-          })}
-
-          {/* Render wire currently being created */}
-          {creatingWireStartNode &&
-            (() => {
-              const startNode = getNodeById(creatingWireStartNode);
-
-              if (!startNode) return null;
-              const startNodeX =
-                startNode.x + (getNodeParent(startNode.id)?.x ?? 0);
-              const startNodeY =
-                startNode.y + (getNodeParent(startNode.id)?.y ?? 0);
+      {/* Canvas */}
+      <div className="flex-grow h-full">
+        <Stage
+          id="canvas-stage"
+          width={window.innerWidth * 0.5}
+          height={window.innerHeight}
+          onMouseMove={handleStageMouseMove}
+          onClick={handleStageClick}
+        >
+          <Layer>
+            {/* Render wires */}
+            {wires.map((wire) => {
+              const points = getWirePoints(wire);
+              if (!points) return null;
 
               return (
                 <Line
-                  points={[startNodeX, startNodeY, mousePos.x, mousePos.y]}
-                  stroke="black"
-                  strokeWidth={2}
-                  dash={[10, 5]}
-                  pointerEvents="none"
+                  key={wire.id}
+                  points={points}
+                  stroke={
+                    getNodeById(wire.fromNodeId)?.fill === "red" &&
+                      getNodeById(wire.toNodeId)?.fill === "red"
+                      ? "red"
+                      : getNodeById(wire.fromNodeId)?.fill === "green" &&
+                        getNodeById(wire.toNodeId)?.fill === "green"
+                        ? "green"
+                        : "black"
+                  }
+                  strokeWidth={3}
+                  hitStrokeWidth={15}
+                  onClick={(e) => {
+                    const from = getNodeById(wire.fromNodeId)!;
+                    const to = getNodeById(wire.toNodeId)!;
+                    handleWireClick(e, wire.id, from, to);
+                  }}
                 />
               );
-            })()}
+            })}
 
-          {elements.map((element) => (
-            <RenderElement
-              key={element.id}
-              element={element}
-              onDragMove={handleElementDragMove}
-              handleNodeClick={handleNodeClick}
-            />
-          ))}
-        </Layer>
-      </Stage>
+            {/* Wire being created */}
+            {creatingWireStartNode &&
+              (() => {
+                const startNode = getNodeById(creatingWireStartNode);
+                if (!startNode) return null;
+                const startNodeX =
+                  startNode.x + (getNodeParent(startNode.id)?.x ?? 0);
+                const startNodeY =
+                  startNode.y + (getNodeParent(startNode.id)?.y ?? 0);
+
+                return (
+                  <Line
+                    points={[startNodeX, startNodeY, mousePos.x, mousePos.y]}
+                    stroke="black"
+                    strokeWidth={2}
+                    dash={[10, 5]}
+                    pointerEvents="none"
+                  />
+                );
+              })()}
+
+            {/* Circuit Elements */}
+            {elements.map((element) => (
+              <RenderElement
+                key={element.id}
+                element={element}
+                onDragMove={handleElementDragMove}
+                handleNodeClick={handleNodeClick}
+              />
+            ))}
+          </Layer>
+        </Stage>
+      </div>
+
+      {/* Palette Panel */}
+      <div
+        className={`transition-all duration-300 h-full bg-black border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
+          }`}
+      >
+        <button
+          className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
+          onClick={() => setShowPalette((prev) => !prev)}
+        >
+          {showPalette ? "⇢" : "⇠"}
+        </button>
+        {showPalette && <Palette />}
+      </div>
     </div>
   );
 }

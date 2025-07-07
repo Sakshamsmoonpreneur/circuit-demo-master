@@ -1,9 +1,12 @@
-import Canvas from "@/components/circuit/core/Canvas";
+'use client';
 
-export default function Editor() {
-  return (
-    <div>
-      <Canvas />
-    </div>
-  );
+import dynamic from "next/dynamic";
+
+const CircuitCanvas = dynamic(() => import('@/components/circuit/core/CircuitCanvas'), {
+  ssr: false,
+});
+
+
+export default function Page() {
+  return <CircuitCanvas />;
 }
