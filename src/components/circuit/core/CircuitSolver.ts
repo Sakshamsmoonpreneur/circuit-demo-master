@@ -107,7 +107,11 @@ export default function solveCircuit(
         );
 
         const totalResistance = connectedElements.reduce((sum, e) => {
-          if (e.type === "resistor" || e.type === "lightbulb") {
+          if (
+            e.type === "resistor" ||
+            e.type === "lightbulb" ||
+            e.type === "potentiometer"
+          ) {
             return sum + (e.properties?.resistance ?? 1);
           }
           return sum;
