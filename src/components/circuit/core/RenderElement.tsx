@@ -21,6 +21,7 @@ export default function RenderElement({
       y={element.y}
       onDragMove={props.onDragMove}
       id={element.id}
+      draggable={true}
     >
       {element.type === "lightbulb" && (
         <Lightbulb
@@ -85,7 +86,7 @@ export default function RenderElement({
             }
           }}
 
-          // TODO: Add interaction handlers here
+        // TODO: Add interaction handlers here
         />
       ))}
     </Group>
