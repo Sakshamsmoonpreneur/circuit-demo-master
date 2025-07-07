@@ -28,6 +28,7 @@ export default function RenderElement({
         props.onSelect?.(element.id);
       }}
       id={element.id}
+      draggable={true}
     >
       {element.type === "lightbulb" && (
         <Lightbulb
@@ -101,7 +102,7 @@ export default function RenderElement({
             }
           }}
 
-          // TODO: Add interaction handlers here
+        // TODO: Add interaction handlers here
         />
       ))}
     </Group>

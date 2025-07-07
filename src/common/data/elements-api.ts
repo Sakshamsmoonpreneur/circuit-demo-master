@@ -22,13 +22,13 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "lightbulb",
     label: "Lightbulb",
     iconPath: "/circuit_elements/bulb-off.svg",
-    defaultProps: { resistance: 5 },
+    defaultProps: { resistance: 1 },
   },
   {
     type: "battery",
     label: "Battery",
     iconPath: "/circuit_elements/battery.svg",
-    defaultProps: { voltage: 20, resistance: 0.1 },
+    defaultProps: { voltage: 20, resistance: 1 },
   },
   {
     type: "resistor",
