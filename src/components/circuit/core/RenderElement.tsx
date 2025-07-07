@@ -4,6 +4,8 @@ import Lightbulb from "../elements/Lightbulb";
 import { KonvaEventObject } from "konva/lib/Node";
 import Battery from "../elements/Battery";
 import Resistor from "../elements/Resistor";
+import Multimeter from "../elements/Multimeter";
+import Potentiometer from "../elements/Potentiometer";
 
 export default function RenderElement({
   element,
@@ -17,7 +19,6 @@ export default function RenderElement({
     <Group
       x={element.x}
       y={element.y}
-      draggable
       onDragMove={props.onDragMove}
       id={element.id}
     >
@@ -35,6 +36,30 @@ export default function RenderElement({
       )}
       {element.type === "resistor" && (
         <Resistor id={element.id} x={1} y={22} children={undefined} />
+      )}
+      {element.type === "multimeter" && (
+        <Multimeter
+          id={element.id}
+          x={1}
+          y={22}
+          children={undefined}
+          current={element.computed?.current ?? 0}
+          voltage={element.computed?.voltage ?? 0}
+          resistance={
+            (element.computed?.voltage ?? 0) / (element.computed?.current ?? 1)
+          }
+        />
+      )}
+      {element.type === "potentiometer" && (
+        <Potentiometer
+          id={element.id}
+          x={1}
+          y={22}
+          children={undefined}
+          onResistanceChange={(resistance) => {
+            // Handle resistance change
+          }}
+        />
       )}
 
       {/* render the nodes for the element */}
@@ -60,7 +85,7 @@ export default function RenderElement({
             }
           }}
 
-        // TODO: Add interaction handlers here
+          // TODO: Add interaction handlers here
         />
       ))}
     </Group>

@@ -1,7 +1,9 @@
 import { CircuitElement } from "@/common/types/circuit";
 import { CircuitElementProps } from "@/common/types/circuit";
 
-export default function createElement(props: CircuitElementProps): CircuitElement | null {
+export default function createElement(
+  props: CircuitElementProps
+): CircuitElement | null {
   const id = props.type + "-" + props.idNumber;
 
   const batteryElement = {
@@ -94,6 +96,66 @@ export default function createElement(props: CircuitElementProps): CircuitElemen
     },
   };
 
+  const multimeterElement = {
+    id,
+    type: props.type,
+    x: props.pos.x,
+    y: props.pos.y,
+    nodes: [
+      {
+        id: id + "-node-1",
+        x: 10,
+        y: 20,
+        parentId: id,
+        fill: "red",
+      },
+      {
+        id: id + "-node-2",
+        x: 30,
+        y: 20,
+        parentId: id,
+        fill: "green",
+      },
+    ],
+    properties: {
+      ...{
+        voltage: props.properties?.voltage ?? 0,
+        resistance: props.properties?.resistance ?? 10,
+      },
+      ...props.properties,
+    },
+  };
+
+  const potentiometerElement = {
+    id,
+    type: props.type,
+    x: props.pos.x,
+    y: props.pos.y,
+    nodes: [
+      {
+        id: id + "-node-1",
+        x: 10,
+        y: 20,
+        parentId: id,
+        fill: "red",
+      },
+      {
+        id: id + "-node-2",
+        x: 30,
+        y: 20,
+        parentId: id,
+        fill: "green",
+      },
+    ],
+    properties: {
+      ...{
+        voltage: props.properties?.voltage ?? 0,
+        resistance: props.properties?.resistance ?? 10,
+      },
+      ...props.properties,
+    },
+  };
+
   // switch based on type
   let element;
   switch (props.type) {
@@ -105,6 +167,12 @@ export default function createElement(props: CircuitElementProps): CircuitElemen
       break;
     case "resistor":
       element = resistorElement;
+      break;
+    case "multimeter":
+      element = multimeterElement;
+      break;
+    case "potentiometer":
+      element = potentiometerElement;
       break;
     default:
       element = null;

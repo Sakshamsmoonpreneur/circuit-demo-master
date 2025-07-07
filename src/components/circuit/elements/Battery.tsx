@@ -6,7 +6,7 @@ import {
 import { useEffect, useState } from "react";
 import { Image } from "react-konva";
 
-interface BatteryProps extends BaseElementProps { }
+interface BatteryProps extends BaseElementProps {}
 
 export default function Battery(props: BatteryProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);

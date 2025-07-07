@@ -73,60 +73,64 @@ export default function solveCircuit(
   }
 
   return elements.map((el) => {
-    if (
-      (el.type === "lightbulb" || el.type === "resistor") &&
-      el.nodes.length === 2
-    ) {
-      const [n1, n2] = el.nodes;
+    if (el.nodes.length !== 2) {
+      return { ...el, computed: { current: 0, voltage: 0 } };
+    }
 
-      for (const loop of batteryLoops) {
-        const { battery, nodeIds, positiveId, negativeId } = loop;
+    const [n1, n2] = el.nodes;
 
-        if (
-          nodeIds.has(n1.id) &&
-          nodeIds.has(n2.id)
-        ) {
-          // ✅ Make sure n1 and n2 are not both connected to the same terminal
-          const n1ConnectedToPositive = findConnectedComponent(positiveId).has(n1.id);
-          const n1ConnectedToNegative = findConnectedComponent(negativeId).has(n1.id);
-          const n2ConnectedToPositive = findConnectedComponent(positiveId).has(n2.id);
-          const n2ConnectedToNegative = findConnectedComponent(negativeId).has(n2.id);
+    for (const loop of batteryLoops) {
+      const { battery, nodeIds, positiveId, negativeId } = loop;
 
-          const validConnection =
-            (n1ConnectedToPositive && n2ConnectedToNegative) ||
-            (n2ConnectedToPositive && n1ConnectedToNegative);
+      if (nodeIds.has(n1.id) && nodeIds.has(n2.id)) {
+        const n1ConnectedToPositive = findConnectedComponent(positiveId).has(
+          n1.id
+        );
+        const n1ConnectedToNegative = findConnectedComponent(negativeId).has(
+          n1.id
+        );
+        const n2ConnectedToPositive = findConnectedComponent(positiveId).has(
+          n2.id
+        );
+        const n2ConnectedToNegative = findConnectedComponent(negativeId).has(
+          n2.id
+        );
 
-          if (!validConnection) continue;
+        const validConnection =
+          (n1ConnectedToPositive && n2ConnectedToNegative) ||
+          (n2ConnectedToPositive && n1ConnectedToNegative);
 
-          // ✅ Calculate total resistance of all components in this loop
-          const connectedElements = elements.filter((e) =>
-            e.nodes.every((n) => nodeIds.has(n.id))
-          );
+        if (!validConnection) continue;
 
-          const totalResistance = connectedElements.reduce((sum, e) => {
-            if (e.type === "resistor" || e.type === "lightbulb") {
-              return sum + (e.properties?.resistance ?? 1);
-            }
-            return sum;
-          }, 0);
+        const connectedElements = elements.filter((e) =>
+          e.nodes.every((n) => nodeIds.has(n.id))
+        );
 
-          const voltage = battery.properties?.voltage ?? 0;
-          const current = voltage / (totalResistance || 1); // Avoid divide-by-zero
-          return {
-            ...el,
-            computed: {
-              current,
-              voltage,
-              power: voltage * current,
-            },
-          };
-        }
+        const totalResistance = connectedElements.reduce((sum, e) => {
+          if (e.type === "resistor" || e.type === "lightbulb") {
+            return sum + (e.properties?.resistance ?? 1);
+          }
+          return sum;
+        }, 0);
+
+        const voltage = battery.properties?.voltage ?? 0;
+        const current = voltage / (totalResistance || 1); // avoid divide-by-zero
+
+        return {
+          ...el,
+          computed: {
+            current,
+            voltage,
+            power: voltage * current,
+          },
+        };
       }
     }
 
+    // Not part of any valid loop
     return {
       ...el,
-      computed: { current: 0 },
+      computed: { current: 0, voltage: 0 },
     };
   });
 }

@@ -33,22 +33,6 @@ export default function CircuitCanvas() {
   const [editingWire, setEditingWire] = useState<EditingWire | null>(null);
 
   function resetState() {
-    // const initialElements: CircuitElement[] = [
-    //   createElement({
-    //     type: "lightbulb",
-    //     idNumber: 1,
-    //     pos: { x: 300, y: 125 },
-    //     properties: { voltage: 0, resistance: 1 },
-    //   }),
-    //   createElement({
-    //     type: "battery",
-    //     idNumber: 1,
-    //     pos: { x: 300, y: 350 },
-    //     properties: { voltage: 30, resistance: 1 },
-    //   })
-    // ].filter((el): el is CircuitElement => el !== null);
-
-    // setElements(initialElements);
     setElements([]);
     setWires([]);
     setWireCounter(0);
@@ -62,43 +46,6 @@ export default function CircuitCanvas() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "L" || e.key === "l") {
-        const newLightbulb: CircuitElement | null = createElement({
-          type: "lightbulb",
-          idNumber: elements.length + 1,
-          pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 0, resistance: 1 },
-        });
-
-        if (!newLightbulb) return;
-
-        setElements((prev) => [...prev, newLightbulb]);
-      }
-      if (e.key === "B" || e.key === "b") {
-        const newBattery: CircuitElement | null = createElement({
-          type: "battery",
-          idNumber: elements.length + 1,
-          pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 30, resistance: 1 },
-        });
-
-        if (!newBattery) return;
-
-        setElements((prev) => [...prev, newBattery]);
-      }
-      // resistor
-      if (e.key === "R" || e.key === "r") {
-        const newResistor: CircuitElement | null = createElement({
-          type: "resistor",
-          idNumber: elements.length + 1,
-          pos: { x: mousePos.x, y: mousePos.y },
-          properties: { voltage: 0, resistance: 10 },
-        });
-
-        if (!newResistor) return;
-
-        setElements((prev) => [...prev, newResistor]);
-      }
       // reset the circuit
       if (e.key === "Escape") {
         resetState();
@@ -166,7 +113,7 @@ export default function CircuitCanvas() {
 
     const clickedEnd =
       dist(clickPos, { x: fromNode.x, y: fromNode.y }) <
-        dist(clickPos, { x: toNode.x, y: toNode.y })
+      dist(clickPos, { x: toNode.x, y: toNode.y })
         ? "from"
         : "to";
 
@@ -265,8 +212,6 @@ export default function CircuitCanvas() {
     setElements((prev) => [...prev, newElement]);
   }
 
-
-
   return (
     <div
       className="flex flex-row items-center justify-between h-screen w-screen relative"
@@ -275,8 +220,9 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
-          }`}
+        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${
+          showDebugBox ? "w-[25%]" : "w-10"
+        }`}
       >
         <button
           className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -313,12 +259,12 @@ export default function CircuitCanvas() {
                   points={points}
                   stroke={
                     getNodeById(wire.fromNodeId)?.fill === "red" &&
-                      getNodeById(wire.toNodeId)?.fill === "red"
+                    getNodeById(wire.toNodeId)?.fill === "red"
                       ? "red"
                       : getNodeById(wire.fromNodeId)?.fill === "green" &&
                         getNodeById(wire.toNodeId)?.fill === "green"
-                        ? "green"
-                        : "black"
+                      ? "green"
+                      : "black"
                   }
                   strokeWidth={3}
                   hitStrokeWidth={15}
@@ -367,8 +313,9 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-black border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
-          }`}
+        className={`transition-all duration-300 h-full bg-black border-l border-black-200 shadow-md overflow-auto ${
+          showPalette ? "w-[25%]" : "w-10"
+        }`}
       >
         <button
           className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
