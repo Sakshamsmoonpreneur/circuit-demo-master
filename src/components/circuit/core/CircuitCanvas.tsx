@@ -183,6 +183,21 @@ export default function CircuitCanvas() {
     setElements((prevElements) => solveCircuit(prevElements, wiresSnapshot));
   }
 
+  // handle resistance change for potentiometer
+  function handleResistanceChange(elementId: string, resistance: number) {
+    setElements((prev) =>
+      prev.map((el) =>
+        el.id === elementId
+          ? {
+              ...el,
+              properties: { ...el.properties, resistance },
+            }
+          : el
+      )
+    );
+    computeCircuit(wires);
+  }
+
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
 
@@ -305,6 +320,7 @@ export default function CircuitCanvas() {
                 element={element}
                 onDragMove={handleElementDragMove}
                 handleNodeClick={handleNodeClick}
+                handleResistanceChange={handleResistanceChange}
               />
             ))}
           </Layer>

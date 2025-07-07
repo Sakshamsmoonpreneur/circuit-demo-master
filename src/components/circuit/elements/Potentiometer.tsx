@@ -3,62 +3,76 @@ import {
   BaseElement,
   BaseElementProps,
 } from "@/components/circuit/core/BaseElement";
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Circle, Group, Line } from "react-konva";
+import Konva from "konva";
 
 interface PotentiometerProps extends BaseElementProps {
   onResistanceChange?: (resistance: number) => void;
+  minResistance?: number; // Optional min resistance
+  maxResistance?: number; // Optional max resistance
 }
 
 export default function Potentiometer(props: PotentiometerProps) {
-  const [angle, setAngle] = useState(135); // initial knob angle
+  const [angle, setAngle] = useState(135); // Start in middle of range
   const [isDragging, setIsDragging] = useState(false);
+  const groupRef = useRef<Konva.Group>(null);
 
   const minAngle = 45;
   const maxAngle = 315;
   const centerX = 25;
   const centerY = 25;
 
+  const minResistance = props.minResistance ?? 0; // Default to 0 if not provided
+  const maxResistance = props.maxResistance ?? 10000; // Default to 10k
+
   const resistance = Math.round(
-    ((angle - minAngle) / (maxAngle - minAngle)) * 10000
+    ((angle - minAngle) / (maxAngle - minAngle)) *
+      (maxResistance - minResistance) +
+      minResistance
   );
 
   useEffect(() => {
     props.onResistanceChange?.(resistance);
   }, [resistance]);
 
-  const clamp = (a: number) => Math.max(minAngle, Math.min(maxAngle, a));
+  const clampAngle = (deg: number) => {
+    if (deg < minAngle && deg > 180) return minAngle;
+    if (deg > maxAngle && deg < 360) return maxAngle;
+    return Math.max(minAngle, Math.min(maxAngle, deg));
+  };
 
   const handlePointerMove = (e: any) => {
-    if (!isDragging) return;
+    if (!isDragging || !groupRef.current) return;
+
     const stage = e.target.getStage();
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
+    const pointer = stage?.getPointerPosition();
+    const absPos = groupRef.current.getAbsolutePosition();
+    if (!pointer || !absPos) return;
 
-    const dx = pointer.x - (props.x ?? 0) - centerX;
-    const dy = pointer.y - (props.y ?? 0) - centerY;
+    const dx = pointer.x - (absPos.x + centerX);
+    const dy = pointer.y - (absPos.y + centerY);
 
-    // Calculate angle from center to pointer
     let rawAngle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
     if (rawAngle < 0) rawAngle += 360;
 
-    // Accept only angles within the allowed range (45–315)
-    const inRange = rawAngle >= minAngle && rawAngle <= maxAngle;
+    // Only allow values from minAngle to maxAngle
+    const withinRange = rawAngle >= minAngle && rawAngle <= maxAngle;
 
-    if (inRange) {
-      setAngle(rawAngle);
+    if (withinRange) {
+      setAngle(clampAngle(rawAngle));
     }
   };
 
   return (
     <BaseElement {...props}>
       <Group
+        ref={groupRef}
         onMouseMove={handlePointerMove}
         onTouchMove={handlePointerMove}
         onMouseUp={() => setIsDragging(false)}
         onTouchEnd={() => setIsDragging(false)}
       >
-        {/* Potentiometer base */}
         <Circle
           x={centerX}
           y={centerY}
@@ -68,17 +82,23 @@ export default function Potentiometer(props: PotentiometerProps) {
           strokeWidth={2}
         />
 
-        {/* Center knob pointer (corrected) */}
         <Line
-          points={[0, 0, 0, -15]} // from center upward
+          points={[0, 0, 0, -15]} // center to top
           stroke="black"
           strokeWidth={4}
+          hitStrokeWidth={10}
           lineCap="round"
           x={centerX}
           y={centerY}
           rotation={angle}
-          onMouseDown={() => setIsDragging(true)}
-          onTouchStart={() => setIsDragging(true)}
+          onMouseDown={(e) => {
+            e.cancelBubble = true;
+            setIsDragging(true);
+          }}
+          onTouchStart={(e) => {
+            e.cancelBubble = true;
+            setIsDragging(true);
+          }}
         />
       </Group>
     </BaseElement>
