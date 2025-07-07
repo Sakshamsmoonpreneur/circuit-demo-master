@@ -9,6 +9,8 @@ export type CircuitElement = {
   properties?: {
     voltage?: number; // for power sources like batteries
     resistance?: number; // all components can have resistance
+    maxResistance?: number; // for variable components like potentiometers
+    minResistance?: number; // for variable components like potentiometers
   };
   computed?: {
     current?: number; // computed current through the element
@@ -30,7 +32,7 @@ export type Node = {
   x: number;
   y: number;
   parentId: string;
-  fill?: string; // Optional fill color for the node
+  polarity?: "positive" | "negative"; // Optional polarity for the node
 };
 
 export type Size =
@@ -46,5 +48,10 @@ export type CircuitElementProps = {
   type: string;
   idNumber: number;
   pos: { x: number; y: number };
-  properties?: { resistance?: number; voltage?: number };
+  properties?: {
+    resistance?: number;
+    voltage?: number;
+    maxResistance?: number;
+    minResistance?: number;
+  };
 };
