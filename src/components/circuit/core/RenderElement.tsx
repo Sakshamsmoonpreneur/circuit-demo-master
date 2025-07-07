@@ -14,11 +14,13 @@ export default function RenderElement({
   element: CircuitElement;
   onDragMove: (e: KonvaEventObject<DragEvent>) => void;
   handleNodeClick: (nodeId: string) => void;
+  handleResistanceChange?: (elementId: string, resistance: number) => void;
 }) {
   return (
     <Group
       x={element.x}
       y={element.y}
+      draggable
       onDragMove={props.onDragMove}
       id={element.id}
       draggable={true}
@@ -58,8 +60,10 @@ export default function RenderElement({
           y={22}
           children={undefined}
           onResistanceChange={(resistance) => {
-            // Handle resistance change
+            props.handleResistanceChange?.(element.id, resistance);
           }}
+          minResistance={0}
+          maxResistance={20}
         />
       )}
 
