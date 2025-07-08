@@ -38,6 +38,7 @@ export default function RenderElement({
           y={0}
           children={undefined}
           power={element.computed?.power ?? 0}
+          selected={props.selectedElementId === element.id}
         />
       )}
       {element.type === "led" && (
@@ -47,13 +48,26 @@ export default function RenderElement({
           y={0}
           children={undefined}
           current={element.computed?.current ?? 0}
+          selected={props.selectedElementId === element.id}
         />
       )}
       {element.type === "battery" && (
-        <Battery id={element.id} x={0} y={0} children={undefined} />
+        <Battery
+          id={element.id}
+          x={0}
+          y={0}
+          children={undefined}
+          selected={props.selectedElementId === element.id}
+        />
       )}
       {element.type === "resistor" && (
-        <Resistor id={element.id} x={1} y={22} children={undefined} />
+        <Resistor
+          id={element.id}
+          x={1}
+          y={22}
+          children={undefined}
+          selected={props.selectedElementId === element.id}
+        />
       )}
       {element.type === "multimeter" && (
         <Multimeter
@@ -64,6 +78,7 @@ export default function RenderElement({
           measurement={element.computed?.measurement}
           initialMode={"voltage"}
           onModeChange={props.handleModeChange}
+          selected={props.selectedElementId === element.id}
         />
       )}
       {element.type === "potentiometer" && (
@@ -78,6 +93,7 @@ export default function RenderElement({
           minResistance={element.properties?.minResistance ?? 0}
           maxResistance={element.properties?.maxResistance ?? 20}
           resistance={element.properties?.resistance}
+          selected={props.selectedElementId === element.id}
         />
       )}
 

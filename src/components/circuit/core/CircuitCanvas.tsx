@@ -51,9 +51,31 @@ export default function CircuitCanvas() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // reset the circuit
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && e.shiftKey) {
+        e.preventDefault(); // Prevent default behavior (e.g. exiting fullscreen)
         resetState();
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault(); // Prevent default delete behavior
+        if (selectedElement) {
+          const updatedElements = elements.filter(
+            (el) => el.id !== selectedElement.id
+          );
+          setElements(updatedElements);
+
+          // Remove any wires connected to this element
+          const updatedWires = wires.filter(
+            (wire) =>
+              getNodeParent(wire.fromNodeId)?.id !== selectedElement.id &&
+              getNodeParent(wire.toNodeId)?.id !== selectedElement.id
+          );
+          setWires(updatedWires);
+          computeCircuit(updatedWires); // Recompute circuit after deletion
+
+          setSelectedElement(null);
+          setCreatingWireStartNode(null);
+          setEditingWire(null);
+        }
       }
     };
 
