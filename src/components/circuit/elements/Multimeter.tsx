@@ -7,31 +7,38 @@ import { useEffect, useState } from "react";
 import { Image, Text, Rect, Group } from "react-konva";
 
 interface MultimeterProps extends BaseElementProps {
-  current?: number;
-  voltage?: number;
-  resistance?: number;
+  measurement?: number;
+  initialMode?: Mode;
+  onModeChange: (id: string, mode: Mode) => void;
 }
 
-type Mode = "voltage" | "current" | "resistance";
+type Mode = "voltage" | "current";
 
 export default function Multimeter(props: MultimeterProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
-  const [mode, setMode] = useState<Mode>("voltage");
+  const [mode, setMode] = useState<Mode>(props.initialMode || "voltage");
+
+  useEffect(() => {
+    if (props.initialMode && props.initialMode !== mode) {
+      setMode(props.initialMode);
+    }
+  }, [props.initialMode]);
+
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    props.onModeChange(props.id, newMode);
+  };
 
   const getDisplayValue = () => {
+    if (props.measurement === undefined) {
+      return "---";
+    }
+
     switch (mode) {
       case "voltage":
-        return props.voltage !== undefined
-          ? `${props.voltage.toFixed(2)} V`
-          : "---";
+        return `${props.measurement.toFixed(2)} V`;
       case "current":
-        return props.current !== undefined
-          ? `${props.current.toFixed(2)} A`
-          : "---";
-      case "resistance":
-        return props.resistance !== undefined
-          ? `${props.resistance.toFixed(2)} Ω`
-          : "---";
+        return `${props.measurement.toFixed(2)} A`;
       default:
         return "---";
     }
@@ -48,7 +55,7 @@ export default function Multimeter(props: MultimeterProps) {
   const buttonDefs = [
     { y: 10, label: "V", mode: "voltage" },
     { y: 40, label: "A", mode: "current" },
-    { y: 70, label: "Ω", mode: "resistance" },
+    { y: 70, label: "Ω", mode: "voltage" },
   ] as const;
 
   return (
@@ -69,8 +76,8 @@ export default function Multimeter(props: MultimeterProps) {
         {buttonDefs.map((btn) => (
           <Group
             key={btn.label}
-            onClick={() => setMode(btn.mode)}
-            onTap={() => setMode(btn.mode)}
+            onClick={() => handleModeChange(btn.mode)}
+            onTap={() => handleModeChange(btn.mode)}
           >
             <Rect
               x={170}

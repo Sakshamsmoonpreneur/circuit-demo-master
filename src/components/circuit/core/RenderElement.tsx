@@ -16,6 +16,7 @@ export default function RenderElement({
   onDragMove: (e: KonvaEventObject<DragEvent>) => void;
   handleNodeClick: (nodeId: string) => void;
   handleResistanceChange?: (elementId: string, resistance: number) => void;
+  handleModeChange: (elementId: string, mode: "voltage" | "current") => void;
   onSelect?: (elementId: string) => void;
   selectedElementId?: string | null;
 }) {
@@ -36,7 +37,7 @@ export default function RenderElement({
           x={0}
           y={0}
           children={undefined}
-          current={element.computed?.current ?? 0}
+          power={element.computed?.power ?? 0}
         />
       )}
       {element.type === "led" && (
@@ -60,11 +61,9 @@ export default function RenderElement({
           x={1}
           y={22}
           children={undefined}
-          current={element.computed?.current ?? 0}
-          voltage={element.computed?.voltage ?? 0}
-          resistance={
-            (element.computed?.voltage ?? 0) / (element.computed?.current ?? 1)
-          }
+          measurement={element.computed?.measurement}
+          initialMode={"voltage"}
+          onModeChange={props.handleModeChange}
         />
       )}
       {element.type === "potentiometer" && (
@@ -93,8 +92,8 @@ export default function RenderElement({
             node.polarity === "positive"
               ? "green"
               : node.polarity === "negative"
-                ? "red"
-                : "black"
+              ? "red"
+              : "black"
           }
           onClick={() => props.handleNodeClick(node.id)}
           hitStrokeWidth={10}
@@ -111,7 +110,7 @@ export default function RenderElement({
             }
           }}
 
-        // TODO: Add interaction handlers here
+          // TODO: Add interaction handlers here
         />
       ))}
     </Group>

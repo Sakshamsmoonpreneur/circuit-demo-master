@@ -17,14 +17,14 @@ export default function createElement(
         x: 10,
         y: -2,
         parentId: id,
-        polarity: "negative",
+        polarity: "positive",
       },
       {
         id: id + "-node-2",
         x: 30,
         y: -2,
         parentId: id,
-        polarity: "positive",
+        polarity: "negative",
       },
     ],
     properties: {
