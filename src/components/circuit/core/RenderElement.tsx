@@ -3,6 +3,7 @@ import { Circle, Group, Rect } from "react-konva";
 import Lightbulb from "../elements/Lightbulb";
 import { KonvaEventObject } from "konva/lib/Node";
 import Battery from "../elements/Battery";
+import Led from "../elements/Led";
 import Resistor from "../elements/Resistor";
 import Multimeter from "../elements/Multimeter";
 import Potentiometer from "../elements/Potentiometer";
@@ -22,7 +23,6 @@ export default function RenderElement({
     <Group
       x={element.x}
       y={element.y}
-      draggable
       onDragMove={props.onDragMove}
       onClick={() => {
         props.onSelect?.(element.id);
@@ -32,6 +32,15 @@ export default function RenderElement({
     >
       {element.type === "lightbulb" && (
         <Lightbulb
+          id={element.id}
+          x={0}
+          y={0}
+          children={undefined}
+          current={element.computed?.current ?? 0}
+        />
+      )}
+      {element.type === "led" && (
+        <Led
           id={element.id}
           x={0}
           y={0}
@@ -84,8 +93,8 @@ export default function RenderElement({
             node.polarity === "positive"
               ? "green"
               : node.polarity === "negative"
-              ? "red"
-              : "black"
+                ? "red"
+                : "black"
           }
           onClick={() => props.handleNodeClick(node.id)}
           hitStrokeWidth={10}

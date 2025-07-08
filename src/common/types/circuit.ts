@@ -55,3 +55,11 @@ export type CircuitElementProps = {
     minResistance?: number;
   };
 };
+
+export type PaletteElementType =
+  | "lightbulb"
+  | "battery"
+  | "resistor"
+  | "multimeter"
+  | "potentiometer"
+  | "led";

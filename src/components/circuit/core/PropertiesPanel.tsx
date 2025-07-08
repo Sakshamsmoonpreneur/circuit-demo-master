@@ -64,83 +64,96 @@ export default function PropertiesPanel({
   };
 
   return (
-    <div className="bg-white h-1/2 border-l border-black-200 shadow-md p-4 overflow-y-auto flex flex-col gap-4">
-      <h2 className="text-xl font-medium">Properties</h2>
-      {/* Render properties form here */}
-      {/* edit resistance */}
-      <div className="flex flex-col gap-2">
-        {/* element type */}
-        <div className="flex gap-2 items-center">
-          <label className="font-semibold">Element Type:</label>
-          <span className="ml-2">{selectedElement.type}</span>
-        </div>
-
-        <div className="flex gap-2 items-center">
-          <label className="font-semibold">Element ID:</label>
-          <span className="ml-2">{selectedElement.id}</span>
-        </div>
+    <div className="bg-blue-100 h-1/2 border-l border-gray-300 shadow-md flex flex-col">
+      {/* Top Header */}
+      <div className="bg-blue-200 px-4 py-2 border-b border-gray-300 shadow-sm">
+        <h2 className="text-2xl font-bold text-gray-700 mb-6 flex items-center gap-2">
+          Properties
+        </h2>
       </div>
 
-      {resistance != null && (
-        <div className="flex flex-row gap-4 items-center">
-          <label>Resistance:</label>
-          <input
-            type="number"
-            className="border border-gray-300 rounded px-2 py-1 w-24"
-            value={resistance}
-            onChange={(e) => setResistance(Number(e.target.value))}
-          />
+      {/* Body */}
+      <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-5">
+        {/* Info Section */}
+        <div className="text-sm text-gray-800 space-y-2">
+          <div className="flex justify-between">
+            <span className="font-semibold">Element Type:</span>
+            <span>{selectedElement.type}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="font-semibold">Element ID:</span>
+            <span>{selectedElement.id}</span>
+          </div>
         </div>
-      )}
 
-      {voltage != null && (
-        <div className="flex flex-row gap-4 items-center">
-          <label>Voltage:</label>
-          <input
-            type="number"
-            className="border border-gray-300 rounded px-2 py-1 w-24"
-            value={voltage}
-            onChange={(e) => setVoltage(Number(e.target.value))}
-          />
+        {/* Resistance Field */}
+        {resistance != null && (
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700">Resistance (Ω):</label>
+            <input
+              type="number"
+              value={resistance}
+              onChange={(e) => setResistance(Number(e.target.value))}
+              className="mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-300 focus:ring-1 outline-none"
+            />
+          </div>
+        )}
+
+        {/* Voltage Field */}
+        {voltage != null && (
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700">Voltage (V):</label>
+            <input
+              type="number"
+              value={voltage}
+              onChange={(e) => setVoltage(Number(e.target.value))}
+              className="mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-300 focus:ring-1 outline-none"
+            />
+          </div>
+        )}
+
+        {/* Min Resistance */}
+        {minResistance !== null && (
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700">Min Resistance (Ω):</label>
+            <input
+              type="number"
+              value={minResistance}
+              onChange={(e) => setMinResistance(Number(e.target.value))}
+              className="mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-300 focus:ring-1 outline-none"
+            />
+          </div>
+        )}
+
+        {/* Max Resistance */}
+        {maxResistance !== null && (
+          <div className="flex flex-col">
+            <label className="text-sm font-medium text-gray-700">Max Resistance (Ω):</label>
+            <input
+              type="number"
+              value={maxResistance}
+              onChange={(e) => setMaxResistance(Number(e.target.value))}
+              className="mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-300 focus:ring-1 outline-none"
+            />
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div className="mt-4 flex gap-4">
+          <button
+            className="flex-1 bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600 transition"
+            onClick={handleUpdate}
+          >
+            Update
+          </button>
+          <button
+            className="flex-1 bg-red-500 text-white py-2 rounded-md hover:bg-red-600 transition"
+            onClick={handleDelete}
+          >
+            Delete
+          </button>
         </div>
-      )}
-
-      {minResistance !== null && (
-        <div className="flex flex-row gap-4 items-center">
-          <label>Min Resistance:</label>
-          <input
-            type="number"
-            className="border border-gray-300 rounded px-2 py-1 w-24"
-            value={minResistance}
-            onChange={(e) => setMinResistance(Number(e.target.value))}
-          />
-        </div>
-      )}
-
-      {maxResistance !== null && (
-        <div className="flex flex-row gap-4 items-center">
-          <label>Max Resistance:</label>
-          <input
-            type="number"
-            className="border border-gray-300 rounded px-2 py-1 w-24"
-            value={maxResistance}
-            onChange={(e) => setMaxResistance(Number(e.target.value))}
-          />
-        </div>
-      )}
-
-      <button
-        className="rounded-md bg-blue-400 text-black cursor-pointer hover:bg-blue-500 transition-all duration-200 px-4 py-2"
-        onClick={handleUpdate}
-      >
-        Update
-      </button>
-      <button
-        className="rounded-md bg-red-400 text-black cursor-pointer hover:bg-red-500 transition-all duration-200 px-4 py-2"
-        onClick={handleDelete}
-      >
-        Delete
-      </button>
+      </div>
     </div>
   );
 }

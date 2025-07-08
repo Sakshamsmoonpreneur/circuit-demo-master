@@ -1,11 +1,8 @@
 // /src/common/data/elements-api.ts
 
-export type PaletteElementType =
-  | "lightbulb"
-  | "battery"
-  | "resistor"
-  | "multimeter"
-  | "potentiometer";
+import { PaletteElementType } from "../types/circuit";
+
+
 
 export interface PaletteElement {
   type: PaletteElementType;
@@ -46,6 +43,12 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "potentiometer",
     label: "Potentiometer",
     iconPath: "/circuit_elements/potentiometer.svg",
+    defaultProps: { resistance: 10 },
+  },
+  {
+    type: "led",
+    label: "Led",
+    iconPath: "/circuit_elements/led.svg",
     defaultProps: { resistance: 10 },
   },
 ];

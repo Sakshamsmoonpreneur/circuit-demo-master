@@ -13,8 +13,8 @@ import { DebugBox } from "@/components/debug/DebugBox";
 import createElement from "./createElement"; // Adjust the import path as necessary
 import solveCircuit from "./CircuitSolver";
 import { json } from "stream/consumers";
-import Palette from "../elements/Palette";
 import PropertiesPanel from "./PropertiesPanel";
+import CircuitPalette from "./CircuitPalette";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -118,7 +118,7 @@ export default function CircuitCanvas() {
 
     const clickedEnd =
       dist(clickPos, { x: fromNode.x, y: fromNode.y }) <
-      dist(clickPos, { x: toNode.x, y: toNode.y })
+        dist(clickPos, { x: toNode.x, y: toNode.y })
         ? "from"
         : "to";
 
@@ -194,9 +194,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, resistance },
-            }
+            ...el,
+            properties: { ...el.properties, resistance },
+          }
           : el
       )
     );
@@ -240,9 +240,8 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${
-          showDebugBox ? "w-[25%]" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
+          }`}
       >
         <button
           className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -279,12 +278,12 @@ export default function CircuitCanvas() {
                   points={points}
                   stroke={
                     getNodeById(wire.fromNodeId)?.polarity === "negative" &&
-                    getNodeById(wire.toNodeId)?.polarity === "negative"
+                      getNodeById(wire.toNodeId)?.polarity === "negative"
                       ? "red"
                       : getNodeById(wire.fromNodeId)?.polarity === "positive" &&
                         getNodeById(wire.toNodeId)?.polarity === "positive"
-                      ? "green"
-                      : "black"
+                        ? "green"
+                        : "black"
                   }
                   strokeWidth={3}
                   hitStrokeWidth={15}
@@ -341,9 +340,8 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${
-          showPalette ? "w-[25%]" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
+          }`}
       >
         <button
           className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -351,7 +349,7 @@ export default function CircuitCanvas() {
         >
           {showPalette ? "⇢" : "⇠"}
         </button>
-        {showPalette && <Palette />}
+        {showPalette && <CircuitPalette />}
         {showPalette && selectedElement && (
           <PropertiesPanel
             selectedElement={selectedElement}

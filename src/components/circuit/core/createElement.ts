@@ -72,14 +72,14 @@ export default function createElement(
     nodes: [
       {
         id: id + "-node-1",
-        x: 2,
-        y: 40,
+        x: 1,
+        y: 42,
         parentId: id,
       },
       {
         id: id + "-node-2",
-        x: 40,
-        y: 40,
+        x: 42,
+        y: 42,
         parentId: id,
       },
     ],
@@ -131,14 +131,45 @@ export default function createElement(
       {
         id: id + "-node-1",
         x: 10,
-        y: 20,
+        y: 23,
         parentId: id,
       },
       {
         id: id + "-node-2",
-        x: 30,
-        y: 20,
+        x: 43,
+        y: 23,
         parentId: id,
+      },
+    ],
+    properties: {
+      ...{
+        voltage: props.properties?.voltage,
+        resistance: props.properties?.resistance ?? 10,
+        maxResistance: props.properties?.maxResistance ?? 20,
+        minResistance: props.properties?.minResistance ?? 0,
+      },
+      ...props.properties,
+    },
+  };
+  const ledElement = {
+    id,
+    type: props.type,
+    x: props.pos.x,
+    y: props.pos.y,
+    nodes: [
+      {
+        id: id + "-node-1",
+        x: 13,
+        y: 40,
+        parentId: id,
+        polarity: "negative",
+      },
+      {
+        id: id + "-node-2",
+        x: 27,
+        y: 40,
+        parentId: id,
+        polarity: "positive",
       },
     ],
     properties: {
@@ -169,6 +200,9 @@ export default function createElement(
       break;
     case "potentiometer":
       element = potentiometerElement;
+      break;
+    case "led":
+      element = ledElement;
       break;
     default:
       element = null;
