@@ -2,8 +2,6 @@
 
 import { PaletteElementType } from "../types/circuit";
 
-
-
 export interface PaletteElement {
   type: PaletteElementType;
   label: string;
@@ -19,13 +17,13 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "lightbulb",
     label: "Lightbulb",
     iconPath: "/circuit_elements/bulb-off.svg",
-    defaultProps: { resistance: 1 },
+    defaultProps: { resistance: 50 },
   },
   {
     type: "battery",
     label: "Battery",
     iconPath: "/circuit_elements/battery.svg",
-    defaultProps: { voltage: 20, resistance: 1 },
+    defaultProps: { voltage: 9, resistance: 1 },
   },
   {
     type: "resistor",
