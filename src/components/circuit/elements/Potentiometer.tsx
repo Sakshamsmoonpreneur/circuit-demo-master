@@ -11,6 +11,7 @@ interface PotentiometerProps extends BaseElementProps {
   onResistanceChange?: (resistance: number) => void;
   minResistance?: number; // Optional min resistance
   maxResistance?: number; // Optional max resistance
+  resistance?: number; // Current resistance value
 }
 
 export default function Potentiometer(props: PotentiometerProps) {
@@ -26,11 +27,22 @@ export default function Potentiometer(props: PotentiometerProps) {
   const minResistance = props.minResistance ?? 0; // Default to 0 if not provided
   const maxResistance = props.maxResistance ?? 10000; // Default to 10k
 
-  const resistance = Math.round(
+  let resistance = Math.round(
     ((angle - minAngle) / (maxAngle - minAngle)) *
       (maxResistance - minResistance) +
       minResistance
   );
+
+  useEffect(() => {
+    if (typeof props.resistance === "number") {
+      const newAngle =
+        ((props.resistance - minResistance) / (maxResistance - minResistance)) *
+          (maxAngle - minAngle) +
+        minAngle;
+
+      setAngle(clampAngle(newAngle));
+    }
+  }, [props.resistance, minResistance, maxResistance]);
 
   useEffect(() => {
     props.onResistanceChange?.(resistance);

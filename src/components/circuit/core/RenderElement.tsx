@@ -1,5 +1,5 @@
 import { CircuitElement } from "@/common/types/circuit";
-import { Circle, Group } from "react-konva";
+import { Circle, Group, Rect } from "react-konva";
 import Lightbulb from "../elements/Lightbulb";
 import { KonvaEventObject } from "konva/lib/Node";
 import Battery from "../elements/Battery";
@@ -15,6 +15,8 @@ export default function RenderElement({
   onDragMove: (e: KonvaEventObject<DragEvent>) => void;
   handleNodeClick: (nodeId: string) => void;
   handleResistanceChange?: (elementId: string, resistance: number) => void;
+  onSelect?: (elementId: string) => void;
+  selectedElementId?: string | null;
 }) {
   return (
     <Group
@@ -22,6 +24,9 @@ export default function RenderElement({
       y={element.y}
       draggable
       onDragMove={props.onDragMove}
+      onClick={() => {
+        props.onSelect?.(element.id);
+      }}
       id={element.id}
       draggable={true}
     >
@@ -62,8 +67,9 @@ export default function RenderElement({
           onResistanceChange={(resistance) => {
             props.handleResistanceChange?.(element.id, resistance);
           }}
-          minResistance={0}
-          maxResistance={20}
+          minResistance={element.properties?.minResistance ?? 0}
+          maxResistance={element.properties?.maxResistance ?? 20}
+          resistance={element.properties?.resistance}
         />
       )}
 
@@ -74,7 +80,13 @@ export default function RenderElement({
           x={node.x}
           y={node.y}
           radius={5}
-          fill={node.fill || "black"}
+          fill={
+            node.polarity === "positive"
+              ? "green"
+              : node.polarity === "negative"
+              ? "red"
+              : "black"
+          }
           onClick={() => props.handleNodeClick(node.id)}
           hitStrokeWidth={10}
           onMouseEnter={(e) => {

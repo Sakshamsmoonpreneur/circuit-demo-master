@@ -40,7 +40,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "multimeter",
     label: "Multimeter",
     iconPath: "/circuit_elements/Multimeter.svg",
-    defaultProps: { voltage: 0, resistance: 10 },
+    defaultProps: { resistance: 10 },
   },
   {
     type: "potentiometer",

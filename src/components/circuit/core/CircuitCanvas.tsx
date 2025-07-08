@@ -14,6 +14,7 @@ import createElement from "./createElement"; // Adjust the import path as necess
 import solveCircuit from "./CircuitSolver";
 import { json } from "stream/consumers";
 import Palette from "../elements/Palette";
+import PropertiesPanel from "./PropertiesPanel";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -26,6 +27,10 @@ export default function CircuitCanvas() {
   const [wireCounter, setWireCounter] = useState(0);
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(true);
+
+  const [selectedElement, setSelectedElement] = useState<CircuitElement | null>(
+    null
+  );
 
   const [creatingWireStartNode, setCreatingWireStartNode] = useState<
     string | null
@@ -247,7 +252,7 @@ export default function CircuitCanvas() {
         </button>
         {showDebugBox && (
           <DebugBox
-            data={{ mousePos, elements, wires }}
+            data={{ mousePos, selectedElement, editingWire, elements, wires }}
             className="w-full h-full p-4"
           />
         )}
@@ -273,11 +278,11 @@ export default function CircuitCanvas() {
                   key={wire.id}
                   points={points}
                   stroke={
-                    getNodeById(wire.fromNodeId)?.fill === "red" &&
-                    getNodeById(wire.toNodeId)?.fill === "red"
+                    getNodeById(wire.fromNodeId)?.polarity === "negative" &&
+                    getNodeById(wire.toNodeId)?.polarity === "negative"
                       ? "red"
-                      : getNodeById(wire.fromNodeId)?.fill === "green" &&
-                        getNodeById(wire.toNodeId)?.fill === "green"
+                      : getNodeById(wire.fromNodeId)?.polarity === "positive" &&
+                        getNodeById(wire.toNodeId)?.polarity === "positive"
                       ? "green"
                       : "black"
                   }
@@ -321,6 +326,13 @@ export default function CircuitCanvas() {
                 onDragMove={handleElementDragMove}
                 handleNodeClick={handleNodeClick}
                 handleResistanceChange={handleResistanceChange}
+                onSelect={(id) => {
+                  // Only set selectedElement if it's not already selected
+                  if (selectedElement?.id !== id) {
+                    setSelectedElement(getElementById(id) ?? null);
+                  }
+                }}
+                selectedElementId={selectedElement?.id || null}
               />
             ))}
           </Layer>
@@ -329,7 +341,7 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-black border-l border-black-200 shadow-md overflow-auto ${
+        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${
           showPalette ? "w-[25%]" : "w-10"
         }`}
       >
@@ -340,6 +352,46 @@ export default function CircuitCanvas() {
           {showPalette ? "⇢" : "⇠"}
         </button>
         {showPalette && <Palette />}
+        {showPalette && selectedElement && (
+          <PropertiesPanel
+            selectedElement={selectedElement}
+            onEdit={(
+              updatedElement: CircuitElement,
+              deleteElement: boolean
+            ) => {
+              if (deleteElement) {
+                const updatedWires = wires.filter(
+                  (wire) =>
+                    getNodeParent(wire.fromNodeId)?.id !== updatedElement.id &&
+                    getNodeParent(wire.toNodeId)?.id !== updatedElement.id
+                );
+
+                setWires(updatedWires);
+
+                setElements((prev) =>
+                  prev.filter((el) => el.id !== updatedElement.id)
+                );
+
+                setSelectedElement(null);
+                setCreatingWireStartNode(null);
+                setEditingWire(null);
+
+                computeCircuit(updatedWires); // ✅ Pass updated wires directly
+              } else {
+                setElements((prev) =>
+                  prev.map((el) =>
+                    el.id === updatedElement.id ? updatedElement : el
+                  )
+                );
+
+                computeCircuit(wires); // Recompute circuit after editing
+                setCreatingWireStartNode(null);
+                setEditingWire(null);
+                setSelectedElement(updatedElement);
+              }
+            }}
+          />
+        )}
       </div>
     </div>
   );

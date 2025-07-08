@@ -6,7 +6,7 @@ export default function createElement(
 ): CircuitElement | null {
   const id = props.type + "-" + props.idNumber;
 
-  const batteryElement = {
+  const batteryElement: CircuitElement = {
     id,
     type: props.type,
     x: props.pos.x,
@@ -17,14 +17,14 @@ export default function createElement(
         x: 10,
         y: -2,
         parentId: id,
-        fill: "red",
+        polarity: "negative",
       },
       {
         id: id + "-node-2",
         x: 30,
         y: -2,
         parentId: id,
-        fill: "green",
+        polarity: "positive",
       },
     ],
     properties: {
@@ -47,19 +47,17 @@ export default function createElement(
         x: 10,
         y: 40,
         parentId: id,
-        fill: "red",
       },
       {
         id: id + "-node-2",
         x: 30,
         y: 40,
         parentId: id,
-        fill: "green",
       },
     ],
     properties: {
       ...{
-        voltage: props.properties?.voltage ?? 0,
+        voltage: props.properties?.voltage,
         resistance: props.properties?.resistance ?? 10,
       },
       ...props.properties,
@@ -77,19 +75,17 @@ export default function createElement(
         x: 2,
         y: 40,
         parentId: id,
-        fill: "red",
       },
       {
         id: id + "-node-2",
         x: 40,
         y: 40,
         parentId: id,
-        fill: "green",
       },
     ],
     properties: {
       ...{
-        voltage: props.properties?.voltage ?? 0,
+        voltage: props.properties?.voltage,
         resistance: props.properties?.resistance ?? 10,
       },
       ...props.properties,
@@ -107,19 +103,19 @@ export default function createElement(
         x: 10,
         y: 20,
         parentId: id,
-        fill: "red",
+        polarity: "negative",
       },
       {
         id: id + "-node-2",
         x: 30,
         y: 20,
         parentId: id,
-        fill: "green",
+        polarity: "positive",
       },
     ],
     properties: {
       ...{
-        voltage: props.properties?.voltage ?? 0,
+        voltage: props.properties?.voltage,
         resistance: props.properties?.resistance ?? 10,
       },
       ...props.properties,
@@ -137,20 +133,20 @@ export default function createElement(
         x: 10,
         y: 20,
         parentId: id,
-        fill: "red",
       },
       {
         id: id + "-node-2",
         x: 30,
         y: 20,
         parentId: id,
-        fill: "green",
       },
     ],
     properties: {
       ...{
-        voltage: props.properties?.voltage ?? 0,
+        voltage: props.properties?.voltage,
         resistance: props.properties?.resistance ?? 10,
+        maxResistance: props.properties?.maxResistance ?? 20,
+        minResistance: props.properties?.minResistance ?? 0,
       },
       ...props.properties,
     },
