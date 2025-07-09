@@ -32,6 +32,7 @@ export default function CircuitCanvas() {
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(true);
   const [selectedWireId, setSelectedWireId] = useState<string | null>(null);
+  const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
   >([]);
@@ -367,7 +368,7 @@ export default function CircuitCanvas() {
           onMouseMove={handleStageMouseMove}
           onClick={handleStageClick}
           className="bg-blue-200"
-          draggable
+          draggable // after i made this draggable the wires are not working as expected while being drawn
         >
           <Layer>
             {/* Render wires */}
@@ -425,11 +426,14 @@ export default function CircuitCanvas() {
                 };
 
                 const inProgressPoints: number[] = [
-                  startPos.x,
-                  startPos.y,
-                  ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
-                  mousePos.x,
-                  mousePos.y,
+                  startPos.x - stagePosition.x,
+                  startPos.y - stagePosition.y,
+                  ...creatingWireJoints.flatMap((p) => [
+                    p.x - stagePosition.x,
+                    p.y - stagePosition.y,
+                  ]),
+                  mousePos.x - stagePosition.x,
+                  mousePos.y - stagePosition.y,
                 ];
 
                 return (
