@@ -16,6 +16,9 @@ import { json } from "stream/consumers";
 import PropertiesPanel from "./PropertiesPanel";
 import CircuitPalette from "./CircuitPalette";
 import GetCircuitOutput from "@/utils/GetCircuitOutput";
+import CircuitCreate from "./CircuitCreate";
+import CircuitPicker from "./CircuitPicker";
+import { getCircuitById } from "./CircuitSaver";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -29,7 +32,11 @@ export default function CircuitCanvas() {
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(true);
   const [selectedWireId, setSelectedWireId] = useState<string | null>(null);
-  const [creatingWireJoints, setCreatingWireJoints] = useState<{ x: number; y: number }[]>([]);
+  const [creatingWireJoints, setCreatingWireJoints] = useState<
+    { x: number; y: number }[]
+  >([]);
+
+  const [simulationRunning, setSimulationRunning] = useState(false);
 
   const [selectedElement, setSelectedElement] = useState<CircuitElement | null>(
     null
@@ -59,6 +66,11 @@ export default function CircuitCanvas() {
         setCreatingWireStartNode(null);
         setEditingWire(null);
       }
+      // if ctrl + L is pressed
+      if (e.ctrlKey && e.key === "l") {
+        e.preventDefault(); // Prevent default behavior
+        resetState();
+      }
       if (e.key === "Delete") {
         e.preventDefault(); // Prevent default delete behavior
         if (selectedElement) {
@@ -74,7 +86,8 @@ export default function CircuitCanvas() {
               getNodeParent(wire.toNodeId)?.id !== selectedElement.id
           );
           setWires(updatedWires);
-          computeCircuit(updatedWires); // Recompute circuit after deletion
+          //computeCircuit(updatedWires); // Recompute circuit after deletion
+          stopSimulation();
 
           setSelectedElement(null);
           setCreatingWireStartNode(null);
@@ -86,6 +99,27 @@ export default function CircuitCanvas() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mousePos, elements]);
+
+  function stopSimulation() {
+    setSimulationRunning(false);
+    setElements((prev) =>
+      prev.map((el) => ({
+        ...el,
+        // set computed values to undefined when simulation stops
+        computed: {
+          current: undefined,
+          voltage: undefined,
+          power: undefined,
+          measurement: el.computed?.measurement ?? undefined,
+        },
+      }))
+    );
+  }
+
+  function startSimulation() {
+    setSimulationRunning(true);
+    computeCircuit(wires);
+  }
 
   function getNodeById(nodeId: string) {
     return elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
@@ -112,7 +146,8 @@ export default function CircuitCanvas() {
     if (editingWire) {
       const updated = wires.filter((w) => w.id !== editingWire.wireId);
       setWires(updated);
-      computeCircuit(updated);
+      //computeCircuit(updated);
+      stopSimulation();
       setEditingWire(null);
       return;
     }
@@ -121,8 +156,6 @@ export default function CircuitCanvas() {
       setCreatingWireJoints((prev) => [...prev, pos]);
     }
   }
-
-
 
   function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
     const id = e.target.id();
@@ -190,14 +223,13 @@ export default function CircuitCanvas() {
       const updatedWires = [...wires, newWire];
       setWires(updatedWires);
       setWireCounter((c) => c + 1);
-      computeCircuit(updatedWires);
+      //computeCircuit(updatedWires);
+      stopSimulation();
 
       setCreatingWireStartNode(null);
       setCreatingWireJoints([]);
     }
   }
-
-
 
   function computeCircuit(wiresSnapshot: Wire[]) {
     setElements((prevElements) => solveCircuit(prevElements, wiresSnapshot));
@@ -209,13 +241,14 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, resistance },
-          }
+              ...el,
+              properties: { ...el.properties, resistance },
+            }
           : el
       )
     );
-    computeCircuit(wires);
+    //computeCircuit(wires);
+    stopSimulation();
   }
 
   function handleModeChange(elementId: string, mode: "voltage" | "current") {
@@ -223,13 +256,13 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
-    computeCircuit(wires);
+    if (simulationRunning) computeCircuit(wires);
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
@@ -266,10 +299,10 @@ export default function CircuitCanvas() {
     const toPolarity = getNodeById(wire.toNodeId)?.polarity;
 
     if (fromPolarity === "negative" && toPolarity === "negative") return "red";
-    if (fromPolarity === "positive" && toPolarity === "positive") return "green";
+    if (fromPolarity === "positive" && toPolarity === "positive")
+      return "green";
     return "black";
   };
-
 
   return (
     <div
@@ -279,8 +312,9 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
-          }`}
+        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${
+          showDebugBox ? "w-[25%]" : "w-10"
+        }`}
       >
         <button
           className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -298,6 +332,34 @@ export default function CircuitCanvas() {
 
       {/* Canvas */}
       <div className="flex-grow h-full">
+        {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
+        <div className="bg-blue-50 px-2 py-2 rounded-md shadow-md absolute top-4 left-1/2 transform -translate-x-1/2 z-10 cursor-pointer flex flex-row gap-4 items-center justify-center">
+          <button
+            className={`px-4 py-2 rounded ${
+              simulationRunning ? "bg-red-500" : "bg-green-500"
+            } text-white`}
+            onClick={() => {
+              if (simulationRunning) {
+                stopSimulation();
+              } else {
+                startSimulation();
+              }
+            }}
+          >
+            {simulationRunning ? "Stop Simulation" : "Start Simulation"}
+          </button>
+          <CircuitCreate elements={elements} wires={wires} />
+          <CircuitPicker
+            onCircuitSelect={function (circuitId: string): void {
+              const data = getCircuitById(circuitId);
+              if (!data) return;
+
+              resetState();
+              setElements(data.elements);
+              setWires(data.wires);
+            }}
+          />
+        </div>
         <Stage
           id="canvas-stage"
           width={window.innerWidth * 0.5}
@@ -309,8 +371,8 @@ export default function CircuitCanvas() {
             {/* Render wires */}
             {wires.map((wire) => {
               const points = getWirePoints(wire);
-              console.log(points)
-              console.log('length' + points.length)
+              console.log(points);
+              console.log("length" + points.length);
               // 🛠 Fix: If wire has no joints, inject midpoint for Konva to render
               if (points.length == 4) {
                 // Two points only: start.x, start.y, end.x, end.y
@@ -325,7 +387,9 @@ export default function CircuitCanvas() {
                   <Line
                     points={points}
                     stroke={
-                      selectedElement?.id === wire.id ? "orange" : getWireColor(wire)
+                      selectedElement?.id === wire.id
+                        ? "orange"
+                        : getWireColor(wire)
                     }
                     strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
                     hitStrokeWidth={12}
@@ -402,8 +466,9 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
-          }`}
+        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${
+          showPalette ? "w-[25%]" : "w-10"
+        }`}
       >
         <button
           className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -426,26 +491,30 @@ export default function CircuitCanvas() {
                 );
 
                 setWires(updatedWires);
-                setElements((prev) => prev.filter((el) => el.id !== updatedElement.id));
+                setElements((prev) =>
+                  prev.filter((el) => el.id !== updatedElement.id)
+                );
                 setSelectedElement(null);
                 setCreatingWireStartNode(null);
                 setEditingWire(null);
-                computeCircuit(updatedWires);
+                //computeCircuit(updatedWires);
+                stopSimulation();
               } else {
                 setElements((prev) =>
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                        ...el,
-                        ...updatedElement,
-                        x: el.x,
-                        y: el.y,
-                      }
+                          ...el,
+                          ...updatedElement,
+                          x: el.x,
+                          y: el.y,
+                        }
                       : el
                   )
                 );
 
-                computeCircuit(wires);
+                //computeCircuit(wires);
+                stopSimulation();
                 setSelectedElement(updatedElement);
                 setCreatingWireStartNode(null);
                 setEditingWire(null);
@@ -457,12 +526,16 @@ export default function CircuitCanvas() {
                 setSelectedElement(null);
                 setCreatingWireStartNode(null);
                 setEditingWire(null);
-                computeCircuit(wires.filter((w) => w.id !== updatedWire.id));
+                //computeCircuit(wires.filter((w) => w.id !== updatedWire.id));
+                stopSimulation();
               } else {
                 setWires((prev) =>
-                  prev.map((w) => (w.id === updatedWire.id ? { ...w, ...updatedWire } : w))
+                  prev.map((w) =>
+                    w.id === updatedWire.id ? { ...w, ...updatedWire } : w
+                  )
                 );
-                computeCircuit(wires);
+                //computeCircuit(wires);
+                stopSimulation();
               }
             }}
             onEditWireSelect={(wire) => {
