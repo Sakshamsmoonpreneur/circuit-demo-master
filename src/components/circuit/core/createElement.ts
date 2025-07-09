@@ -29,8 +29,8 @@ export default function createElement(
     ],
     properties: {
       ...{
-        voltage: props.properties?.voltage ?? 9,
-        resistance: props.properties?.resistance ?? 0,
+        voltage: props.properties?.voltage ?? 20,
+        resistance: props.properties?.resistance ?? 1,
       },
       ...props.properties,
     },
@@ -58,7 +58,7 @@ export default function createElement(
     properties: {
       ...{
         voltage: props.properties?.voltage,
-        resistance: props.properties?.resistance ?? 10,
+        resistance: props.properties?.resistance ?? 1,
       },
       ...props.properties,
     },
@@ -86,7 +86,7 @@ export default function createElement(
     properties: {
       ...{
         voltage: props.properties?.voltage,
-        resistance: props.properties?.resistance ?? 10,
+        resistance: props.properties?.resistance ?? 5,
       },
       ...props.properties,
     },
@@ -116,7 +116,7 @@ export default function createElement(
     properties: {
       ...{
         voltage: props.properties?.voltage,
-        resistance: props.properties?.resistance ?? 10,
+        resistance: props.properties?.resistance ?? 11,
       },
       ...props.properties,
     },
@@ -144,9 +144,9 @@ export default function createElement(
     properties: {
       ...{
         voltage: props.properties?.voltage,
-        resistance: props.properties?.resistance ?? 10,
+        resistance: props.properties?.resistance ?? 2,
         maxResistance: props.properties?.maxResistance ?? 20,
-        minResistance: props.properties?.minResistance ?? 0,
+        minResistance: props.properties?.minResistance ?? 1,
       },
       ...props.properties,
     },
@@ -175,9 +175,7 @@ export default function createElement(
     properties: {
       ...{
         voltage: props.properties?.voltage,
-        resistance: props.properties?.resistance ?? 10,
-        maxResistance: props.properties?.maxResistance ?? 20,
-        minResistance: props.properties?.minResistance ?? 0,
+        resistance: props.properties?.resistance ?? 1,
       },
       ...props.properties,
     },

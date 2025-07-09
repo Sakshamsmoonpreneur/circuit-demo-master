@@ -54,9 +54,10 @@ export default function CircuitCanvas() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && e.shiftKey) {
+      if (e.key === "Escape") {
         e.preventDefault(); // Prevent default behavior (e.g. exiting fullscreen)
-        resetState();
+        setCreatingWireStartNode(null);
+        setEditingWire(null);
       }
       if (e.key === "Delete") {
         e.preventDefault(); // Prevent default delete behavior
@@ -104,19 +105,6 @@ export default function CircuitCanvas() {
     if (pos) setMousePos(pos);
   }
 
-  // function handleStageClick(e: KonvaEventObject<MouseEvent>) {
-  //   if (editingWire) {
-  //     const updated = wires.filter((w) => w.id !== editingWire.wireId);
-  //     setWires(updated);
-  //     computeCircuit(updated); // 👈 Update light status after wire deletion
-  //     setEditingWire(null);
-  //   }
-
-  //   if (creatingWireStartNode) {
-  //     setCreatingWireStartNode(null);
-  //   }
-  // }
-
   function handleStageClick(e: KonvaEventObject<MouseEvent>) {
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
@@ -129,7 +117,6 @@ export default function CircuitCanvas() {
       return;
     }
 
-    // If wire drawing is active, add intermediate joint
     if (creatingWireStartNode) {
       setCreatingWireJoints((prev) => [...prev, pos]);
     }
@@ -148,87 +135,6 @@ export default function CircuitCanvas() {
       )
     );
   }
-
-  // function handleWireClick(
-  //   e: KonvaEventObject<MouseEvent>,
-  //   wireId: string,
-  //   fromNode: Node,
-  //   toNode: Node
-  // ) {
-  //   const clickPos = e.target.getStage()?.getPointerPosition();
-  //   if (!clickPos) return;
-
-  //   const dist = (p1: { x: number; y: number }, p2: { x: number; y: number }) =>
-  //     Math.hypot(p1.x - p2.x, p1.y - p2.y);
-
-  //   const clickedEnd =
-  //     dist(clickPos, { x: fromNode.x, y: fromNode.y }) <
-  //       dist(clickPos, { x: toNode.x, y: toNode.y })
-  //       ? "from"
-  //       : "to";
-
-  //   setEditingWire({ wireId, end: clickedEnd });
-  //   setCreatingWireStartNode(null); // cancel any wire creation
-  // }
-
-  function handleWireClick(e: KonvaEventObject<MouseEvent>, wireId: string) {
-    setSelectedWireId(wireId);
-  }
-
-
-
-  // function getWirePoints(wire: Wire): [number, number, number, number] | null {
-  //   const fromNode = getNodeById(wire.fromNodeId);
-  //   const toNode = getNodeById(wire.toNodeId);
-  //   if (!fromNode || !toNode) return null;
-
-  //   const getAbsolutePos = (node: Node) => {
-  //     const parent = getNodeParent(node.id);
-  //     return {
-  //       x: node.x + (parent?.x ?? 0),
-  //       y: node.y + (parent?.y ?? 0),
-  //     };
-  //   };
-
-  //   const isEditingFrom =
-  //     editingWire?.wireId === wire.id && editingWire.end === "from";
-  //   const isEditingTo =
-  //     editingWire?.wireId === wire.id && editingWire.end === "to";
-
-  //   const start = isEditingFrom ? mousePos : getAbsolutePos(fromNode);
-  //   const end = isEditingTo ? mousePos : getAbsolutePos(toNode);
-
-  //   return [start.x, start.y, end.x, end.y];
-  // }
-
-
-  // function getWirePoints(wire: Wire): number[] | null {
-  //   const fromNode = getNodeById(wire.fromNodeId);
-  //   const toNode = getNodeById(wire.toNodeId);
-  //   if (!fromNode || !toNode) return null;
-
-  //   const getAbsolutePos = (node: Node) => {
-  //     const parent = getNodeParent(node.id);
-  //     return {
-  //       x: node.x + (parent?.x ?? 0),
-  //       y: node.y + (parent?.y ?? 0),
-  //     };
-  //   };
-
-  //   const fromPos = getAbsolutePos(fromNode);
-  //   const toPos = getAbsolutePos(toNode);
-  //   const midPoints = wire.points || [];
-
-  //   const points: number[] = [
-  //     fromPos.x,
-  //     fromPos.y,
-  //     ...midPoints.flatMap((p) => [p.x, p.y]),
-  //     toPos.x,
-  //     toPos.y,
-  //   ];
-
-  //   return points;
-  // }
 
   function getWirePoints(wire: Wire): number[] {
     const fromNode = getNodeById(wire.fromNodeId);
@@ -253,45 +159,6 @@ export default function CircuitCanvas() {
 
     return [start.x, start.y, ...jointPoints, end.x, end.y];
   }
-
-
-
-
-
-  // function handleNodeClick(nodeId: string) {
-  //   if (editingWire) {
-  //     // Finish editing wire
-  //     setWires((prev) =>
-  //       prev.map((wire) =>
-  //         wire.id === editingWire.wireId
-  //           ? { ...wire, [editingWire.end]: nodeId }
-  //           : wire
-  //       )
-  //     );
-  //     setEditingWire(null);
-  //   } else if (creatingWireStartNode === null) {
-  //     // Start new wire
-  //     setCreatingWireStartNode(nodeId);
-  //   } else if (creatingWireStartNode === nodeId) {
-  //     // Cancel new wire
-  //     setCreatingWireStartNode(null);
-  //   } else {
-  //     // Complete new wire
-  //     const newWire: Wire = {
-  //       id: `wire-${wireCounter}`,
-  //       fromNodeId: creatingWireStartNode,
-  //       toNodeId: nodeId,
-  //       joints: [],
-  //     };
-
-  //     const updatedWires = [...wires, newWire];
-
-  //     setWires(updatedWires);
-  //     setWireCounter((c) => c + 1);
-  //     computeCircuit(updatedWires);
-  //     setCreatingWireStartNode(null);
-  //   }
-  // }
 
   function handleNodeClick(nodeId: string) {
     if (editingWire) {
@@ -442,40 +309,27 @@ export default function CircuitCanvas() {
             {/* Render wires */}
             {wires.map((wire) => {
               const points = getWirePoints(wire);
-              if (!points) return null;
+              console.log(points)
+              console.log('length' + points.length)
+              // 🛠 Fix: If wire has no joints, inject midpoint for Konva to render
+              if (points.length == 4) {
+                // Two points only: start.x, start.y, end.x, end.y
+                const [x1, y1, x2, y2] = points;
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+                points.splice(2, 0, midX, midY); // insert midpoint between start and end
+              }
 
               return (
-                // <Line
-                //   key={wire.id}
-                //   points={points}
-                //   stroke={
-                //     getNodeById(wire.fromNodeId)?.polarity === "negative" &&
-                //       getNodeById(wire.toNodeId)?.polarity === "negative"
-                //       ? "red"
-                //       : getNodeById(wire.fromNodeId)?.polarity === "positive" &&
-                //         getNodeById(wire.toNodeId)?.polarity === "positive"
-                //         ? "green"
-                //         : "black"
-                //   }
-                //   strokeWidth={3}
-                //   hitStrokeWidth={15}
-                //   onClick={(e) => {
-                //     const from = getNodeById(wire.fromNodeId)!;
-                //     const to = getNodeById(wire.toNodeId)!;
-                //     handleWireClick(e, wire.id, from, to);
-                //   }}
-                // />
                 <React.Fragment key={wire.id}>
                   <Line
-                    points={getWirePoints(wire)}
+                    points={points}
                     stroke={
-                      selectedElement?.id === wire.id
-                        ? "orange"
-                        : getWireColor(wire)
+                      selectedElement?.id === wire.id ? "orange" : getWireColor(wire)
                     }
                     strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
                     hitStrokeWidth={12}
-                    tension={2}
+                    tension={1}
                     lineCap="round"
                     lineJoin="round"
                     bezier={true}
@@ -489,15 +343,7 @@ export default function CircuitCanvas() {
                       });
                     }}
                   />
-
-
-
-                  {/* 🔥 REMOVE the joint rendering after drawing */}
-                  {/* (Do NOT render joints for existing wires anymore) */}
                 </React.Fragment>
-
-
-
               );
             })}
 
