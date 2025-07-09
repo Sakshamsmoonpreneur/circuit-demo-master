@@ -241,14 +241,16 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, resistance },
-            }
+            ...el,
+            properties: { ...el.properties, resistance },
+          }
           : el
       )
     );
-    //computeCircuit(wires);
-    stopSimulation();
+    if (simulationRunning) {
+      computeCircuit(wires);
+    }
+    // stopSimulation();
   }
 
   function handleModeChange(elementId: string, mode: "voltage" | "current") {
@@ -256,9 +258,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -312,9 +314,8 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${
-          showDebugBox ? "w-[25%]" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
+          }`}
       >
         <button
           className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -335,9 +336,8 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className="bg-blue-50 px-2 py-2 rounded-md shadow-md absolute top-4 left-1/2 transform -translate-x-1/2 z-10 cursor-pointer flex flex-row gap-4 items-center justify-center">
           <button
-            className={`px-4 py-2 rounded ${
-              simulationRunning ? "bg-red-500" : "bg-green-500"
-            } text-white`}
+            className={`px-4 py-2 rounded ${simulationRunning ? "bg-red-500" : "bg-green-500"
+              } text-white`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -348,7 +348,7 @@ export default function CircuitCanvas() {
           >
             {simulationRunning ? "Stop Simulation" : "Start Simulation"}
           </button>
-          <CircuitCreate elements={elements} wires={wires} />
+          {/* <CircuitCreate elements={elements} wires={wires} />
           <CircuitPicker
             onCircuitSelect={function (circuitId: string): void {
               const data = getCircuitById(circuitId);
@@ -358,7 +358,7 @@ export default function CircuitCanvas() {
               setElements(data.elements);
               setWires(data.wires);
             }}
-          />
+          /> */}
         </div>
         <Stage
           id="canvas-stage"
@@ -466,9 +466,8 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${
-          showPalette ? "w-[25%]" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
+          }`}
       >
         <button
           className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -504,11 +503,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                          ...el,
-                          ...updatedElement,
-                          x: el.x,
-                          y: el.y,
-                        }
+                        ...el,
+                        ...updatedElement,
+                        x: el.x,
+                        y: el.y,
+                      }
                       : el
                   )
                 );
