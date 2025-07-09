@@ -21,7 +21,7 @@ export default function Lightbulb(props: LightbulbProps) {
   // Clamp power to a minimum of 0
   const power = Math.max(0, props.power ?? 0);
   // Assume max power for full brightness is 60 (adjust as needed)
-  const maxPower = 60;
+  const maxPower = 300;
   // Normalize brightness between 0 and 1
   const brightness = Math.min(1, power / maxPower);
   return (

@@ -27,6 +27,7 @@ export type Wire = {
   id: string;
   resistance?: number;
   color?: string; // Optional color for the wire
+  joints: { x: number; y: number }[];
 };
 
 export type Node = {
@@ -65,3 +66,12 @@ export type PaletteElementType =
   | "multimeter"
   | "potentiometer"
   | "led";
+
+export type PropertiesPanelProps = {
+  selectedElement: CircuitElement | null;
+  wires: Wire[];
+  getNodeById: (id: string) => Node | undefined;
+  onElementEdit: (updatedElement: CircuitElement, deleteElement: boolean) => void;
+  onWireEdit: (updatedWire: Wire, deleteElement: boolean) => void;
+  onEditWireSelect?: (wire: Wire) => void;
+};

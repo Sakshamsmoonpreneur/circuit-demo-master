@@ -1,4 +1,5 @@
 import { CircuitElement, Wire, Node } from "@/common/types/circuit";
+import { json } from "stream/consumers";
 
 export default function solveCircuit(
   elements: CircuitElement[],
@@ -12,6 +13,9 @@ export default function solveCircuit(
       nodeMap.set(node.id, node);
     }
   }
+
+  console.log("Circuit Elements", JSON.stringify(elements, null, 2));
+  console.log("Wire Connection", JSON.stringify(wiresSnapshot, null, 2));
 
   const adjacency = new Map<string, string[]>();
   for (const wire of wiresSnapshot) {

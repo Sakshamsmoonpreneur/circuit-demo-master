@@ -29,15 +29,15 @@ export default function Potentiometer(props: PotentiometerProps) {
 
   let resistance = Math.round(
     ((angle - minAngle) / (maxAngle - minAngle)) *
-      (maxResistance - minResistance) +
-      minResistance
+    (maxResistance - minResistance) +
+    minResistance
   );
 
   useEffect(() => {
     if (typeof props.resistance === "number") {
       const newAngle =
         ((props.resistance - minResistance) / (maxResistance - minResistance)) *
-          (maxAngle - minAngle) +
+        (maxAngle - minAngle) +
         minAngle;
 
       setAngle(clampAngle(newAngle));

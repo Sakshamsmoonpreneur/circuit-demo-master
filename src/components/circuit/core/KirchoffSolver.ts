@@ -326,7 +326,8 @@ export default function solveCircuit(
     if (
       el.type === "resistor" ||
       el.type === "lightbulb" ||
-      el.type === "potentiometer"
+      el.type === "potentiometer" ||
+      el.type === "led"
     ) {
       const R = el.properties?.resistance ?? 1;
       computedCurrent = computedVoltage / R; // Current from A to B
