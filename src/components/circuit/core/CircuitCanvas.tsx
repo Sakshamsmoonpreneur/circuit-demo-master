@@ -366,6 +366,8 @@ export default function CircuitCanvas() {
           height={window.innerHeight}
           onMouseMove={handleStageMouseMove}
           onClick={handleStageClick}
+          className="bg-blue-200"
+          draggable
         >
           <Layer>
             {/* Render wires */}
