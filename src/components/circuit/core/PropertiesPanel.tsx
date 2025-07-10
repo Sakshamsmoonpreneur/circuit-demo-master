@@ -1,6 +1,10 @@
-import { CircuitElement, Wire, Node, PropertiesPanelProps } from "@/common/types/circuit";
+import {
+  CircuitElement,
+  Wire,
+  Node,
+  PropertiesPanelProps,
+} from "@/common/types/circuit";
 import { useEffect, useState } from "react";
-
 
 export default function PropertiesPanel({
   selectedElement,
@@ -12,14 +16,12 @@ export default function PropertiesPanel({
 }: PropertiesPanelProps) {
   const [resistance, setResistance] = useState<number | null>(null);
   const [voltage, setVoltage] = useState<number | null>(null);
-  const [minResistance, setMinResistance] = useState<number | null>(null);
-  const [maxResistance, setMaxResistance] = useState<number | null>(null);
+  const [ratio, setRatio] = useState<number | null>(null);
 
   useEffect(() => {
     setResistance(selectedElement?.properties?.resistance ?? null);
     setVoltage(selectedElement?.properties?.voltage ?? null);
-    setMinResistance(selectedElement?.properties?.minResistance ?? null);
-    setMaxResistance(selectedElement?.properties?.maxResistance ?? null);
+    setRatio(selectedElement?.properties?.ratio ?? null);
   }, [selectedElement]);
 
   if (!selectedElement) return null;
@@ -33,19 +35,13 @@ export default function PropertiesPanel({
       return;
     }
 
-    let tempResistance = resistance;
-    if (minResistance !== null && maxResistance !== null && tempResistance !== null) {
-      tempResistance = Math.max(minResistance, Math.min(maxResistance, tempResistance));
-    }
-
     const updatedElement: CircuitElement = {
       ...selectedElement,
       properties: {
         ...selectedElement.properties,
-        resistance: tempResistance ?? undefined,
+        resistance: resistance ?? undefined,
         voltage: voltage ?? undefined,
-        minResistance: minResistance ?? undefined,
-        maxResistance: maxResistance ?? undefined,
+        ratio: ratio ?? undefined,
       },
     };
 
@@ -63,19 +59,20 @@ export default function PropertiesPanel({
     }
   };
 
-
   const getWireColor = (wire: Wire): string => {
     const fromPolarity = getNodeById(wire.fromNodeId)?.polarity;
     const toPolarity = getNodeById(wire.toNodeId)?.polarity;
 
     if (fromPolarity === "negative" && toPolarity === "negative") return "red";
-    if (fromPolarity === "positive" && toPolarity === "positive") return "green";
+    if (fromPolarity === "positive" && toPolarity === "positive")
+      return "green";
     return "black";
   };
 
   const connectedWires = wires.filter(
     (w) =>
-      w.fromNodeId.startsWith(selectedElement.id) || w.toNodeId.startsWith(selectedElement.id)
+      w.fromNodeId.startsWith(selectedElement.id) ||
+      w.toNodeId.startsWith(selectedElement.id)
   );
 
   return (
@@ -92,7 +89,9 @@ export default function PropertiesPanel({
           </div>
           <div className="flex justify-between">
             <span className="font-semibold">Element ID:</span>
-            <span className="text-blue-600 font-mono">{selectedElement.id}</span>
+            <span className="text-blue-600 font-mono">
+              {selectedElement.id}
+            </span>
           </div>
         </div>
 
@@ -120,29 +119,24 @@ export default function PropertiesPanel({
           </div>
         )}
 
-        {minResistance !== null && (
+        {ratio != null && (
           <div className="flex flex-col">
-            <label>Min Resistance (Ω):</label>
+            <label>Ratio:</label>
             <input
               type="number"
-              value={minResistance}
-              onChange={(e) => setMinResistance(Number(e.target.value))}
+              step="0.01"
+              value={ratio}
+              onChange={(e) => setRatio(Number(e.target.value))}
               className="border px-3 py-2 rounded focus:ring focus:ring-blue-300"
             />
+            {/* display effective resistance */}
+            <div className="text-sm text-gray-600">
+              Effective Resistance: {(ratio * (resistance ?? 0)).toFixed(2)} Ω
+            </div>
           </div>
         )}
 
-        {maxResistance !== null && (
-          <div className="flex flex-col">
-            <label>Max Resistance (Ω):</label>
-            <input
-              type="number"
-              value={maxResistance}
-              onChange={(e) => setMaxResistance(Number(e.target.value))}
-              className="border px-3 py-2 rounded focus:ring focus:ring-blue-300"
-            />
-          </div>
-        )}
+        {/* 🛠️ Action Buttons */}
 
         <div className="flex gap-2 mt-2">
           {selectedElement.type !== "wire" && (
@@ -164,7 +158,9 @@ export default function PropertiesPanel({
         {/* 🧩 Connected Wire Info */}
         {connectedWires.length > 0 && (
           <div className="mt-4 border-t pt-3">
-            <h3 className="text-sm font-bold text-gray-600 mb-2">Connected Wires</h3>
+            <h3 className="text-sm font-bold text-gray-600 mb-2">
+              Connected Wires
+            </h3>
             <ul className="space-y-1">
               {connectedWires.map((wire) => (
                 <li
@@ -172,7 +168,10 @@ export default function PropertiesPanel({
                   className="flex items-center justify-between text-xs border px-2 py-1 rounded bg-white hover:bg-blue-100"
                 >
                   <span className="font-mono text-gray-800">
-                    {wire.id} <span className="text-gray-400">({getWireColor(wire)})</span>
+                    {wire.id}{" "}
+                    <span className="text-gray-400">
+                      ({getWireColor(wire)})
+                    </span>
                   </span>
                   <button
                     className="text-blue-600 hover:underline"
