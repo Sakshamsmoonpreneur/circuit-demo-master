@@ -16,7 +16,7 @@ type CircuitManagerProps = {
   onCircuitSelect: (circuitId: string) => void;
   currentElements?: CircuitElement[];
   currentWires?: Wire[];
-  snapshot?: string;
+  getSnapshot?: () => string;
 };
 export default function CircuitManager(props: CircuitManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -34,7 +34,6 @@ export default function CircuitManager(props: CircuitManagerProps) {
   };
 
   const [savedCircuits, setSavedCircuits] = useState(getSavedCircuitsList());
-  console.log(`SNAPSHOT : ${JSON.stringify(props.snapshot, null, 2)}`)
 
   useEffect(() => {
     if (isOpen) {
@@ -48,12 +47,6 @@ export default function CircuitManager(props: CircuitManagerProps) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
-
-  useEffect(() => {
-    if (selectedCircuitID) {
-      console.log('SSSSSS' + JSON.stringify(getCircuitById(selectedCircuitID)));
-    }
-  }, [selectedCircuitID, props]);
 
   const handleCircuitSelect = (circuitId: string) => {
     props.onCircuitSelect(circuitId);
@@ -114,7 +107,9 @@ export default function CircuitManager(props: CircuitManagerProps) {
                           alt="Circuit Snapshot"
                         />
                       ) : (
-                        <div className="text-gray-400 text-sm italic mb-2">No snapshot available</div>
+                        <div className="text-gray-400 text-sm italic mb-2">
+                          No snapshot available
+                        </div>
                       )}
                       <label className="block text-sm font-medium mt-2 mb-1">
                         Name:
@@ -167,7 +162,7 @@ export default function CircuitManager(props: CircuitManagerProps) {
                                 selectedCircuitID,
                                 props.currentElements ?? [],
                                 props.currentWires ?? [],
-                                props.snapshot
+                                props.getSnapshot?.() ?? ""
                               );
                               setSavedCircuits(getSavedCircuitsList());
                             }
@@ -201,7 +196,7 @@ export default function CircuitManager(props: CircuitManagerProps) {
                         circuitName,
                         props.currentElements ?? [],
                         props.currentWires ?? [],
-                        props.snapshot
+                        props.getSnapshot?.() ?? ""
                       );
                       setSavedCircuits(getSavedCircuitsList());
                     }
