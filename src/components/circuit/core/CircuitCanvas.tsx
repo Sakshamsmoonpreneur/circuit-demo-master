@@ -1,21 +1,18 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
-import { Stage, Layer, Circle, Line } from "react-konva";
+import { Stage, Layer, Line } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import {
   CircuitElement,
   EditingWire,
-  Wire,
-  Node,
+  Wire
 } from "@/common/types/circuit";
 import RenderElement from "./RenderElement";
 import { DebugBox } from "@/components/debug/DebugBox";
-import createElement from "./createElement"; // Adjust the import path as necessary
+import createElement from "./createElement";
 import solveCircuit from "./KirchoffSolver";
-import { json } from "stream/consumers";
 import PropertiesPanel from "./PropertiesPanel";
 import CircuitPalette from "./CircuitPalette";
-import GetCircuitOutput from "@/utils/GetCircuitOutput";
 import { getCircuitById } from "./CircuitSaver";
 import CircuitManager from "./CircuitManager";
 import Konva from "konva";
@@ -25,7 +22,7 @@ export default function CircuitCanvas() {
     x: 0,
     y: 0,
   });
-
+  const stageRef = useRef<Konva.Stage | null>(null);
   const [elements, setElements] = useState<CircuitElement[]>([]);
   const [wires, setWires] = useState<Wire[]>([]);
   const [wireCounter, setWireCounter] = useState(0);
@@ -35,8 +32,6 @@ export default function CircuitCanvas() {
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
   >([]);
-
-  const stageRef = useRef<Konva.Stage | null>(null);
 
   const [simulationRunning, setSimulationRunning] = useState(false);
 
@@ -55,7 +50,6 @@ export default function CircuitCanvas() {
     setWireCounter(0);
     setCreatingWireStartNode(null);
     setEditingWire(null);
-    setSelectedElement(null);
   }
 
   useEffect(() => {
@@ -244,9 +238,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, resistance },
-            }
+            ...el,
+            properties: { ...el.properties, resistance },
+          }
           : el
       )
     );
@@ -261,9 +255,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -317,9 +311,8 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${
-          showDebugBox ? "w-[25%]" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
+          }`}
       >
         <button
           className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -340,11 +333,10 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className="bg-blue-50 px-2 py-2 rounded-md shadow-md absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex flex-row gap-4 items-center justify-center">
           <button
-            className={`px-4 py-2 rounded cursor-pointer ${
-              simulationRunning
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-green-500 hover:bg-green-600"
-            } text-white`}
+            className={`px-4 py-2 rounded cursor-pointer ${simulationRunning
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-green-500 hover:bg-green-600"
+              } text-white`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -375,9 +367,6 @@ export default function CircuitCanvas() {
           height={window.innerHeight}
           onMouseMove={handleStageMouseMove}
           onClick={handleStageClick}
-          className="bg-blue-200"
-          ref={stageRef}
-          // draggable
         >
           <Layer>
             {/* Render wires */}
@@ -385,13 +374,11 @@ export default function CircuitCanvas() {
               const points = getWirePoints(wire);
               console.log(points);
               console.log("length" + points.length);
-              // 🛠 Fix: If wire has no joints, inject midpoint for Konva to render
               if (points.length == 4) {
-                // Two points only: start.x, start.y, end.x, end.y
                 const [x1, y1, x2, y2] = points;
                 const midX = (x1 + x2) / 2;
                 const midY = (y1 + y2) / 2;
-                points.splice(2, 0, midX, midY); // insert midpoint between start and end
+                points.splice(2, 0, midX, midY);
               }
 
               return (
@@ -405,7 +392,7 @@ export default function CircuitCanvas() {
                     }
                     strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
                     hitStrokeWidth={12}
-                    tension={1}
+                    tension={0.5}
                     lineCap="round"
                     lineJoin="round"
                     bezier={true}
@@ -447,7 +434,7 @@ export default function CircuitCanvas() {
                     points={inProgressPoints}
                     stroke="black"
                     strokeWidth={2}
-                    dash={[10, 5]}
+                    // dash={[10, 5]}
                     pointerEvents="none"
                     lineCap="round"
                     lineJoin="round"
@@ -478,9 +465,8 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${
-          showPalette ? "w-[25%]" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
+          }`}
       >
         <button
           className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
@@ -516,11 +502,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                          ...el,
-                          ...updatedElement,
-                          x: el.x,
-                          y: el.y,
-                        }
+                        ...el,
+                        ...updatedElement,
+                        x: el.x,
+                        y: el.y,
+                      }
                       : el
                   )
                 );

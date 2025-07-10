@@ -30,6 +30,18 @@ export default function RenderElement({
       }}
       id={element.id}
       draggable={true}
+      onMouseEnter={(e) => {
+        const stage = e.target.getStage();
+        if (stage) {
+          stage.container().style.cursor = "grab";
+        }
+      }}
+      onMouseLeave={(e) => {
+        const stage = e.target.getStage();
+        if (stage) {
+          stage.container().style.cursor = "default";
+        }
+      }}
     >
       {element.type === "lightbulb" && (
         <Lightbulb
