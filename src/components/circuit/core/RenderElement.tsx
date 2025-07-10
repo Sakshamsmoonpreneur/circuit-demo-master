@@ -47,7 +47,7 @@ export default function RenderElement({
           x={0}
           y={0}
           children={undefined}
-          current={element.computed?.current ?? 0}
+          power={element.computed?.power ?? 0}
           selected={props.selectedElementId === element.id}
         />
       )}
@@ -108,8 +108,8 @@ export default function RenderElement({
             node.polarity === "positive"
               ? "green"
               : node.polarity === "negative"
-                ? "red"
-                : "black"
+              ? "red"
+              : "black"
           }
           onClick={() => props.handleNodeClick(node.id)}
           hitStrokeWidth={10}
@@ -126,7 +126,7 @@ export default function RenderElement({
             }
           }}
 
-        // TODO: Add interaction handlers here
+          // TODO: Add interaction handlers here
         />
       ))}
     </Group>

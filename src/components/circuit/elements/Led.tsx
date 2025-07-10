@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { Group, Circle, Image } from "react-konva";
 
 interface Led extends BaseElementProps {
-  current?: number;
+  power?: number;
 }
 
 export default function Led(props: Led) {
@@ -19,7 +19,11 @@ export default function Led(props: Led) {
 
   // Normalize brightness between 0 and 1
   // const brightness = Math.min(1, (props.current ?? 0) / 1.5); // Adjust denominator for how quickly it maxes out
-  const brightness = Math.round((props.current ?? 0) / 2); // Adjust denominator for how quickly it maxes out
+  const power = Math.max(0, props.power ?? 0);
+  // Assume max power for full brightness is 60 (adjust as needed)
+  const maxPower = 300;
+  // Normalize brightness between 0 and 1
+  const brightness = Math.min(1, power / maxPower);
   return (
     <BaseElement {...props}>
       <Group>
