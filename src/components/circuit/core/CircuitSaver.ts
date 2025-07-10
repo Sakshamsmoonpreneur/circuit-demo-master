@@ -1,20 +1,23 @@
+"use client";
 import { CircuitElement, Wire } from "@/common/types/circuit";
 
 export function SaveCircuit(
   name: string,
   elements: CircuitElement[],
-  wires: Wire[]
+  wires: Wire[],
+  snapshot?: string
 ) {
-  // save to local storage
-  // give it a unique uuid
+  // Strip out computed fields
+  const sanitizedElements = elements.map(({ computed, ...rest }) => rest);
+
   const circuitData = {
     name,
-    id: crypto.randomUUID(), // Generate a unique ID for the circuit
-    elements,
+    snapshot: snapshot || null,
+    id: crypto.randomUUID(),
+    elements: sanitizedElements,
     wires,
   };
 
-  // add to local storage array of saved circuits
   const savedCircuits = JSON.parse(
     localStorage.getItem("savedCircuits") || "[]"
   );
@@ -32,13 +35,68 @@ export function getSavedCircuitsList(): { id: string; name: string }[] {
   }));
 }
 
-export function getCircuitById(
-  id: string
-):
-  | { id: string; name: string; elements: CircuitElement[]; wires: Wire[] }
+export function getCircuitById(id: string):
+  | {
+      id: string;
+      name: string;
+      elements: CircuitElement[];
+      wires: Wire[];
+      snapshot?: string;
+    }
   | undefined {
   const savedCircuits = JSON.parse(
     localStorage.getItem("savedCircuits") || "[]"
   );
   return savedCircuits.find((circuit: { id: string }) => circuit.id === id);
+}
+
+export function deleteCircuitById(id: string): boolean {
+  const savedCircuits = JSON.parse(
+    localStorage.getItem("savedCircuits") || "[]"
+  );
+  const newSavedCircuits = savedCircuits.filter(
+    (circuit: { id: string }) => circuit.id !== id
+  );
+  if (newSavedCircuits.length === savedCircuits.length) {
+    return false; // No circuit was deleted
+  }
+  localStorage.setItem("savedCircuits", JSON.stringify(newSavedCircuits));
+  return true; // Circuit was successfully deleted
+}
+
+export function editCircuitName(id: string, newName: string): boolean {
+  const savedCircuits = JSON.parse(
+    localStorage.getItem("savedCircuits") || "[]"
+  );
+  const circuitIndex = savedCircuits.findIndex(
+    (circuit: { id: string }) => circuit.id === id
+  );
+  if (circuitIndex === -1) {
+    return false; // Circuit not found
+  }
+  savedCircuits[circuitIndex].name = newName;
+  localStorage.setItem("savedCircuits", JSON.stringify(savedCircuits));
+  return true; // Circuit name was successfully updated
+}
+
+export function overrideCircuit(
+  id: string,
+  newElements: CircuitElement[],
+  newWires: Wire[],
+  newSnapshot?: string
+): boolean {
+  const savedCircuits = JSON.parse(
+    localStorage.getItem("savedCircuits") || "[]"
+  );
+  const circuitIndex = savedCircuits.findIndex(
+    (circuit: { id: string }) => circuit.id === id
+  );
+  if (circuitIndex === -1) {
+    return false; // Circuit not found
+  }
+  savedCircuits[circuitIndex].elements = newElements;
+  savedCircuits[circuitIndex].wires = newWires;
+  savedCircuits[circuitIndex].snapshot = newSnapshot || null;
+  localStorage.setItem("savedCircuits", JSON.stringify(savedCircuits));
+  return true; // Circuit was successfully overridden
 }
