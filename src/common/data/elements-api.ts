@@ -9,6 +9,8 @@ export interface PaletteElement {
   defaultProps: {
     resistance?: number;
     voltage?: number;
+    ratio?: number;
+    mode?: "voltage" | "current"; // For multimeters
   };
 }
 
@@ -35,13 +37,13 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "multimeter",
     label: "Multimeter",
     iconPath: "/circuit_elements/Multimeter.svg",
-    defaultProps: { resistance: 1 },
+    defaultProps: { resistance: 1, mode: "voltage" },
   },
   {
     type: "potentiometer",
     label: "Potentiometer",
     iconPath: "/circuit_elements/potentiometer.svg",
-    defaultProps: { resistance: 2 },
+    defaultProps: { resistance: 100, ratio: 0.5 },
   },
   {
     type: "led",

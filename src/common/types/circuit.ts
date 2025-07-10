@@ -9,8 +9,7 @@ export type CircuitElement = {
   properties?: {
     voltage?: number; // for power sources like batteries
     resistance?: number; // all components can have resistance
-    maxResistance?: number; // for variable components like potentiometers
-    minResistance?: number; // for variable components like potentiometers
+    ratio?: number; // for potentiometers, the ratio of resistance
     mode?: "voltage" | "current"; // for multimeters, can be voltage or current mode
   };
   computed?: {
@@ -54,8 +53,7 @@ export type CircuitElementProps = {
   properties?: {
     resistance?: number;
     voltage?: number;
-    maxResistance?: number;
-    minResistance?: number;
+    ratio?: number;
   };
 };
 
@@ -71,7 +69,10 @@ export type PropertiesPanelProps = {
   selectedElement: CircuitElement | null;
   wires: Wire[];
   getNodeById: (id: string) => Node | undefined;
-  onElementEdit: (updatedElement: CircuitElement, deleteElement: boolean) => void;
+  onElementEdit: (
+    updatedElement: CircuitElement,
+    deleteElement: boolean
+  ) => void;
   onWireEdit: (updatedWire: Wire, deleteElement: boolean) => void;
   onEditWireSelect?: (wire: Wire) => void;
 };

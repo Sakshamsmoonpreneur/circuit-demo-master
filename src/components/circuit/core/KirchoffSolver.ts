@@ -217,7 +217,6 @@ function buildMNAMatrices(
     if (
       el.type === "resistor" ||
       el.type === "lightbulb" ||
-      el.type === "potentiometer" ||
       el.type === "led"
     ) {
       const R = el.properties?.resistance ?? 1;
@@ -227,6 +226,38 @@ function buildMNAMatrices(
       if (ai !== undefined && bi !== undefined) {
         G[ai][bi] -= g;
         G[bi][ai] -= g;
+      }
+    } else if (el.type === "potentiometer") {
+      const [nodeA, nodeW, nodeB] = el.nodes;
+      const R = el.properties?.resistance ?? 1;
+      const t = el.properties?.ratio ?? 0.5; // how far the wiper is between A and B
+
+      const Ra = R * (1 - t); // A–W
+      const Rb = R * t; // W–B
+
+      const a = nodeMap.get(nodeA.id);
+      const w = nodeMap.get(nodeW.id);
+      const b = nodeMap.get(nodeB.id);
+
+      const ai = nodeIndex.get(a!);
+      const wi = nodeIndex.get(w!);
+      const bi = nodeIndex.get(b!);
+
+      const ga = 1 / Ra;
+      const gb = 1 / Rb;
+
+      if (ai !== undefined) G[ai][ai] += ga;
+      if (wi !== undefined) G[wi][wi] += ga;
+      if (ai !== undefined && wi !== undefined) {
+        G[ai][wi] -= ga;
+        G[wi][ai] -= ga;
+      }
+
+      if (bi !== undefined) G[bi][bi] += gb;
+      if (wi !== undefined) G[wi][wi] += gb;
+      if (bi !== undefined && wi !== undefined) {
+        G[bi][wi] -= gb;
+        G[wi][bi] -= gb;
       }
     } else if (el.type === "battery") {
       const pos =
@@ -302,15 +333,37 @@ function computeElementResults(
     const b = nodeMap.get(el.nodes[1].id);
     const Va = nodeVoltages[a!] ?? 0;
     const Vb = nodeVoltages[b!] ?? 0;
-    const voltage = Va - Vb;
+    let voltage = Va - Vb;
     let current = 0,
       power = 0,
       measurement = 0;
 
-    if (["resistor", "lightbulb", "potentiometer", "led"].includes(el.type)) {
+    if (["resistor", "lightbulb", "led"].includes(el.type)) {
       const R = el.properties?.resistance ?? 1;
       current = voltage / R;
       power = voltage * current;
+    } else if (el.type === "potentiometer") {
+      const [nodeA, nodeW, nodeB] = el.nodes;
+      const Va = nodeVoltages[nodeMap.get(nodeA.id)!] ?? 0;
+      const Vw = nodeVoltages[nodeMap.get(nodeW.id)!] ?? 0;
+      const Vb = nodeVoltages[nodeMap.get(nodeB.id)!] ?? 0;
+
+      const R = el.properties?.resistance ?? 1;
+      const t = el.properties?.ratio ?? 0.5;
+      const Ra = R * (1 - t); // A–W
+      const Rb = R * t; // W–B
+
+      const Ia = (Va - Vw) / Ra;
+      const Ib = (Vw - Vb) / Rb;
+
+      // voltage across entire potentiometer
+      const totalVoltage = Va - Vb;
+      const totalCurrent = Ia; // = Ib if everything is correct
+      const totalPower = totalVoltage * totalCurrent;
+
+      current = totalCurrent;
+      voltage = totalVoltage;
+      power = totalPower;
     } else if (el.type === "battery") {
       const idx = currentMap.get(el.id);
       if (idx !== undefined) current = x[n + idx];

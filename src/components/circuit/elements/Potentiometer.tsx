@@ -8,14 +8,13 @@ import { Circle, Group, Line } from "react-konva";
 import Konva from "konva";
 
 interface PotentiometerProps extends BaseElementProps {
-  onResistanceChange?: (resistance: number) => void;
-  minResistance?: number; // Optional min resistance
-  maxResistance?: number; // Optional max resistance
-  resistance?: number; // Current resistance value
+  resistance?: number; // Total resistance between ends A and B
+  ratio?: number; // Wiper position from 0 to 1
+  onRatioChange?: (ratio: number) => void; // Called when user moves the knob
 }
 
 export default function Potentiometer(props: PotentiometerProps) {
-  const [angle, setAngle] = useState(135); // Start in middle of range
+  const [angle, setAngle] = useState(135); // Initial angle
   const [isDragging, setIsDragging] = useState(false);
   const groupRef = useRef<Konva.Group>(null);
 
@@ -24,35 +23,28 @@ export default function Potentiometer(props: PotentiometerProps) {
   const centerX = 25;
   const centerY = 25;
 
-  const minResistance = props.minResistance ?? 0; // Default to 0 if not provided
-  const maxResistance = props.maxResistance ?? 10000; // Default to 10k
-
-  let resistance = Math.round(
-    ((angle - minAngle) / (maxAngle - minAngle)) *
-    (maxResistance - minResistance) +
-    minResistance
-  );
-
-  useEffect(() => {
-    if (typeof props.resistance === "number") {
-      const newAngle =
-        ((props.resistance - minResistance) / (maxResistance - minResistance)) *
-        (maxAngle - minAngle) +
-        minAngle;
-
-      setAngle(clampAngle(newAngle));
-    }
-  }, [props.resistance, minResistance, maxResistance]);
-
-  useEffect(() => {
-    props.onResistanceChange?.(resistance);
-  }, [resistance]);
-
   const clampAngle = (deg: number) => {
     if (deg < minAngle && deg > 180) return minAngle;
     if (deg > maxAngle && deg < 360) return maxAngle;
     return Math.max(minAngle, Math.min(maxAngle, deg));
   };
+
+  const ratioFromAngle = (ang: number) =>
+    (ang - minAngle) / (maxAngle - minAngle);
+
+  const angleFromRatio = (ratio: number) =>
+    clampAngle(ratio * (maxAngle - minAngle) + minAngle);
+
+  useEffect(() => {
+    if (typeof props.ratio === "number") {
+      setAngle(angleFromRatio(props.ratio));
+    }
+  }, [props.ratio]);
+
+  useEffect(() => {
+    const ratio = ratioFromAngle(angle);
+    props.onRatioChange?.(ratio);
+  }, [angle]);
 
   const handlePointerMove = (e: any) => {
     if (!isDragging || !groupRef.current) return;
@@ -68,10 +60,7 @@ export default function Potentiometer(props: PotentiometerProps) {
     let rawAngle = (Math.atan2(dy, dx) * 180) / Math.PI + 90;
     if (rawAngle < 0) rawAngle += 360;
 
-    // Only allow values from minAngle to maxAngle
-    const withinRange = rawAngle >= minAngle && rawAngle <= maxAngle;
-
-    if (withinRange) {
+    if (rawAngle >= minAngle && rawAngle <= maxAngle) {
       setAngle(clampAngle(rawAngle));
     }
   };
@@ -99,7 +88,7 @@ export default function Potentiometer(props: PotentiometerProps) {
         />
 
         <Line
-          points={[0, 0, 0, -15]} // center to top
+          points={[0, 0, 0, -15]} // handle
           stroke="black"
           strokeWidth={4}
           hitStrokeWidth={10}

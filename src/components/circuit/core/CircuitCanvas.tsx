@@ -229,13 +229,13 @@ export default function CircuitCanvas() {
   }
 
   // handle resistance change for potentiometer
-  function handleResistanceChange(elementId: string, resistance: number) {
+  function handleRatioChange(elementId: string, ratio: number) {
     setElements((prev) =>
       prev.map((el) =>
         el.id === elementId
           ? {
               ...el,
-              properties: { ...el.properties, resistance },
+              properties: { ...el.properties, ratio },
             }
           : el
       )
@@ -445,7 +445,7 @@ export default function CircuitCanvas() {
                 element={element}
                 onDragMove={handleElementDragMove}
                 handleNodeClick={handleNodeClick}
-                handleResistanceChange={handleResistanceChange}
+                handleRatioChange={handleRatioChange}
                 handleModeChange={handleModeChange}
                 onSelect={(id) => {
                   // Only set selectedElement if it's not already selected

@@ -129,24 +129,32 @@ export default function createElement(
     y: props.pos.y,
     nodes: [
       {
-        id: id + "-node-1",
+        id: id + "-node-A", // Terminal A
         x: 10,
         y: 23,
         parentId: id,
+        name: "A", // optional for clarity
       },
       {
-        id: id + "-node-2",
+        id: id + "-node-W", // Wiper
+        x: 26.5,
+        y: 23, // position it visually on top if needed
+        parentId: id,
+        name: "W",
+      },
+      {
+        id: id + "-node-B", // Terminal B
         x: 43,
         y: 23,
         parentId: id,
+        name: "B",
       },
     ],
     properties: {
       ...{
         voltage: props.properties?.voltage,
         resistance: props.properties?.resistance ?? 2,
-        maxResistance: props.properties?.maxResistance ?? 20,
-        minResistance: props.properties?.minResistance ?? 1,
+        ratio: props.properties?.ratio ?? 0.5, // Default ratio for potentiometer
       },
       ...props.properties,
     },

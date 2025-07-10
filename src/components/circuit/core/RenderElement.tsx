@@ -15,7 +15,7 @@ export default function RenderElement({
   element: CircuitElement;
   onDragMove: (e: KonvaEventObject<DragEvent>) => void;
   handleNodeClick: (nodeId: string) => void;
-  handleResistanceChange?: (elementId: string, resistance: number) => void;
+  handleRatioChange?: (elementId: string, ratio: number) => void;
   handleModeChange: (elementId: string, mode: "voltage" | "current") => void;
   onSelect?: (elementId: string) => void;
   selectedElementId?: string | null;
@@ -87,12 +87,11 @@ export default function RenderElement({
           x={1}
           y={22}
           children={undefined}
-          onResistanceChange={(resistance) => {
-            props.handleResistanceChange?.(element.id, resistance);
+          onRatioChange={(ratio) => {
+            props.handleRatioChange?.(element.id, ratio);
           }}
-          minResistance={element.properties?.minResistance ?? 0}
-          maxResistance={element.properties?.maxResistance ?? 20}
-          resistance={element.properties?.resistance}
+          resistance={element.properties?.resistance ?? 100}
+          ratio={element.properties?.ratio ?? 0.5}
           selected={props.selectedElementId === element.id}
         />
       )}
