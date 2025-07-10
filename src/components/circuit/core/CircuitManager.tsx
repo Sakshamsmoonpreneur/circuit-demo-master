@@ -108,8 +108,15 @@ export default function CircuitManager(props: CircuitManagerProps) {
                       <h3 className="font-semibold">Circuit Info</h3>
                       <p>ID: {selectedCircuitID}</p>
                       <img
-                        src={getCircuitById(selectedCircuitID)?.snapshot ?? ""}
-                        className="w-lg aspect-auto rounded-lg mb-2 max-h-[20rem]"
+                        src={getCircuitById(selectedCircuitID)?.snapshot ? (
+                          <img
+                            src={getCircuitById(selectedCircuitID)!.snapshot}
+                            className="w-lg aspect-auto rounded-lg mb-2 max-h-[20rem]"
+                            alt="Circuit Snapshot"
+                          />
+                        ) : (
+                          <div className="text-gray-400 text-sm italic mb-2">No Circuit Snapshot available</div>
+                        )}
                       />
                       <label className="block text-sm font-medium mt-2 mb-1">
                         Name:
