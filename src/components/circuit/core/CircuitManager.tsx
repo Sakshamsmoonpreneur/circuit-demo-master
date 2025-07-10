@@ -18,7 +18,6 @@ type CircuitManagerProps = {
   currentWires?: Wire[];
   snapshot?: string;
 };
-
 export default function CircuitManager(props: CircuitManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCircuitID, setSelectedCircuitID] = useState<string | null>(
@@ -35,6 +34,7 @@ export default function CircuitManager(props: CircuitManagerProps) {
   };
 
   const [savedCircuits, setSavedCircuits] = useState(getSavedCircuitsList());
+  console.log(`SNAPSHOT : ${JSON.stringify(props.snapshot, null, 2)}`)
 
   useEffect(() => {
     if (isOpen) {

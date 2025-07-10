@@ -372,8 +372,6 @@ export default function CircuitCanvas() {
             {/* Render wires */}
             {wires.map((wire) => {
               const points = getWirePoints(wire);
-              console.log(points);
-              console.log("length" + points.length);
               if (points.length == 4) {
                 const [x1, y1, x2, y2] = points;
                 const midX = (x1 + x2) / 2;
