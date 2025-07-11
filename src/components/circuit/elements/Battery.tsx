@@ -6,15 +6,14 @@ import {
 import { useEffect, useState } from "react";
 import { Image } from "react-konva";
 
-interface BatteryProps extends BaseElementProps { }
-
-export default function Battery(props: BatteryProps) {
+export default function Battery(props: BaseElementProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
     const image = new window.Image();
     image.src = "/circuit_elements/battery.svg";
     image.onload = () => setImg(image);
+    image.alt = "Battery";
   }, []);
 
   return (

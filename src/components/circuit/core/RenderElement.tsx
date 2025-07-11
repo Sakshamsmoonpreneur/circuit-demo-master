@@ -1,5 +1,5 @@
 import { CircuitElement } from "@/common/types/circuit";
-import { Circle, Group, Rect } from "react-konva";
+import { Circle, Group } from "react-konva";
 import Lightbulb from "../elements/Lightbulb";
 import { KonvaEventObject } from "konva/lib/Node";
 import Battery from "../elements/Battery";
@@ -36,7 +36,6 @@ export default function RenderElement({
           id={element.id}
           x={0}
           y={0}
-          children={undefined}
           power={element.computed?.power ?? 0}
           selected={props.selectedElementId === element.id}
         />
@@ -46,7 +45,6 @@ export default function RenderElement({
           id={element.id}
           x={0}
           y={0}
-          children={undefined}
           power={element.computed?.power ?? 0}
           selected={props.selectedElementId === element.id}
         />
@@ -56,7 +54,6 @@ export default function RenderElement({
           id={element.id}
           x={0}
           y={0}
-          children={undefined}
           selected={props.selectedElementId === element.id}
         />
       )}
@@ -65,7 +62,6 @@ export default function RenderElement({
           id={element.id}
           x={1}
           y={22}
-          children={undefined}
           selected={props.selectedElementId === element.id}
         />
       )}
@@ -74,7 +70,6 @@ export default function RenderElement({
           id={element.id}
           x={1}
           y={22}
-          children={undefined}
           measurement={element.computed?.measurement}
           initialMode={"voltage"}
           onModeChange={props.handleModeChange}
@@ -86,7 +81,6 @@ export default function RenderElement({
           id={element.id}
           x={1}
           y={22}
-          children={undefined}
           onRatioChange={(ratio) => {
             props.handleRatioChange?.(element.id, ratio);
           }}

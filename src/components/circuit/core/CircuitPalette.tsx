@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { ELEMENT_PALETTE } from "@/common/data/elements-api";
+import { ELEMENT_PALETTE } from "@/common/data/defaultElementProperties";
 
 export default function CircuitPalette() {
   return (

@@ -15,6 +15,7 @@ export default function Led(props: Led) {
     const image = new window.Image();
     image.src = "/circuit_elements/led.svg"; // Always use the "off" bulb
     image.onload = () => setImg(image);
+    image.alt = "LED";
   }, []);
 
   // Normalize brightness between 0 and 1

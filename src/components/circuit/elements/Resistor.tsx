@@ -6,15 +6,14 @@ import {
 import { useEffect, useState } from "react";
 import { Image } from "react-konva";
 
-interface ResistorProps extends BaseElementProps { }
-
-export default function Resistor(props: ResistorProps) {
+export default function Resistor(props: BaseElementProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
     const image = new window.Image();
     image.src = "/circuit_elements/resistor.svg";
     image.onload = () => setImg(image);
+    image.alt = "Resistor";
   }, []);
 
   return (

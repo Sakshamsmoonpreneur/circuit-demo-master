@@ -8,7 +8,7 @@ export interface BaseElementProps {
   selected?: boolean;
   onSelect?: (id: string) => void;
   onDragEnd?: (id: string, x: number, y: number) => void;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   nodes?: Node[];
 }
 
@@ -16,7 +16,6 @@ export function BaseElement({
   id,
   x,
   y,
-  selected,
   onSelect,
   onDragEnd,
   children,

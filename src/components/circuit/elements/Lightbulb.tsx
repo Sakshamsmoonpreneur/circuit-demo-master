@@ -15,6 +15,7 @@ export default function Lightbulb(props: LightbulbProps) {
     const image = new window.Image();
     image.src = "/circuit_elements/bulb-off.svg"; // Always use the "off" bulb
     image.onload = () => setImg(image);
+    image.alt = "Lightbulb";
   }, []);
 
   // Normalize brightness between 0 and 1

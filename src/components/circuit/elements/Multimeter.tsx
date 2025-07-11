@@ -22,7 +22,7 @@ export default function Multimeter(props: MultimeterProps) {
     if (props.initialMode && props.initialMode !== mode) {
       setMode(props.initialMode);
     }
-  }, [props.initialMode]);
+  }, [props.initialMode, mode]);
 
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
@@ -48,6 +48,7 @@ export default function Multimeter(props: MultimeterProps) {
     const image = new window.Image();
     image.src = "/circuit_elements/multimeter.svg";
     image.onload = () => setImg(image);
+    image.alt = "Multimeter";
   }, []);
 
   const SCALE = 180 / 240; // ~0.3333
