@@ -22,7 +22,7 @@ export default function Multimeter(props: MultimeterProps) {
     if (props.initialMode && props.initialMode !== mode) {
       setMode(props.initialMode);
     }
-  }, [props.initialMode, mode]);
+  }, []);
 
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);
