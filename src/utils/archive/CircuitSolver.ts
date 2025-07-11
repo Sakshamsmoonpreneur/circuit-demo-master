@@ -1,5 +1,4 @@
 import { CircuitElement, Wire, Node } from "@/common/types/circuit";
-import { json } from "stream/consumers";
 
 export default function solveCircuit(
   elements: CircuitElement[],

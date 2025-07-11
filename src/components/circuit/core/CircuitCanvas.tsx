@@ -5,13 +5,13 @@ import type { KonvaEventObject } from "konva/lib/Node";
 import { CircuitElement, EditingWire, Wire } from "@/common/types/circuit";
 import RenderElement from "./RenderElement";
 import { DebugBox } from "@/components/debug/DebugBox";
-import createElement from "./createElement";
-import solveCircuit from "./KirchoffSolver";
+import createElement from "@/utils/core/createElement";
+import solveCircuit from "@/utils/core/kirchoffSolver";
 import PropertiesPanel from "./PropertiesPanel";
 import CircuitPalette from "./CircuitPalette";
-import { getCircuitById } from "./CircuitSaver";
-import CircuitManager from "./CircuitManager";
+import { getCircuitById } from "../../../utils/core/circuitStorage";
 import Konva from "konva";
+import CircuitStorage from "./CircuitStorage";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -24,7 +24,6 @@ export default function CircuitCanvas() {
   const [wireCounter, setWireCounter] = useState(0);
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(true);
-  const [selectedWireId, setSelectedWireId] = useState<string | null>(null);
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
   >([]);
@@ -51,6 +50,48 @@ export default function CircuitCanvas() {
   useEffect(() => {
     resetState();
   }, []);
+
+  function stopSimulation() {
+    setSimulationRunning(false);
+    setElements((prev) =>
+      prev.map((el) => ({
+        ...el,
+        // set computed values to undefined when simulation stops
+        computed: {
+          current: undefined,
+          voltage: undefined,
+          power: undefined,
+          measurement: el.computed?.measurement ?? undefined,
+        },
+      }))
+    );
+  }
+
+  function startSimulation() {
+    setSimulationRunning(true);
+    computeCircuit(wires);
+  }
+
+  function getNodeById(nodeId: string) {
+    return elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
+  }
+
+  const getElementById = React.useCallback(
+    (elementId: string) => {
+      return elements.find((e) => e.id === elementId);
+    },
+    [elements]
+  );
+
+  const getNodeParent = React.useCallback(
+    (nodeId: string) => {
+      const node = elements
+        .flatMap((e) => e.nodes)
+        .find((n) => n.id === nodeId);
+      return node ? getElementById(node.parentId) : null;
+    },
+    [elements, getElementById]
+  );
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -91,41 +132,7 @@ export default function CircuitCanvas() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mousePos, elements]);
-
-  function stopSimulation() {
-    setSimulationRunning(false);
-    setElements((prev) =>
-      prev.map((el) => ({
-        ...el,
-        // set computed values to undefined when simulation stops
-        computed: {
-          current: undefined,
-          voltage: undefined,
-          power: undefined,
-          measurement: el.computed?.measurement ?? undefined,
-        },
-      }))
-    );
-  }
-
-  function startSimulation() {
-    setSimulationRunning(true);
-    computeCircuit(wires);
-  }
-
-  function getNodeById(nodeId: string) {
-    return elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
-  }
-
-  function getElementById(elementId: string) {
-    return elements.find((e) => e.id === elementId);
-  }
-
-  function getNodeParent(nodeId: string) {
-    const node = elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
-    return node ? getElementById(node.parentId) : null;
-  }
+  }, [mousePos, elements, getNodeParent, wires, selectedElement]);
 
   function handleStageMouseMove(e: KonvaEventObject<PointerEvent>) {
     const pos = e.target.getStage()?.getPointerPosition();
@@ -343,7 +350,7 @@ export default function CircuitCanvas() {
           >
             {simulationRunning ? "Stop Simulation" : "Start Simulation"}
           </button>
-          <CircuitManager
+          <CircuitStorage
             onCircuitSelect={function (circuitId: string): void {
               const data = getCircuitById(circuitId);
               if (!data) return;
@@ -391,7 +398,7 @@ export default function CircuitCanvas() {
                     lineCap="round"
                     lineJoin="round"
                     bezier={true}
-                    onClick={(e) => {
+                    onClick={() => {
                       setSelectedElement({
                         id: wire.id,
                         type: "wire",

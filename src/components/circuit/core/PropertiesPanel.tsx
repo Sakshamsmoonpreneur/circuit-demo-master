@@ -1,7 +1,6 @@
 import {
   CircuitElement,
   Wire,
-  Node,
   PropertiesPanelProps,
 } from "@/common/types/circuit";
 import { useEffect, useState } from "react";

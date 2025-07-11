@@ -1,11 +1,12 @@
 "use client";
+import React, { useEffect, useRef, useState } from "react";
 import {
   BaseElement,
   BaseElementProps,
 } from "@/components/circuit/core/BaseElement";
-import { useEffect, useRef, useState } from "react";
 import { Circle, Group, Line } from "react-konva";
 import Konva from "konva";
+import { KonvaEventObject } from "konva/lib/Node";
 
 interface PotentiometerProps extends BaseElementProps {
   resistance?: number; // Total resistance between ends A and B
@@ -13,8 +14,8 @@ interface PotentiometerProps extends BaseElementProps {
   onRatioChange?: (ratio: number) => void; // Called when user moves the knob
 }
 
-export default function Potentiometer(props: PotentiometerProps) {
-  const [angle, setAngle] = useState(135); // Initial angle
+function Potentiometer(props: PotentiometerProps) {
+  const [angle, setAngle] = useState(135);
   const [isDragging, setIsDragging] = useState(false);
   const groupRef = useRef<Konva.Group>(null);
 
@@ -35,18 +36,27 @@ export default function Potentiometer(props: PotentiometerProps) {
   const angleFromRatio = (ratio: number) =>
     clampAngle(ratio * (maxAngle - minAngle) + minAngle);
 
+  // Update angle only if ratio changes and differs significantly
   useEffect(() => {
     if (typeof props.ratio === "number") {
-      setAngle(angleFromRatio(props.ratio));
+      const newAngle = angleFromRatio(props.ratio);
+      if (Math.abs(newAngle - angle) > 0.01) {
+        setAngle(newAngle);
+      }
     }
-  }, [props.ratio]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.ratio]); // intentionally ignore 'angle' here to avoid loop
 
+  // Call onRatioChange only if ratio changed meaningfully
   useEffect(() => {
     const ratio = ratioFromAngle(angle);
-    props.onRatioChange?.(ratio);
-  }, [angle]);
+    if (props.ratio === undefined || Math.abs(ratio - props.ratio) > 0.01) {
+      props.onRatioChange?.(ratio);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [angle]); // intentionally ignoring props.ratio and onRatioChange references
 
-  const handlePointerMove = (e: any) => {
+  const handlePointerMove = (e: KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (!isDragging || !groupRef.current) return;
 
     const stage = e.target.getStage();
@@ -88,7 +98,7 @@ export default function Potentiometer(props: PotentiometerProps) {
         />
 
         <Line
-          points={[0, 0, 0, -15]} // handle
+          points={[0, 0, 0, -15]}
           stroke="black"
           strokeWidth={4}
           hitStrokeWidth={10}
@@ -109,3 +119,5 @@ export default function Potentiometer(props: PotentiometerProps) {
     </BaseElement>
   );
 }
+
+export default React.memo(Potentiometer);

@@ -1,6 +1,6 @@
 "use client";
 
-export function App() {
+export default function Page() {
   return (
     <div className="flex h-screen">
       <div className="w-1/4 h-full bg-gray-100 p-0">
@@ -9,4 +9,3 @@ export function App() {
     </div>
   );
 }
-export default App;

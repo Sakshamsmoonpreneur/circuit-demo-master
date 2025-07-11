@@ -9,7 +9,7 @@ import {
   SaveCircuit,
   editCircuitName,
   overrideCircuit,
-} from "./CircuitSaver";
+} from "../../../utils/core/circuitStorage";
 import React from "react";
 
 type CircuitManagerProps = {
@@ -18,7 +18,7 @@ type CircuitManagerProps = {
   currentWires?: Wire[];
   getSnapshot?: () => string;
 };
-export default function CircuitManager(props: CircuitManagerProps) {
+export default function CircuitStorage(props: CircuitManagerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCircuitID, setSelectedCircuitID] = useState<string | null>(
     null

@@ -28,7 +28,6 @@ function solveSingleSubcircuit(
   const n = nonGroundIds.length;
 
   const elementsWithCurrent = getElementsWithCurrent(elements);
-  const m = elementsWithCurrent.length;
   const currentSourceIndexMap = mapCurrentSourceIndices(elementsWithCurrent);
 
   const { G, B, C, D, I, E } = buildMNAMatrices(
@@ -261,11 +260,9 @@ function buildMNAMatrices(
       }
     } else if (el.type === "battery") {
       const pos =
-        el.nodes.find((n: any) => n.polarity === "positive")?.id ??
-        el.nodes[1].id;
+        el.nodes.find((n) => n.polarity === "positive")?.id ?? el.nodes[1].id;
       const neg =
-        el.nodes.find((n: any) => n.polarity === "negative")?.id ??
-        el.nodes[0].id;
+        el.nodes.find((n) => n.polarity === "negative")?.id ?? el.nodes[0].id;
       const pIdx = nodeIndex.get(nodeMap.get(pos)!);
       const nIdx = nodeIndex.get(nodeMap.get(neg)!);
       const idx = currentMap.get(el.id)!;
@@ -351,10 +348,10 @@ function computeElementResults(
       const R = el.properties?.resistance ?? 1;
       const t = el.properties?.ratio ?? 0.5;
       const Ra = R * (1 - t); // A–W
-      const Rb = R * t; // W–B
+      //const Rb = R * t; // W–B
 
       const Ia = (Va - Vw) / Ra;
-      const Ib = (Vw - Vb) / Rb;
+      //const Ib = (Vw - Vb) / Rb;
 
       // voltage across entire potentiometer
       const totalVoltage = Va - Vb;

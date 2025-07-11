@@ -8,7 +8,9 @@ export function SaveCircuit(
   snapshot?: string
 ) {
   // Strip out computed fields
-  const sanitizedElements = elements.map(({ computed, ...rest }) => rest);
+  const sanitizedElements = elements.map(
+    ({ computed: _computed, ...rest }) => rest
+  );
 
   const circuitData = {
     name,
