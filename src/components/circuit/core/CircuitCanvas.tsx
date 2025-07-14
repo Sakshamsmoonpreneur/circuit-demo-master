@@ -198,7 +198,6 @@ export default function CircuitCanvas() {
   }
 
   function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
-    pushToHistory();
     const id = e.target.id();
     const x = e.target.x();
     const y = e.target.y();
@@ -563,6 +562,7 @@ export default function CircuitCanvas() {
                 handleNodeClick={handleNodeClick}
                 handleRatioChange={handleRatioChange}
                 handleModeChange={handleModeChange}
+                onDragOver={() => pushToHistory()}
                 onSelect={(id) => {
                   // Only set selectedElement if it's not already selected
                   if (selectedElement?.id !== id) {

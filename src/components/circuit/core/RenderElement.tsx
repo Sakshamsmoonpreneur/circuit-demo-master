@@ -19,12 +19,14 @@ export default function RenderElement({
   handleModeChange: (elementId: string, mode: "voltage" | "current") => void;
   onSelect?: (elementId: string) => void;
   selectedElementId?: string | null;
+  onDragOver: () => void
 }) {
   return (
     <Group
       x={element.x}
       y={element.y}
       onDragMove={props.onDragMove}
+      onDragEnd={props.onDragOver}
       onClick={() => {
         props.onSelect?.(element.id);
       }}
