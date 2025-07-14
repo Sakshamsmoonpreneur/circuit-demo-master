@@ -11,6 +11,7 @@ import PropertiesPanel from "./PropertiesPanel";
 import CircuitPalette from "./CircuitPalette";
 import { getCircuitById } from "../../../utils/core/circuitStorage";
 import Konva from "konva";
+import styles from './CircuitCanvas.module.css';
 import CircuitStorage from "./CircuitStorage";
 
 export default function CircuitCanvas() {
@@ -394,17 +395,19 @@ export default function CircuitCanvas() {
 
   return (
     <div
-      className="flex flex-row items-center justify-between h-screen w-screen relative"
+      // className="flex flex-row items-center justify-between h-screen w-screen relative"
+      className={styles.canvasContainer}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
       {/* Debug Box Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-r border-gray-200 shadow-md overflow-auto ${showDebugBox ? "w-[25%]" : "w-10"
+        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
           }`}
       >
         <button
-          className="absolute left-2 top-2 z-10 bg-blue-100 text-blue-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
+          className={styles.toggleButton}
+          style={{ left: '0.5rem' }}
           onClick={() => setShowDebugBox((prev) => !prev)}
         >
           {showDebugBox ? "⇠" : "⇢"}
@@ -420,12 +423,10 @@ export default function CircuitCanvas() {
       {/* Canvas */}
       <div className="flex-grow h-full">
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
-        <div className="bg-blue-50 px-2 py-2 rounded-md shadow-md absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex flex-row gap-4 items-center justify-center">
+        <div className={styles.centerControls}>
           <button
-            className={`px-4 py-2 rounded cursor-pointer ${simulationRunning
-              ? "bg-red-500 hover:bg-red-600"
-              : "bg-green-500 hover:bg-green-600"
-              } text-white`}
+            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
+              }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -449,6 +450,30 @@ export default function CircuitCanvas() {
             currentWires={wires}
             getSnapshot={() => stageRef.current?.toDataURL() || ""}
           />
+          <div className={styles.tooltipWrapper}>
+            <div className={styles.tooltipIcon}>?</div>
+            <div className={styles.tooltipContent}>
+              <div className={styles.tooltipTitle}>Keyboard Shortcuts</div>
+              <ul className={styles.tooltipList}>
+                <li>
+                  <kbd className={styles.kbd}>Ctrl</kbd> + <kbd className={styles.kbd}>Z</kbd> – Undo last action
+                </li>
+                <li>
+                  <kbd className={styles.kbd}>Delete</kbd> – Delete selected element
+                </li>
+                <li>
+                  <kbd className={styles.kbd}>Shift</kbd> + <kbd className={styles.kbd}>W</kbd> – Delete all wires
+                </li>
+                <li>
+                  <kbd className={styles.kbd}>Ctrl</kbd> + <kbd className={styles.kbd}>L</kbd> – Clear/reset circuit
+                </li>
+                <li>
+                  <kbd className={styles.kbd}>Esc</kbd> – Cancel wire creation/editing
+                </li>
+              </ul>
+            </div>
+          </div>
+
         </div>
         <Stage
           id="canvas-stage"
@@ -553,11 +578,12 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`transition-all duration-300 h-full bg-white border-l border-black-200 shadow-md overflow-auto ${showPalette ? "w-[25%]" : "w-10"
+        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
           }`}
       >
         <button
-          className="absolute right-2 top-2 z-10 bg-blue-100 text-sky-800 text-sm px-2 py-1 rounded hover:bg-yellow-200"
+          className={styles.toggleButton}
+          style={{ right: '0.5rem' }}
           onClick={() => setShowPalette((prev) => !prev)}
         >
           {showPalette ? "⇢" : "⇠"}
