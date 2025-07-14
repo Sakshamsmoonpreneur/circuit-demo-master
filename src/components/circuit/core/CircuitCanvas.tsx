@@ -27,7 +27,9 @@ export default function CircuitCanvas() {
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
   >([]);
-
+  const [history, setHistory] = useState<
+    { elements: CircuitElement[]; wires: Wire[] }[]
+  >([]);
   const [simulationRunning, setSimulationRunning] = useState(false);
 
   const [selectedElement, setSelectedElement] = useState<CircuitElement | null>(
@@ -40,6 +42,7 @@ export default function CircuitCanvas() {
   const [editingWire, setEditingWire] = useState<EditingWire | null>(null);
 
   function resetState() {
+    pushToHistory();
     setElements([]);
     setWires([]);
     setWireCounter(0);
@@ -72,6 +75,20 @@ export default function CircuitCanvas() {
     computeCircuit(wires);
   }
 
+  function pushToHistory() {
+    setHistory((prev) => {
+      const next = [
+        ...prev,
+        {
+          elements: JSON.parse(JSON.stringify(elements)),
+          wires: JSON.parse(JSON.stringify(wires)),
+        },
+      ];
+
+      return next.length > 50 ? next.slice(1) : next;
+    });
+  }
+
   function getNodeById(nodeId: string) {
     return elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
   }
@@ -101,13 +118,14 @@ export default function CircuitCanvas() {
         setEditingWire(null);
       }
       // if ctrl + L is pressed
-      if (e.ctrlKey && e.key === "l") {
+      if ((e.ctrlKey && e.key.toLowerCase() === "l")) {
         e.preventDefault(); // Prevent default behavior
         resetState();
       }
       if (e.key === "Delete") {
         e.preventDefault(); // Prevent default delete behavior
         if (selectedElement) {
+          pushToHistory();
           const updatedElements = elements.filter(
             (el) => el.id !== selectedElement.id
           );
@@ -127,6 +145,27 @@ export default function CircuitCanvas() {
           setCreatingWireStartNode(null);
           setEditingWire(null);
         }
+      }
+      // to remove delete all the wires
+      if ((e.shiftKey && e.key.toLowerCase() === "w")) {
+        e.preventDefault();
+        pushToHistory();
+        setWires([]);
+        stopSimulation();
+      }
+      // to revert to history
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        setHistory((prev) => {
+          if (prev.length === 0) return prev;
+
+          const last = prev[prev.length - 1];
+          setElements(last.elements);
+          setWires(last.wires);
+          stopSimulation();
+
+          return prev.slice(0, -1); // remove the last snapshot
+        });
       }
     };
 
@@ -158,6 +197,7 @@ export default function CircuitCanvas() {
   }
 
   function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
+    pushToHistory();
     const id = e.target.id();
     const x = e.target.x();
     const y = e.target.y();
@@ -193,8 +233,47 @@ export default function CircuitCanvas() {
     return [start.x, start.y, ...jointPoints, end.x, end.y];
   }
 
+  // function handleNodeClick(nodeId: string) {
+  //   if (editingWire) {
+  //     setWires((prev) =>
+  //       prev.map((wire) =>
+  //         wire.id === editingWire.wireId
+  //           ? { ...wire, [editingWire.end]: nodeId }
+  //           : wire
+  //       )
+  //     );
+  //     setEditingWire(null);
+  //     return;
+  //   }
+
+  //   if (!creatingWireStartNode) {
+  //     setCreatingWireStartNode(nodeId);
+  //     setCreatingWireJoints([]);
+  //   } else if (creatingWireStartNode === nodeId) {
+  //     setCreatingWireStartNode(null);
+  //     setCreatingWireJoints([]);
+  //   } else {
+  //     const newWire: Wire = {
+  //       id: `wire-${wireCounter}`,
+  //       fromNodeId: creatingWireStartNode,
+  //       toNodeId: nodeId,
+  //       joints: creatingWireJoints,
+  //     };
+
+  //     const updatedWires = [...wires, newWire];
+  //     setWires(updatedWires);
+  //     setWireCounter((c) => c + 1);
+  //     //computeCircuit(updatedWires);
+  //     stopSimulation();
+
+  //     setCreatingWireStartNode(null);
+  //     setCreatingWireJoints([]);
+  //   }
+  // }
   function handleNodeClick(nodeId: string) {
     if (editingWire) {
+      // complete wire editing logic
+      pushToHistory();
       setWires((prev) =>
         prev.map((wire) =>
           wire.id === editingWire.wireId
@@ -206,29 +285,36 @@ export default function CircuitCanvas() {
       return;
     }
 
+    // First click: set start node
     if (!creatingWireStartNode) {
       setCreatingWireStartNode(nodeId);
       setCreatingWireJoints([]);
-    } else if (creatingWireStartNode === nodeId) {
-      setCreatingWireStartNode(null);
-      setCreatingWireJoints([]);
-    } else {
-      const newWire: Wire = {
-        id: `wire-${wireCounter}`,
-        fromNodeId: creatingWireStartNode,
-        toNodeId: nodeId,
-        joints: creatingWireJoints,
-      };
-
-      const updatedWires = [...wires, newWire];
-      setWires(updatedWires);
-      setWireCounter((c) => c + 1);
-      //computeCircuit(updatedWires);
-      stopSimulation();
-
-      setCreatingWireStartNode(null);
-      setCreatingWireJoints([]);
+      return;
     }
+
+    // Clicked same node again: cancel
+    if (creatingWireStartNode === nodeId) {
+      setCreatingWireStartNode(null);
+      setCreatingWireJoints([]);
+      return;
+    }
+
+    // Second click: create wire
+    pushToHistory();
+
+    const newWire: Wire = {
+      id: `wire-${wireCounter}`,
+      fromNodeId: creatingWireStartNode,
+      toNodeId: nodeId,
+      joints: creatingWireJoints,
+    };
+
+    setWires([...wires, newWire]);
+    setWireCounter((c) => c + 1);
+    stopSimulation();
+
+    setCreatingWireStartNode(null);
+    setCreatingWireJoints([]);
   }
 
   function computeCircuit(wiresSnapshot: Wire[]) {
@@ -269,7 +355,7 @@ export default function CircuitCanvas() {
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
-
+    pushToHistory();
     const elementData = e.dataTransfer.getData("application/element-type");
     if (!elementData) return;
 
@@ -337,8 +423,8 @@ export default function CircuitCanvas() {
         <div className="bg-blue-50 px-2 py-2 rounded-md shadow-md absolute top-4 left-1/2 transform -translate-x-1/2 z-10 flex flex-row gap-4 items-center justify-center">
           <button
             className={`px-4 py-2 rounded cursor-pointer ${simulationRunning
-                ? "bg-red-500 hover:bg-red-600"
-                : "bg-green-500 hover:bg-green-600"
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-green-500 hover:bg-green-600"
               } text-white`}
             onClick={() => {
               if (simulationRunning) {
@@ -354,7 +440,7 @@ export default function CircuitCanvas() {
             onCircuitSelect={function (circuitId: string): void {
               const data = getCircuitById(circuitId);
               if (!data) return;
-
+              pushToHistory();
               resetState();
               setElements(data.elements);
               setWires(data.wires);
@@ -483,6 +569,7 @@ export default function CircuitCanvas() {
             wires={wires}
             getNodeById={getNodeById}
             onElementEdit={(updatedElement, deleteElement) => {
+              pushToHistory();
               if (deleteElement) {
                 const updatedWires = wires.filter(
                   (wire) =>
@@ -521,6 +608,7 @@ export default function CircuitCanvas() {
               }
             }}
             onWireEdit={(updatedWire, deleteElement) => {
+              pushToHistory();
               if (deleteElement) {
                 setWires((prev) => prev.filter((w) => w.id !== updatedWire.id));
                 setSelectedElement(null);
