@@ -11,8 +11,13 @@ import PropertiesPanel from "./PropertiesPanel";
 import CircuitPalette from "./CircuitPalette";
 import { getCircuitById } from "../../../utils/core/circuitStorage";
 import Konva from "konva";
-import styles from './CircuitCanvas.module.css';
+import styles from "./CircuitCanvas.module.css";
 import CircuitStorage from "./CircuitStorage";
+import useCircuitShortcuts from "@/utils/hooks/useCircuitShortcuts";
+import {
+  getCircuitShortcuts,
+  getShortcutMetadata,
+} from "@/utils/core/circuitShortcuts";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -111,68 +116,33 @@ export default function CircuitCanvas() {
     [elements, getElementById]
   );
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault(); // Prevent default behavior (e.g. exiting fullscreen)
-        setCreatingWireStartNode(null);
-        setEditingWire(null);
-      }
-      // if ctrl + L is pressed
-      if ((e.ctrlKey && e.key.toLowerCase() === "l")) {
-        e.preventDefault(); // Prevent default behavior
-        resetState();
-      }
-      if (e.key === "Delete") {
-        e.preventDefault(); // Prevent default delete behavior
-        if (selectedElement) {
-          pushToHistory();
-          const updatedElements = elements.filter(
-            (el) => el.id !== selectedElement.id
-          );
-          setElements(updatedElements);
-
-          // Remove any wires connected to this element
-          const updatedWires = wires.filter(
-            (wire) =>
-              getNodeParent(wire.fromNodeId)?.id !== selectedElement.id &&
-              getNodeParent(wire.toNodeId)?.id !== selectedElement.id
-          );
-          setWires(updatedWires);
-          //computeCircuit(updatedWires); // Recompute circuit after deletion
-          stopSimulation();
-
-          setSelectedElement(null);
-          setCreatingWireStartNode(null);
-          setEditingWire(null);
-        }
-      }
-      // to remove delete all the wires
-      if ((e.shiftKey && e.key.toLowerCase() === "w")) {
-        e.preventDefault();
-        pushToHistory();
-        setWires([]);
-        stopSimulation();
-      }
-      // to revert to history
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        setHistory((prev) => {
-          if (prev.length === 0) return prev;
-
-          const last = prev[prev.length - 1];
-          setElements(last.elements);
-          setWires(last.wires);
-          stopSimulation();
-
-          return prev.slice(0, -1); // remove the last snapshot
-        });
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [mousePos, elements, getNodeParent, wires, selectedElement]);
+  useCircuitShortcuts({
+    getShortcuts: () =>
+      getCircuitShortcuts({
+        elements,
+        wires,
+        selectedElement,
+        setElements,
+        setWires,
+        setSelectedElement,
+        setCreatingWireStartNode,
+        setEditingWire,
+        pushToHistory,
+        stopSimulation,
+        resetState,
+        getNodeParent,
+        undo: () => {
+          setHistory((prev) => {
+            if (prev.length === 0) return prev;
+            const last = prev[prev.length - 1];
+            setElements(last.elements);
+            setWires(last.wires);
+            stopSimulation();
+            return prev.slice(0, -1);
+          });
+        },
+      }),
+  });
 
   function handleStageMouseMove(e: KonvaEventObject<PointerEvent>) {
     const pos = e.target.getStage()?.getPointerPosition();
@@ -233,43 +203,6 @@ export default function CircuitCanvas() {
     return [start.x, start.y, ...jointPoints, end.x, end.y];
   }
 
-  // function handleNodeClick(nodeId: string) {
-  //   if (editingWire) {
-  //     setWires((prev) =>
-  //       prev.map((wire) =>
-  //         wire.id === editingWire.wireId
-  //           ? { ...wire, [editingWire.end]: nodeId }
-  //           : wire
-  //       )
-  //     );
-  //     setEditingWire(null);
-  //     return;
-  //   }
-
-  //   if (!creatingWireStartNode) {
-  //     setCreatingWireStartNode(nodeId);
-  //     setCreatingWireJoints([]);
-  //   } else if (creatingWireStartNode === nodeId) {
-  //     setCreatingWireStartNode(null);
-  //     setCreatingWireJoints([]);
-  //   } else {
-  //     const newWire: Wire = {
-  //       id: `wire-${wireCounter}`,
-  //       fromNodeId: creatingWireStartNode,
-  //       toNodeId: nodeId,
-  //       joints: creatingWireJoints,
-  //     };
-
-  //     const updatedWires = [...wires, newWire];
-  //     setWires(updatedWires);
-  //     setWireCounter((c) => c + 1);
-  //     //computeCircuit(updatedWires);
-  //     stopSimulation();
-
-  //     setCreatingWireStartNode(null);
-  //     setCreatingWireJoints([]);
-  //   }
-  // }
   function handleNodeClick(nodeId: string) {
     if (editingWire) {
       // complete wire editing logic
@@ -327,9 +260,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, ratio },
-          }
+              ...el,
+              properties: { ...el.properties, ratio },
+            }
           : el
       )
     );
@@ -344,9 +277,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
@@ -401,12 +334,13 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelLeft} ${
+          showDebugBox ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
-          style={{ left: '0.5rem' }}
+          style={{ left: "0.5rem" }}
           onClick={() => setShowDebugBox((prev) => !prev)}
         >
           {showDebugBox ? "⇠" : "⇢"}
@@ -424,8 +358,9 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
-              }`}
+            className={`${styles.simulationButton} ${
+              simulationRunning ? styles.simulationStop : styles.simulationStart
+            }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -453,26 +388,39 @@ export default function CircuitCanvas() {
             <div className={styles.tooltipIcon}>?</div>
             <div className={styles.tooltipContent}>
               <div className={styles.tooltipTitle}>Keyboard Shortcuts</div>
-              <ul className={styles.tooltipList}>
-                <li>
-                  <kbd className={styles.kbd}>Ctrl</kbd> + <kbd className={styles.kbd}>Z</kbd> – Undo last action
-                </li>
-                <li>
-                  <kbd className={styles.kbd}>Delete</kbd> – Delete selected element
-                </li>
-                <li>
-                  <kbd className={styles.kbd}>Shift</kbd> + <kbd className={styles.kbd}>W</kbd> – Delete all wires
-                </li>
-                <li>
-                  <kbd className={styles.kbd}>Ctrl</kbd> + <kbd className={styles.kbd}>L</kbd> – Clear/reset circuit
-                </li>
-                <li>
-                  <kbd className={styles.kbd}>Esc</kbd> – Cancel wire creation/editing
-                </li>
-              </ul>
+              <table className="w-full text-sm border-separate border-spacing-y-1">
+                <thead>
+                  <tr>
+                    <th className="text-left w-32 font-medium text-gray-700">
+                      Keybind
+                    </th>
+                    <th className="text-left font-medium text-gray-700">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getShortcutMetadata().map((s) => (
+                    <tr key={s.name}>
+                      <td className="py-1 pr-4 align-top">
+                        {s.keys.map((k, i) => (
+                          <React.Fragment key={`${s.name}-key-${k}`}>
+                            <kbd className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded border border-gray-300 text-xs font-mono">
+                              {k}
+                            </kbd>
+                            {i < s.keys.length - 1 && (
+                              <span className="mx-1">+</span>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </td>
+                      <td className="py-1 align-middle">{s.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-
         </div>
         <Stage
           id="canvas-stage"
@@ -562,7 +510,7 @@ export default function CircuitCanvas() {
                 handleNodeClick={handleNodeClick}
                 handleRatioChange={handleRatioChange}
                 handleModeChange={handleModeChange}
-                onDragOver={() => pushToHistory()}
+                onDragStart={() => pushToHistory()}
                 onSelect={(id) => {
                   // Only set selectedElement if it's not already selected
                   if (selectedElement?.id !== id) {
@@ -578,12 +526,13 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelRight} ${
+          showPalette ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
-          style={{ right: '0.5rem' }}
+          style={{ right: "0.5rem" }}
           onClick={() => setShowPalette((prev) => !prev)}
         >
           {showPalette ? "⇢" : "⇠"}
@@ -617,11 +566,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                        ...el,
-                        ...updatedElement,
-                        x: el.x,
-                        y: el.y,
-                      }
+                          ...el,
+                          ...updatedElement,
+                          x: el.x,
+                          y: el.y,
+                        }
                       : el
                   )
                 );
