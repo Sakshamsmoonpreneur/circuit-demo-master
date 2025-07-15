@@ -4,7 +4,6 @@ import { ELEMENT_PALETTE } from "@/common/data/defaultElementProperties";
 
 export default function CircuitPalette() {
   return (
-    // <div className="w-[100%] h-1/2  bg-blue-100 border-l border-gray-300 shadow-lg p-4">
     <div className="bg-blue-100 overflow-y-auto h-1/2 border-l border-gray-300 shadow-md flex flex-col">
       <div className="bg-blue-200 px-4 py-2 border-b border-gray-300 shadow-sm">
         <h2 className="text-2xl font-bold text-gray-700 mb-6 flex items-center gap-2">

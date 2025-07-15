@@ -220,3 +220,10 @@
   font-family: monospace;
   font-size: 0.85rem;
 }
+
+.stageBorders {
+  border: 1px solid #333;
+  border-radius: 8px;
+  display: inline-block;
+  padding: 4px,
+}

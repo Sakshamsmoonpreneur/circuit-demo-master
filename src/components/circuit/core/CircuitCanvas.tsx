@@ -260,9 +260,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -277,9 +277,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -334,9 +334,8 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`${styles.panelLeft} ${
-          showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-        }`}
+        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
+          }`}
       >
         <button
           className={styles.toggleButton}
@@ -358,9 +357,8 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${
-              simulationRunning ? styles.simulationStop : styles.simulationStart
-            }`}
+            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
+              }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -422,113 +420,114 @@ export default function CircuitCanvas() {
             </div>
           </div>
         </div>
-        <Stage
-          id="canvas-stage"
-          width={window.innerWidth * 0.5}
-          height={window.innerHeight}
-          onMouseMove={handleStageMouseMove}
-          onClick={handleStageClick}
-          ref={stageRef}
-        >
-          <Layer>
-            {/* Render wires */}
-            {wires.map((wire) => {
-              const points = getWirePoints(wire);
-              if (points.length == 4) {
-                const [x1, y1, x2, y2] = points;
-                const midX = (x1 + x2) / 2;
-                const midY = (y1 + y2) / 2;
-                points.splice(2, 0, midX, midY);
-              }
-
-              return (
-                <React.Fragment key={wire.id}>
-                  <Line
-                    points={points}
-                    stroke={
-                      selectedElement?.id === wire.id
-                        ? "orange"
-                        : getWireColor(wire)
-                    }
-                    strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
-                    hitStrokeWidth={12}
-                    tension={0.5}
-                    lineCap="round"
-                    lineJoin="round"
-                    bezier={true}
-                    onClick={() => {
-                      setSelectedElement({
-                        id: wire.id,
-                        type: "wire",
-                        x: 0,
-                        y: 0,
-                        nodes: [],
-                      });
-                    }}
-                  />
-                </React.Fragment>
-              );
-            })}
-
-            {/* Wire being created */}
-            {creatingWireStartNode &&
-              (() => {
-                const startNode = getNodeById(creatingWireStartNode);
-                if (!startNode) return null;
-
-                const startPos = {
-                  x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
-                  y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
-                };
-
-                const inProgressPoints: number[] = [
-                  startPos.x,
-                  startPos.y,
-                  ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
-                  mousePos.x,
-                  mousePos.y,
-                ];
+        <div className={styles.stageBorders}>
+          <Stage
+            id="canvas-stage"
+            width={window.innerWidth * 0.5}
+            height={window.innerHeight}
+            onMouseMove={handleStageMouseMove}
+            onClick={handleStageClick}
+            ref={stageRef}
+          >
+            <Layer>
+              {/* Render wires */}
+              {wires.map((wire) => {
+                const points = getWirePoints(wire);
+                if (points.length == 4) {
+                  const [x1, y1, x2, y2] = points;
+                  const midX = (x1 + x2) / 2;
+                  const midY = (y1 + y2) / 2;
+                  points.splice(2, 0, midX, midY);
+                }
 
                 return (
-                  <Line
-                    points={inProgressPoints}
-                    stroke="black"
-                    strokeWidth={2}
-                    // dash={[10, 5]}
-                    pointerEvents="none"
-                    lineCap="round"
-                    lineJoin="round"
-                  />
+                  <React.Fragment key={wire.id}>
+                    <Line
+                      points={points}
+                      stroke={
+                        selectedElement?.id === wire.id
+                          ? "orange"
+                          : getWireColor(wire)
+                      }
+                      strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
+                      hitStrokeWidth={12}
+                      tension={0.5}
+                      lineCap="round"
+                      lineJoin="round"
+                      bezier={true}
+                      onClick={() => {
+                        setSelectedElement({
+                          id: wire.id,
+                          type: "wire",
+                          x: 0,
+                          y: 0,
+                          nodes: [],
+                        });
+                      }}
+                    />
+                  </React.Fragment>
                 );
-              })()}
-            {/* Circuit Elements */}
-            {elements.map((element) => (
-              <RenderElement
-                key={element.id}
-                element={element}
-                onDragMove={handleElementDragMove}
-                handleNodeClick={handleNodeClick}
-                handleRatioChange={handleRatioChange}
-                handleModeChange={handleModeChange}
-                onDragStart={() => pushToHistory()}
-                onSelect={(id) => {
-                  // Only set selectedElement if it's not already selected
-                  if (selectedElement?.id !== id) {
-                    setSelectedElement(getElementById(id) ?? null);
-                  }
-                }}
-                selectedElementId={selectedElement?.id || null}
-              />
-            ))}
-          </Layer>
-        </Stage>
+              })}
+
+              {/* Wire being created */}
+              {creatingWireStartNode &&
+                (() => {
+                  const startNode = getNodeById(creatingWireStartNode);
+                  if (!startNode) return null;
+
+                  const startPos = {
+                    x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
+                    y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
+                  };
+
+                  const inProgressPoints: number[] = [
+                    startPos.x,
+                    startPos.y,
+                    ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
+                    mousePos.x,
+                    mousePos.y,
+                  ];
+
+                  return (
+                    <Line
+                      points={inProgressPoints}
+                      stroke="black"
+                      strokeWidth={2}
+                      // dash={[10, 5]}
+                      pointerEvents="none"
+                      lineCap="round"
+                      lineJoin="round"
+                    />
+                  );
+                })()}
+              {/* Circuit Elements */}
+              {elements.map((element) => (
+                <RenderElement
+                  key={element.id}
+                  element={element}
+                  onDragMove={handleElementDragMove}
+                  handleNodeClick={handleNodeClick}
+                  handleRatioChange={handleRatioChange}
+                  handleModeChange={handleModeChange}
+                  onDragStart={() => pushToHistory()}
+                  onSelect={(id) => {
+                    // Only set selectedElement if it's not already selected
+                    if (selectedElement?.id !== id) {
+                      setSelectedElement(getElementById(id) ?? null);
+                    }
+                  }}
+                  selectedElementId={selectedElement?.id || null}
+                />
+              ))}
+            </Layer>
+          </Stage>
+        </div>
       </div>
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${
-          showPalette ? styles.panelExpanded : styles.panelCollapsed
-        }`}
+        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
+          }`}
       >
         <button
           className={styles.toggleButton}
@@ -566,11 +565,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                          ...el,
-                          ...updatedElement,
-                          x: el.x,
-                          y: el.y,
-                        }
+                        ...el,
+                        ...updatedElement,
+                        x: el.x,
+                        y: el.y,
+                      }
                       : el
                   )
                 );
@@ -613,6 +612,6 @@ export default function CircuitCanvas() {
           />
         )}
       </div>
-    </div>
+    </div >
   );
 }
