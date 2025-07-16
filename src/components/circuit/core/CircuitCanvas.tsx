@@ -508,12 +508,15 @@ export default function CircuitCanvas() {
                     y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
                   };
 
+                  const adjustedMouseX = mousePos.x - canvasOffset.x;
+                  const adjustedMouseY = mousePos.y - canvasOffset.y;
+
                   const inProgressPoints: number[] = [
                     startPos.x,
                     startPos.y,
                     ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
-                    mousePos.x,
-                    mousePos.y,
+                    adjustedMouseX,
+                    adjustedMouseY,
                   ];
 
                   return (
