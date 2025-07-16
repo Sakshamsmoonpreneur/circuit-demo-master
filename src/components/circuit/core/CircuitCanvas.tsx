@@ -24,6 +24,9 @@ export default function CircuitCanvas() {
     x: 0,
     y: 0,
   });
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [draggingElement, setDraggingElement] = useState<string | null>(null);
+
   const stageRef = useRef<Konva.Stage | null>(null);
   const [elements, setElements] = useState<CircuitElement[]>([]);
   const [wires, setWires] = useState<Wire[]>([]);
@@ -168,6 +171,7 @@ export default function CircuitCanvas() {
   }
 
   function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
+    e.cancelBubble = true;
     const id = e.target.id();
     const x = e.target.x();
     const y = e.target.y();
@@ -260,9 +264,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, ratio },
-          }
+              ...el,
+              properties: { ...el.properties, ratio },
+            }
           : el
       )
     );
@@ -277,9 +281,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
@@ -297,12 +301,14 @@ export default function CircuitCanvas() {
     const stageX = e.clientX;
     const stageY = e.clientY;
 
-    const canvasOffset = document
+    const canvasOffsetLocal = document
       .getElementById("canvas-stage") // optional: give your Stage a container ID
       ?.getBoundingClientRect();
 
-    const canvasX = stageX - (canvasOffset?.left ?? 0);
-    const canvasY = stageY - (canvasOffset?.top ?? 0);
+    const canvasX =
+      stageX - (canvasOffsetLocal?.left ?? 0) - (canvasOffset?.x || 0);
+    const canvasY =
+      stageY - (canvasOffsetLocal?.top ?? 0) - (canvasOffset?.y || 0);
 
     const newElement = createElement({
       type: element.type,
@@ -334,8 +340,9 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelLeft} ${
+          showDebugBox ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
@@ -346,7 +353,15 @@ export default function CircuitCanvas() {
         </button>
         {showDebugBox && (
           <DebugBox
-            data={{ mousePos, selectedElement, editingWire, elements, wires }}
+            data={{
+              mousePos,
+              canvasOffset,
+              draggingElement,
+              selectedElement,
+              editingWire,
+              elements,
+              wires,
+            }}
             className="w-full h-full p-4"
           />
         )}
@@ -357,8 +372,9 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
-              }`}
+            className={`${styles.simulationButton} ${
+              simulationRunning ? styles.simulationStop : styles.simulationStart
+            }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -423,11 +439,23 @@ export default function CircuitCanvas() {
         <div className={styles.stageBorders}>
           <Stage
             id="canvas-stage"
-            width={window.innerWidth * 0.5}
+            width={
+              window.innerWidth -
+              (showDebugBox ? 300 : 0) -
+              (showPalette ? 300 : 0)
+            }
             height={window.innerHeight}
             onMouseMove={handleStageMouseMove}
             onClick={handleStageClick}
             ref={stageRef}
+            x={canvasOffset.x}
+            y={canvasOffset.y}
+            onDragMove={(e) => {
+              if (draggingElement !== null) return;
+              const stage = e.target;
+              setCanvasOffset({ x: stage.x(), y: stage.y() });
+            }}
+            draggable={draggingElement == null}
           >
             <Layer>
               {/* Render wires */}
@@ -509,7 +537,15 @@ export default function CircuitCanvas() {
                   handleNodeClick={handleNodeClick}
                   handleRatioChange={handleRatioChange}
                   handleModeChange={handleModeChange}
-                  onDragStart={() => pushToHistory()}
+                  onDragStart={() => {
+                    pushToHistory();
+                    setDraggingElement(element.id);
+                    stageRef.current?.draggable(false);
+                  }}
+                  onDragEnd={() => {
+                    setDraggingElement(null);
+                    stageRef.current?.draggable(true);
+                  }}
                   onSelect={(id) => {
                     // Only set selectedElement if it's not already selected
                     if (selectedElement?.id !== id) {
@@ -526,8 +562,9 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelRight} ${
+          showPalette ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
@@ -565,11 +602,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                        ...el,
-                        ...updatedElement,
-                        x: el.x,
-                        y: el.y,
-                      }
+                          ...el,
+                          ...updatedElement,
+                          x: el.x,
+                          y: el.y,
+                        }
                       : el
                   )
                 );
@@ -612,6 +649,6 @@ export default function CircuitCanvas() {
           />
         )}
       </div>
-    </div >
+    </div>
   );
 }

@@ -20,6 +20,7 @@ export default function RenderElement({
   onSelect?: (elementId: string) => void;
   selectedElementId?: string | null;
   onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   return (
     <Group
@@ -27,6 +28,7 @@ export default function RenderElement({
       y={element.y}
       onDragMove={props.onDragMove}
       onDragStart={props.onDragStart}
+      onDragEnd={props.onDragEnd}
       onClick={() => {
         props.onSelect?.(element.id);
       }}
