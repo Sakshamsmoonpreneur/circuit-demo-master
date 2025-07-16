@@ -51,4 +51,10 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     iconPath: "/circuit_elements/led.svg",
     defaultProps: { resistance: 1 },
   },
+  {
+    type: "microbit",
+    label: "Microbit",
+    iconPath: "/circuit_elements/microbit.svg",
+    defaultProps: { resistance: 1 },
+  },
 ];

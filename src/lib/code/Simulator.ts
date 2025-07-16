@@ -67,4 +67,12 @@ export class Simulator {
   getMicrobitInstance(): MicrobitSimulator | null {
     return this.microbit;
   }
+
+  reset() {
+    if (this.microbit) {
+      this.microbit.reset();
+    } else {
+      throw new Error("Microbit controller not initialized.");
+    }
+  }
 }
