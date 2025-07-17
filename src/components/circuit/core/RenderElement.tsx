@@ -7,6 +7,7 @@ import Led from "../elements/Led";
 import Resistor from "../elements/Resistor";
 import Multimeter from "../elements/Multimeter";
 import Potentiometer from "../elements/Potentiometer";
+import Microbit from "../elements/Microbit";
 
 export default function RenderElement({
   element,
@@ -20,7 +21,8 @@ export default function RenderElement({
   onSelect?: (elementId: string) => void;
   selectedElementId?: string | null;
   onDragStart: () => void;
-  onDragEnd: () => void;
+  onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
+  onControllerInput: (elementId: string, input: string) => void;
 }) {
   return (
     <Group
@@ -90,6 +92,21 @@ export default function RenderElement({
           }}
           resistance={element.properties?.resistance ?? 100}
           ratio={element.properties?.ratio ?? 0.5}
+          selected={props.selectedElementId === element.id}
+        />
+      )}
+      {element.type === "microbit" && (
+        <Microbit
+          id={element.id}
+          x={1}
+          y={22}
+          onControllerInput={(input) => {
+            props.onControllerInput(element.id, input);
+          }}
+          leds={
+            (element.controller?.leds as boolean[][] | undefined) ??
+            Array(5).fill(Array(5).fill(false))
+          }
           selected={props.selectedElementId === element.id}
         />
       )}

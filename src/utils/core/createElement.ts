@@ -189,6 +189,21 @@ export default function createElement(
     },
   };
 
+  const microbitElement = {
+    id,
+    type: props.type,
+    x: props.pos.x,
+    y: props.pos.y,
+    nodes: [],
+    properties: {
+      ...{
+        voltage: props.properties?.voltage ?? 3,
+        resistance: props.properties?.resistance ?? 1,
+      },
+      ...props.properties,
+    },
+  };
+
   // switch based on type
   let element;
   switch (props.type) {
@@ -209,6 +224,9 @@ export default function createElement(
       break;
     case "led":
       element = ledElement;
+      break;
+    case "microbit":
+      element = microbitElement;
       break;
     default:
       element = null;

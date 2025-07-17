@@ -13,20 +13,25 @@ const urls = {
   },
 };
 
+declare global {
+  interface Window {
+    writeToConsole?: (msg: string) => void;
+  }
+}
+
+// Global script loading promise, shared across all instances
+let pyodideScriptLoadingPromise: Promise<void> | null = null;
+
 function loadScript(src: string): Promise<void> {
-  return new Promise((resolve, reject) => {
+  if (pyodideScriptLoadingPromise) return pyodideScriptLoadingPromise;
+  pyodideScriptLoadingPromise = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = src;
     script.onload = () => resolve();
     script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
     document.body.appendChild(script);
   });
-}
-
-declare global {
-  interface Window {
-    writeToConsole?: (msg: string) => void;
-  }
+  return pyodideScriptLoadingPromise;
 }
 
 export class PythonInterpreter {
@@ -34,6 +39,7 @@ export class PythonInterpreter {
   private outputCallback: ((line: string) => void) | null = null;
   private hardwareModules: Record<string, any> = {};
   private isReady = false;
+  private static scriptLoaded = false; // static flag to track if loaded
 
   constructor(private useRemote = true) {}
 
@@ -43,10 +49,16 @@ export class PythonInterpreter {
     try {
       if (!this.useRemote) {
         await loadScript(urls.src.local);
-        console.log("Loaded local pyodide.js");
+        if (!PythonInterpreter.scriptLoaded) {
+          console.log("Loaded local pyodide.js");
+          PythonInterpreter.scriptLoaded = true;
+        }
       } else {
         await loadScript(urls.src.remote);
-        console.log("Loaded remote pyodide.js");
+        if (!PythonInterpreter.scriptLoaded) {
+          console.log("Loaded remote pyodide.js");
+          PythonInterpreter.scriptLoaded = true;
+        }
       }
     } catch {
       if (!this.useRemote) {
@@ -82,7 +94,6 @@ export class PythonInterpreter {
 
     try {
       await this.injectPrintRedirect();
-      // reset microbit state before running new code
       await this.pyodide.runPythonAsync(code);
       return "";
     } catch (err: any) {
@@ -106,7 +117,8 @@ export class PythonInterpreter {
       sys.stdout = DualOutput()
       sys.stderr = sys.stdout
       builtins.print = lambda *args, **kwargs: sys.stdout.write(" ".join(map(str, args)) + "\\n")
-      `);
+      from microbit import *
+    `);
   }
 
   getPyodide(): PyodideInterface | null {

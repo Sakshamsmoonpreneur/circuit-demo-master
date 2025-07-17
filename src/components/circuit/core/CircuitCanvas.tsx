@@ -18,6 +18,8 @@ import {
   getCircuitShortcuts,
   getShortcutMetadata,
 } from "@/utils/core/circuitShortcuts";
+import { Simulator } from "@/lib/code/Simulator";
+import PopupEditor from "@/components/code/PopupEditor";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -26,6 +28,16 @@ export default function CircuitCanvas() {
   });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
   const [draggingElement, setDraggingElement] = useState<string | null>(null);
+  const [activeControllerId, setActiveControllerId] = useState<string | null>(
+    null
+  );
+  const [controllerCodeMap, setControllerCodeMap] = useState<
+    Record<string, string>
+  >({});
+
+  const [controllerMap, setControllerMap] = useState<Record<string, Simulator>>(
+    {}
+  );
 
   const stageRef = useRef<Konva.Stage | null>(null);
   const [elements, setElements] = useState<CircuitElement[]>([]);
@@ -77,11 +89,26 @@ export default function CircuitCanvas() {
         },
       }))
     );
+    setControllerMap((prev) => {
+      Object.values(prev).forEach((sim) => sim.reset());
+      return prev; // Keep the map intact!
+    });
   }
 
   function startSimulation() {
     setSimulationRunning(true);
     computeCircuit(wires);
+
+    // Run user code for all controllers
+    elements.forEach((el) => {
+      if (el.type === "microbit") {
+        const sim = controllerMap[el.id];
+        const code = controllerCodeMap[el.id] ?? "";
+        if (sim && code) {
+          sim.run(code);
+        }
+      }
+    });
   }
 
   function pushToHistory() {
@@ -172,15 +199,6 @@ export default function CircuitCanvas() {
 
   function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
     e.cancelBubble = true;
-    const id = e.target.id();
-    const x = e.target.x();
-    const y = e.target.y();
-
-    setElements((prev) =>
-      prev.map((element) =>
-        element.id === id ? { ...element, x, y } : element
-      )
-    );
   }
 
   function getWirePoints(wire: Wire): number[] {
@@ -255,7 +273,21 @@ export default function CircuitCanvas() {
   }
 
   function computeCircuit(wiresSnapshot: Wire[]) {
-    setElements((prevElements) => solveCircuit(prevElements, wiresSnapshot));
+    setElements((prevElements) => {
+      const solved = solveCircuit(prevElements, wiresSnapshot);
+
+      return prevElements.map((oldEl) => {
+        const updated = solved.find((e) => e.id === oldEl.id);
+
+        if (!updated) return oldEl; // If it's missing from the solved list, preserve it
+
+        return {
+          ...oldEl, // keep everything (e.g., controller state, UI stuff)
+          ...updated, // overwrite any simulated data (like computed values)
+          controller: oldEl.controller, // explicitly preserve controller just in case
+        };
+      });
+    });
   }
 
   // handle resistance change for potentiometer
@@ -290,7 +322,7 @@ export default function CircuitCanvas() {
     if (simulationRunning) computeCircuit(wires);
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+  async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     pushToHistory();
     const elementData = e.dataTransfer.getData("application/element-type");
@@ -318,6 +350,30 @@ export default function CircuitCanvas() {
     });
 
     if (!newElement) return;
+
+    if (newElement.type === "microbit") {
+      const simulator = new Simulator({
+        language: "python",
+        controller: "microbit",
+        onOutput: (line) => console.log(`[${newElement.id}]`, line),
+        onEvent: (event) => {
+          if (event.type === "led-change" || event.type === "reset") {
+            const state = simulator.getStates();
+            setElements((prev) =>
+              prev.map((el) =>
+                el.id === newElement.id
+                  ? { ...el, controller: { leds: state.leds } }
+                  : el
+              )
+            );
+          }
+        },
+      });
+      await simulator.initialize();
+
+      setControllerMap((prev) => ({ ...prev, [newElement.id]: simulator }));
+      newElement.controller = { leds: simulator.getStates().leds };
+    }
     setElements((prev) => [...prev, newElement]);
   }
 
@@ -366,6 +422,19 @@ export default function CircuitCanvas() {
           />
         )}
       </div>
+
+      <PopupEditor
+        visible={!!activeControllerId}
+        code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
+        onChange={(newCode) => {
+          if (!activeControllerId) return;
+          setControllerCodeMap((prev) => ({
+            ...prev,
+            [activeControllerId]: newCode,
+          }));
+        }}
+        onClose={() => setActiveControllerId(null)}
+      />
 
       {/* Canvas */}
       <div className="flex-grow h-full">
@@ -545,17 +614,42 @@ export default function CircuitCanvas() {
                     setDraggingElement(element.id);
                     stageRef.current?.draggable(false);
                   }}
-                  onDragEnd={() => {
+                  onDragEnd={(e) => {
                     setDraggingElement(null);
                     stageRef.current?.draggable(true);
+                    const id = e.target.id();
+                    const x = e.target.x();
+                    const y = e.target.y();
+
+                    setElements((prev) =>
+                      prev.map((element) =>
+                        element.id === id ? { ...element, x, y } : element
+                      )
+                    );
                   }}
                   onSelect={(id) => {
-                    // Only set selectedElement if it's not already selected
-                    if (selectedElement?.id !== id) {
-                      setSelectedElement(getElementById(id) ?? null);
+                    const element = getElementById(id);
+                    setSelectedElement(element ?? null);
+
+                    if (element?.type === "microbit") {
+                      setActiveControllerId(element.id);
                     }
                   }}
                   selectedElementId={selectedElement?.id || null}
+                  onControllerInput={(elementId, input) => {
+                    const sim = controllerMap[elementId];
+                    if (sim && sim.getMicrobitInstance()) {
+                      const microbitInstance = sim.getMicrobitInstance();
+                      if (
+                        microbitInstance?.input &&
+                        (input === "A" || input === "B")
+                      ) {
+                        microbitInstance.input._press_button(
+                          input as "A" | "B"
+                        );
+                      }
+                    }
+                  }}
                 />
               ))}
             </Layer>
