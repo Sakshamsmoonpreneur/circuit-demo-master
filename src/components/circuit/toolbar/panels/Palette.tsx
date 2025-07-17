@@ -39,7 +39,7 @@ export default function CircuitSelector() {
             <img
               src={el.iconPath}
               alt={el.label}
-              className="w-8 h-8 object-contain"
+              className="w-13 h-13 object-contain"
             />
             <span className="text-xs text-gray-800 truncate max-w-[95%] text-center">
               {el.label}
