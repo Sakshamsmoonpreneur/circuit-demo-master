@@ -60,7 +60,9 @@ export default function CircuitCanvas() {
     string | null
   >(null);
   const [editingWire, setEditingWire] = useState<EditingWire | null>(null);
-  const tempDragPositions = useRef<{ [id: string]: { x: number; y: number } }>({});
+  const tempDragPositions = useRef<{ [id: string]: { x: number; y: number } }>(
+    {}
+  );
   const [wireDragVersion, setWireDragVersion] = useState(0);
 
   useEffect(() => {
@@ -209,7 +211,17 @@ export default function CircuitCanvas() {
     }
 
     if (creatingWireStartNode) {
-      setCreatingWireJoints((prev) => [...prev, pos]);
+      const stage = stageRef.current;
+      if (!stage || !pos) return;
+
+      const transform = stage.getAbsoluteTransform().copy();
+      transform.invert();
+      const adjusted = transform.point(pos);
+
+      setCreatingWireJoints((prev) => [
+        ...prev,
+        { x: adjusted.x, y: adjusted.y },
+      ]);
     }
   }
 
@@ -320,9 +332,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, ratio },
-          }
+              ...el,
+              properties: { ...el.properties, ratio },
+            }
           : el
       )
     );
@@ -337,9 +349,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
@@ -411,7 +423,6 @@ export default function CircuitCanvas() {
     return "black";
   };
 
-
   // for canvas zoom in and zoom out
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
@@ -448,7 +459,6 @@ export default function CircuitCanvas() {
   };
   // end
 
-
   return (
     <div
       // className="flex flex-row items-center justify-between h-screen w-screen relative"
@@ -458,8 +468,9 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelLeft} ${
+          showDebugBox ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
@@ -502,8 +513,9 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
-              }`}
+            className={`${styles.simulationButton} ${
+              simulationRunning ? styles.simulationStop : styles.simulationStart
+            }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -571,7 +583,8 @@ export default function CircuitCanvas() {
             width={
               window.innerWidth -
               (showDebugBox ? 300 : 0) -
-              (showPalette ? 300 : 0) - (!showDebugBox && !showPalette ? 50 : 0)
+              (showPalette ? 300 : 0) -
+              (!showDebugBox && !showPalette ? 50 : 0)
             }
             height={window.innerHeight}
             onMouseMove={handleStageMouseMove}
@@ -638,8 +651,15 @@ export default function CircuitCanvas() {
                     y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
                   };
 
-                  const adjustedMouseX = mousePos.x - canvasOffset.x;
-                  const adjustedMouseY = mousePos.y - canvasOffset.y;
+                  const stage = stageRef.current;
+                  if (!stage) return null;
+
+                  const transform = stage.getAbsoluteTransform().copy();
+                  transform.invert();
+                  const adjustedMousePos = transform.point(mousePos);
+
+                  const adjustedMouseX = adjustedMousePos.x;
+                  const adjustedMouseY = adjustedMousePos.y;
 
                   const inProgressPoints: number[] = [
                     startPos.x,
@@ -720,8 +740,9 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelRight} ${
+          showPalette ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
@@ -759,11 +780,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                        ...el,
-                        ...updatedElement,
-                        x: el.x,
-                        y: el.y,
-                      }
+                          ...el,
+                          ...updatedElement,
+                          x: el.x,
+                          y: el.y,
+                        }
                       : el
                   )
                 );
@@ -806,6 +827,6 @@ export default function CircuitCanvas() {
           />
         )}
       </div>
-    </div >
+    </div>
   );
 }
