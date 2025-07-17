@@ -20,6 +20,7 @@ import {
 } from "@/utils/core/circuitShortcuts";
 import { Simulator } from "@/lib/code/Simulator";
 import PopupEditor from "@/components/code/PopupEditor";
+import CircuitSelector from "../toolbar/panels/Palette";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -402,7 +403,7 @@ export default function CircuitCanvas() {
       >
         <button
           className={styles.toggleButton}
-          style={{ left: "0.5rem" }}
+          style={{ right: "-0.5rem" }}
           onClick={() => setShowDebugBox((prev) => !prev)}
         >
           {showDebugBox ? "⇠" : "⇢"}
@@ -665,12 +666,12 @@ export default function CircuitCanvas() {
       >
         <button
           className={styles.toggleButton}
-          style={{ right: "0.5rem" }}
+          style={{ left: "-0.5rem" }}
           onClick={() => setShowPalette((prev) => !prev)}
         >
           {showPalette ? "⇢" : "⇠"}
         </button>
-        {showPalette && <CircuitPalette />}
+        {showPalette && <CircuitSelector />}
         {showPalette && selectedElement && (
           <PropertiesPanel
             selectedElement={selectedElement}
