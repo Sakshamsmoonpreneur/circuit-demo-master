@@ -18,7 +18,7 @@ export default function Microbit({
   ...props
 }: MicrobitProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
-
+  const [btnPressed, setBtnPressed] = useState<'A' | 'B' | null>(null);
   useEffect(() => {
     const image = new window.Image();
     image.src = "/circuit_elements/microbit.svg";
@@ -27,8 +27,11 @@ export default function Microbit({
   }, []);
 
   const handleButtonClick = (btn: "A" | "B") => {
+    setBtnPressed(btn);
     onControllerInput?.(btn);
+    setTimeout(() => setBtnPressed(null), 150);
   };
+
 
   return (
     <BaseElement {...props}>
@@ -36,8 +39,8 @@ export default function Microbit({
         {img && (
           <Image
             image={img}
-            width={120}
-            height={120}
+            width={220}
+            height={220}
             shadowColor={props.selected ? "blue" : undefined}
             shadowBlur={props.selected ? 15 : 0}
             shadowOffset={{ x: 0, y: 0 }}
@@ -50,12 +53,12 @@ export default function Microbit({
           leds.map((col, x) => (
             <Rect
               key={`${x}-${y}`}
-              x={12 + x * 16}
-              y={20 + y * 16}
-              width={8}
-              height={8}
+              x={83 + x * 12.4}
+              y={112 + y * 12.4}
+              width={3.5}
+              height={10}
               fill={leds[x][y] ? "yellow" : "#333"}
-              cornerRadius={2}
+              cornerRadius={3}
             />
           ))
         )}
@@ -66,18 +69,31 @@ export default function Microbit({
             e.cancelBubble = true;
             handleButtonClick("A");
           }}
-          x={10}
-          y={95}
+          x={35}
+          y={130}
         >
+          {/* Blue Circle when pressed */}
+          {btnPressed === "A" && (
+            <Rect
+              width={16}
+              height={16}
+              fill=""
+              stroke="#1B5FC5"
+              strokeWidth={1.2}
+              cornerRadius={12}
+              x={2.8}
+              y={0.6}
+            />
+          )}
           <Rect
             width={20}
             height={20}
-            fill="blue"
+            fill=""
             cornerRadius={10}
             shadowBlur={3}
           />
           <Text
-            text="A"
+            text=""
             fill="white"
             x={6}
             y={3}
@@ -86,24 +102,38 @@ export default function Microbit({
           />
         </Group>
 
+
         {/* Button B */}
         <Group
           onClick={(e) => {
             e.cancelBubble = true;
             handleButtonClick("B");
           }}
-          x={90}
-          y={95}
+          x={165}
+          y={130}
         >
+          {/* Blue Circle when pressed */}
+          {btnPressed === "B" && (
+            <Rect
+              width={16}
+              height={16}
+              fill=""
+              stroke="#1B5FC5"
+              strokeWidth={1.2}
+              cornerRadius={12}
+              x={1.6}
+              y={0.6}
+            />
+          )}
           <Rect
             width={20}
             height={20}
-            fill="blue"
+            fill=""
             cornerRadius={10}
             shadowBlur={3}
           />
           <Text
-            text="B"
+            text=""
             fill="white"
             x={6}
             y={3}

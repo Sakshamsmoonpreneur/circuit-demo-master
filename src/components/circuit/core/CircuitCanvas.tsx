@@ -20,7 +20,6 @@ import {
 import { Simulator } from "@/lib/code/Simulator";
 import PopupEditor from "@/components/code/PopupEditor";
 import CircuitSelector from "../toolbar/panels/Palette";
-import { CircuitCanvasUtil } from "@/utils/core/circuitCanvasUtil";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -61,15 +60,8 @@ export default function CircuitCanvas() {
     string | null
   >(null);
   const [editingWire, setEditingWire] = useState<EditingWire | null>(null);
-  const tempDragPositions = useRef<{ [id: string]: { x: number; y: number } }>(
-    {}
-  );
+  const tempDragPositions = useRef<{ [id: string]: { x: number; y: number } }>({});
   const [wireDragVersion, setWireDragVersion] = useState(0);
-
-  const circuitCanvasUtil = new CircuitCanvasUtil({
-    getElements: () => elements,
-    setElements,
-  });
 
   useEffect(() => {
     elementsRef.current = elements;
@@ -144,7 +136,7 @@ export default function CircuitCanvas() {
   }
 
   function getNodeById(nodeId: string) {
-    return circuitCanvasUtil.getNodeById(nodeId);
+    return elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
   }
 
   const getElementById = React.useCallback(
@@ -328,9 +320,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -345,9 +337,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -410,8 +402,15 @@ export default function CircuitCanvas() {
   }
 
   const getWireColor = (wire: Wire): string => {
-    return circuitCanvasUtil.getWireColor(wire);
+    const fromPolarity = getNodeById(wire.fromNodeId)?.polarity;
+    const toPolarity = getNodeById(wire.toNodeId)?.polarity;
+
+    if (fromPolarity === "negative" && toPolarity === "negative") return "red";
+    if (fromPolarity === "positive" && toPolarity === "positive")
+      return "green";
+    return "black";
   };
+
 
   // for canvas zoom in and zoom out
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -435,7 +434,7 @@ export default function CircuitCanvas() {
     const direction = e.evt.deltaY > 0 ? 1 : -1;
     const newScale = direction > 0 ? oldScale / scaleBy : oldScale * scaleBy;
 
-    if (newScale > 1.5 || newScale < 0.5) return;
+    if (newScale > 2.5 || newScale < 0.5) return;
 
     stage.scale({ x: newScale, y: newScale });
 
@@ -449,6 +448,7 @@ export default function CircuitCanvas() {
   };
   // end
 
+
   return (
     <div
       // className="flex flex-row items-center justify-between h-screen w-screen relative"
@@ -458,9 +458,8 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`${styles.panelLeft} ${
-          showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-        }`}
+        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
+          }`}
       >
         <button
           className={styles.toggleButton}
@@ -503,9 +502,8 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${
-              simulationRunning ? styles.simulationStop : styles.simulationStart
-            }`}
+            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
+              }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -573,8 +571,7 @@ export default function CircuitCanvas() {
             width={
               window.innerWidth -
               (showDebugBox ? 300 : 0) -
-              (showPalette ? 300 : 0) -
-              (!showDebugBox && !showPalette ? 50 : 0)
+              (showPalette ? 300 : 0) - (!showDebugBox && !showPalette ? 50 : 0)
             }
             height={window.innerHeight}
             onMouseMove={handleStageMouseMove}
@@ -723,9 +720,8 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${
-          showPalette ? styles.panelExpanded : styles.panelCollapsed
-        }`}
+        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
+          }`}
       >
         <button
           className={styles.toggleButton}
@@ -763,11 +759,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                          ...el,
-                          ...updatedElement,
-                          x: el.x,
-                          y: el.y,
-                        }
+                        ...el,
+                        ...updatedElement,
+                        x: el.x,
+                        y: el.y,
+                      }
                       : el
                   )
                 );
@@ -810,6 +806,6 @@ export default function CircuitCanvas() {
           />
         )}
       </div>
-    </div>
+    </div >
   );
 }

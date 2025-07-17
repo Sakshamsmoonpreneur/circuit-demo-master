@@ -122,8 +122,8 @@ export default function RenderElement({
             node.polarity === "positive"
               ? "green"
               : node.polarity === "negative"
-              ? "red"
-              : "black"
+                ? "red"
+                : "black"
           }
           onClick={() => props.handleNodeClick(node.id)}
           hitStrokeWidth={10}
@@ -140,7 +140,7 @@ export default function RenderElement({
             }
           }}
 
-          // TODO: Add interaction handlers here
+        // TODO: Add interaction handlers here
         />
       ))}
     </Group>
