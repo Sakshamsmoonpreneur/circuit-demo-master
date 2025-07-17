@@ -71,6 +71,7 @@ export class Simulator {
   reset() {
     if (this.microbit) {
       this.microbit.reset();
+      // stop any ongoing simulation
     } else {
       throw new Error("Microbit controller not initialized.");
     }

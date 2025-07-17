@@ -12,6 +12,7 @@ export default function PropertiesPanel({
   wires,
   getNodeById,
   onEditWireSelect,
+  setOpenCodeEditor,
 }: PropertiesPanelProps) {
   const [resistance, setResistance] = useState<number | null>(null);
   const [voltage, setVoltage] = useState<number | null>(null);
@@ -93,6 +94,17 @@ export default function PropertiesPanel({
             </span>
           </div>
         </div>
+        {/* Show open code editor button if it is a controller */}
+        {selectedElement.type === "microbit" && (
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={() => setOpenCodeEditor(true)}
+          >
+            Open Code Editor
+          </button>
+        )}
+
+        {/* 🛠️ Properties Inputs */}
 
         {resistance != null && (
           <div className="flex flex-col">

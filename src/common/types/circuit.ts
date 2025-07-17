@@ -79,4 +79,5 @@ export type PropertiesPanelProps = {
   ) => void;
   onWireEdit: (updatedWire: Wire, deleteElement: boolean) => void;
   onEditWireSelect?: (wire: Wire) => void;
+  setOpenCodeEditor: (open: boolean) => void;
 };

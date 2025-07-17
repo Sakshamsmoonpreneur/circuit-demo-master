@@ -31,6 +31,7 @@ export default function CircuitCanvas() {
   const [activeControllerId, setActiveControllerId] = useState<string | null>(
     null
   );
+  const [openCodeEditor, setOpenCodeEditor] = useState(false);
   const [controllerCodeMap, setControllerCodeMap] = useState<
     Record<string, string>
   >({});
@@ -496,7 +497,7 @@ export default function CircuitCanvas() {
       </div>
 
       <PopupEditor
-        visible={!!activeControllerId}
+        visible={!!activeControllerId && openCodeEditor}
         code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
         onChange={(newCode) => {
           if (!activeControllerId) return;
@@ -505,7 +506,9 @@ export default function CircuitCanvas() {
             [activeControllerId]: newCode,
           }));
         }}
-        onClose={() => setActiveControllerId(null)}
+        onClose={() => {
+          setOpenCodeEditor(false);
+        }}
       />
 
       {/* Canvas */}
@@ -712,6 +715,9 @@ export default function CircuitCanvas() {
                     const element = getElementById(id);
                     setSelectedElement(element ?? null);
 
+                    setActiveControllerId(null);
+                    setOpenCodeEditor(false);
+
                     if (element?.type === "microbit") {
                       setActiveControllerId(element.id);
                     }
@@ -823,6 +829,9 @@ export default function CircuitCanvas() {
                 y: 0,
                 nodes: [],
               });
+            }}
+            setOpenCodeEditor={function (open: boolean): void {
+              setOpenCodeEditor(open);
             }}
           />
         )}
