@@ -25,7 +25,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "battery",
     label: "Battery",
     iconPath: "/circuit_elements/battery.svg",
-    defaultProps: { voltage: 20, resistance: 1 },
+    defaultProps: { voltage: 55, resistance: 1 },
   },
   {
     type: "resistor",

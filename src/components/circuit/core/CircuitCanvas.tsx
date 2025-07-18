@@ -333,9 +333,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -350,9 +350,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -469,9 +469,8 @@ export default function CircuitCanvas() {
     >
       {/* Debug Box Panel */}
       <div
-        className={`${styles.panelLeft} ${
-          showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-        }`}
+        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
+          }`}
       >
         <button
           className={styles.toggleButton}
@@ -508,6 +507,7 @@ export default function CircuitCanvas() {
         }}
         onClose={() => {
           setOpenCodeEditor(false);
+          setSimulationRunning(false);
         }}
       />
 
@@ -516,9 +516,8 @@ export default function CircuitCanvas() {
         {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${
-              simulationRunning ? styles.simulationStop : styles.simulationStart
-            }`}
+            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
+              }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -746,9 +745,8 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${
-          showPalette ? styles.panelExpanded : styles.panelCollapsed
-        }`}
+        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
+          }`}
       >
         <button
           className={styles.toggleButton}
@@ -786,11 +784,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                          ...el,
-                          ...updatedElement,
-                          x: el.x,
-                          y: el.y,
-                        }
+                        ...el,
+                        ...updatedElement,
+                        x: el.x,
+                        y: el.y,
+                      }
                       : el
                   )
                 );

@@ -194,7 +194,38 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
-    nodes: [],
+    nodes: [
+      {
+        id: id + "-node-0",
+        x: 42.9,
+        y: 227,
+        parentId: id,
+      },
+      {
+        id: id + "-node-1",
+        x: 74.8,
+        y: 227,
+        parentId: id,
+      },
+      {
+        id: id + "-node-2",
+        x: 111.4,
+        y: 227,
+        parentId: id,
+      },
+      {
+        id: id + "-node-3V",
+        x: 148,
+        y: 227,
+        parentId: id,
+      },
+      {
+        id: id + "-node-GND",
+        x: 180,
+        y: 227,
+        parentId: id,
+      },
+    ],
     properties: {
       ...{
         voltage: props.properties?.voltage ?? 3,
