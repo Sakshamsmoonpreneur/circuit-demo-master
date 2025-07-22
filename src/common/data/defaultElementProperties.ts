@@ -38,6 +38,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     label: "Multimeter",
     iconPath: "/circuit_elements/Multimeter.svg",
     defaultProps: { resistance: 1, mode: "voltage" },
+    // no props for this
   },
   {
     type: "potentiometer",
@@ -50,6 +51,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     label: "Led",
     iconPath: "/circuit_elements/led.svg",
     defaultProps: { resistance: 1 },
+    //max current 20ma, max voltage 2,
   },
   {
     type: "microbit",
