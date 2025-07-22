@@ -333,9 +333,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, ratio },
-          }
+              ...el,
+              properties: { ...el.properties, ratio },
+            }
           : el
       )
     );
@@ -350,9 +350,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
@@ -468,32 +468,20 @@ export default function CircuitCanvas() {
       onDragOver={(e) => e.preventDefault()}
     >
       {/* Debug Box Panel */}
-      <div
-        className={`${styles.panelLeft} ${showDebugBox ? styles.panelExpanded : styles.panelCollapsed
-          }`}
-      >
-        <button
-          className={styles.toggleButton}
-          style={{ right: "-0.5rem" }}
-          onClick={() => setShowDebugBox((prev) => !prev)}
-        >
-          {showDebugBox ? "⇠" : "⇢"}
-        </button>
-        {showDebugBox && (
-          <DebugBox
-            data={{
-              mousePos,
-              canvasOffset,
-              draggingElement,
-              selectedElement,
-              editingWire,
-              elements,
-              wires,
-            }}
-            className="w-full h-full p-4"
-          />
-        )}
-      </div>
+      {showDebugBox && (
+        <DebugBox
+          data={{
+            mousePos,
+            canvasOffset,
+            draggingElement,
+            selectedElement,
+            editingWire,
+            elements,
+            wires,
+          }}
+          onClose={() => setShowDebugBox(false)}
+        />
+      )}
 
       <PopupEditor
         visible={!!activeControllerId && openCodeEditor}
@@ -513,11 +501,14 @@ export default function CircuitCanvas() {
 
       {/* Canvas */}
       <div className="flex-grow h-full">
-        {/* absolutely position start/stop simulation button at the top center of the screen with padding */}
+        {/* tool bar positioned to take up whole width and is on top using tailwind css*/}
+        <div className="w-full h-12 bg-gray-200">hi</div>
+
         <div className={styles.centerControls}>
           <button
-            className={`${styles.simulationButton} ${simulationRunning ? styles.simulationStop : styles.simulationStart
-              }`}
+            className={`${styles.simulationButton} ${
+              simulationRunning ? styles.simulationStop : styles.simulationStart
+            }`}
             onClick={() => {
               if (simulationRunning) {
                 stopSimulation();
@@ -541,6 +532,10 @@ export default function CircuitCanvas() {
             currentWires={wires}
             getSnapshot={() => stageRef.current?.toDataURL() || ""}
           />
+          {/* open code editor */}
+          <button onClick={() => setOpenCodeEditor(true)} className="">
+            Open Code Editor
+          </button>
           <div className={styles.tooltipWrapper}>
             <div className={styles.tooltipIcon}>?</div>
             <div className={styles.tooltipContent}>
@@ -579,12 +574,11 @@ export default function CircuitCanvas() {
             </div>
           </div>
         </div>
-        <div className={styles.stageBorders}>
+        <div className="border border-gray-800 inline-block p-1">
           <Stage
             id="canvas-stage"
             width={
               window.innerWidth -
-              (showDebugBox ? 300 : 0) -
               (showPalette ? 300 : 0) -
               (!showDebugBox && !showPalette ? 50 : 0)
             }
@@ -745,8 +739,9 @@ export default function CircuitCanvas() {
 
       {/* Palette Panel */}
       <div
-        className={`${styles.panelRight} ${showPalette ? styles.panelExpanded : styles.panelCollapsed
-          }`}
+        className={`${styles.panelRight} ${
+          showPalette ? styles.panelExpanded : styles.panelCollapsed
+        }`}
       >
         <button
           className={styles.toggleButton}
@@ -784,11 +779,11 @@ export default function CircuitCanvas() {
                   prev.map((el) =>
                     el.id === updatedElement.id
                       ? {
-                        ...el,
-                        ...updatedElement,
-                        x: el.x,
-                        y: el.y,
-                      }
+                          ...el,
+                          ...updatedElement,
+                          x: el.x,
+                          y: el.y,
+                        }
                       : el
                   )
                 );
