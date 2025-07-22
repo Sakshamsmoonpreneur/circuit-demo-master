@@ -20,7 +20,7 @@ import {
 import { Simulator } from "@/lib/code/Simulator";
 import PopupEditor from "@/components/code/PopupEditor";
 import CircuitSelector from "../toolbar/panels/Palette";
-import { FaCode, FaPause, FaPlay, FaStop } from "react-icons/fa6";
+import { FaArrowRight, FaCode, FaPause, FaPlay, FaStop } from "react-icons/fa6";
 import { VscDebug } from "react-icons/vsc";
 import CodeEditor from "@/components/code/CodeEditor";
 
@@ -735,7 +735,16 @@ export default function CircuitCanvas() {
           style={{ left: "-0.5rem" }}
           onClick={() => setShowPalette((prev) => !prev)}
         >
-          {showPalette ? "⇢" : "⇠"}
+          <span
+            style={{
+              display: "inline-block",
+              transition: "transform 0.5s",
+              transform: showPalette ? "rotate(0deg)" : "rotate(180deg)",
+            }}
+            className="flex items-center justify-center w-full h-full text-center "
+          >
+            <FaArrowRight />
+          </span>
         </button>
 
         {showPalette && (
