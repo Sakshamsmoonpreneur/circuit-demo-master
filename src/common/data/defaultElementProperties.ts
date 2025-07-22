@@ -6,7 +6,7 @@ export interface PaletteElement {
   type: PaletteElementType;
   label: string;
   iconPath: string; // Relative to public/assets
-  defaultProps: {
+  defaultProps?: {
     resistance?: number;
     voltage?: number;
     ratio?: number;
@@ -57,6 +57,5 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "microbit",
     label: "Microbit",
     iconPath: "/circuit_elements/microbit.svg",
-    defaultProps: { resistance: 1 },
   },
 ];

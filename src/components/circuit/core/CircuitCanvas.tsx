@@ -20,6 +20,9 @@ import {
 import { Simulator } from "@/lib/code/Simulator";
 import PopupEditor from "@/components/code/PopupEditor";
 import CircuitSelector from "../toolbar/panels/Palette";
+import { FaCode, FaPause, FaPlay, FaStop } from "react-icons/fa6";
+import { VscDebug } from "react-icons/vsc";
+import CodeEditor from "@/components/code/CodeEditor";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -45,7 +48,7 @@ export default function CircuitCanvas() {
   const [wires, setWires] = useState<Wire[]>([]);
   const [wireCounter, setWireCounter] = useState(0);
   const [showPalette, setShowPalette] = useState(true);
-  const [showDebugBox, setShowDebugBox] = useState(true);
+  const [showDebugBox, setShowDebugBox] = useState(false);
   const elementsRef = useRef<CircuitElement[]>(elements);
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
@@ -462,12 +465,11 @@ export default function CircuitCanvas() {
 
   return (
     <div
-      // className="flex flex-row items-center justify-between h-screen w-screen relative"
       className={styles.canvasContainer}
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
-      {/* Debug Box Panel */}
+      {/* ==================== Debug Panel ==================== */}
       {showDebugBox && (
         <DebugBox
           data={{
@@ -483,59 +485,66 @@ export default function CircuitCanvas() {
         />
       )}
 
-      <PopupEditor
-        visible={!!activeControllerId && openCodeEditor}
-        code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
-        onChange={(newCode) => {
-          if (!activeControllerId) return;
-          setControllerCodeMap((prev) => ({
-            ...prev,
-            [activeControllerId]: newCode,
-          }));
-        }}
-        onClose={() => {
-          setOpenCodeEditor(false);
-          setSimulationRunning(false);
-        }}
-      />
+      {/* ==================== Left Side: Main Canvas ==================== */}
+      <div className="flex-grow h-full flex flex-col">
+        {/* Toolbar with center controls */}
+        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 shadow-md space-x-4 py-2 justify-between">
+          {/* controls */}
+          <div className="flex flex-row items-center gap-2">
+            <button
+              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${
+                simulationRunning ? "bg-red-300" : "bg-emerald-300"
+              } flex items-center space-x-2`}
+              onClick={() => {
+                simulationRunning ? stopSimulation() : startSimulation();
+              }}
+            >
+              {simulationRunning ? (
+                <>
+                  <FaStop />
+                  <span>Stop Simulation</span>
+                </>
+              ) : (
+                <>
+                  <FaPlay />
+                  <span>Start Simulation</span>
+                </>
+              )}
+            </button>
 
-      {/* Canvas */}
-      <div className="flex-grow h-full">
-        {/* tool bar positioned to take up whole width and is on top using tailwind css*/}
-        <div className="w-full h-12 bg-gray-200">hi</div>
+            <button
+              onClick={() => setOpenCodeEditor((prev) => !prev)}
+              className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
+            >
+              <FaCode />
 
-        <div className={styles.centerControls}>
-          <button
-            className={`${styles.simulationButton} ${
-              simulationRunning ? styles.simulationStop : styles.simulationStart
-            }`}
-            onClick={() => {
-              if (simulationRunning) {
-                stopSimulation();
-              } else {
-                startSimulation();
-              }
-            }}
-          >
-            {simulationRunning ? "Stop Simulation" : "Start Simulation"}
-          </button>
-          <CircuitStorage
-            onCircuitSelect={function (circuitId: string): void {
-              const data = getCircuitById(circuitId);
-              if (!data) return;
-              pushToHistory();
-              resetState();
-              setElements(data.elements);
-              setWires(data.wires);
-            }}
-            currentElements={elements}
-            currentWires={wires}
-            getSnapshot={() => stageRef.current?.toDataURL() || ""}
-          />
-          {/* open code editor */}
-          <button onClick={() => setOpenCodeEditor(true)} className="">
-            Open Code Editor
-          </button>
+              <span>Code</span>
+            </button>
+
+            <button
+              onClick={() => setShowDebugBox((showDebugBox) => !showDebugBox)}
+              className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
+            >
+              <VscDebug />
+              <span>Debugger</span>
+            </button>
+
+            <CircuitStorage
+              onCircuitSelect={(circuitId) => {
+                const data = getCircuitById(circuitId);
+                if (!data) return;
+                pushToHistory();
+                resetState();
+                setElements(data.elements);
+                setWires(data.wires);
+              }}
+              currentElements={elements}
+              currentWires={wires}
+              getSnapshot={() => stageRef.current?.toDataURL() || ""}
+            />
+          </div>
+
+          {/* Keyboard Shortcut Tooltip */}
           <div className={styles.tooltipWrapper}>
             <div className={styles.tooltipIcon}>?</div>
             <div className={styles.tooltipContent}>
@@ -574,15 +583,13 @@ export default function CircuitCanvas() {
             </div>
           </div>
         </div>
+
+        {/* Canvas Stage */}
         <div className="border border-gray-800 inline-block p-1">
           <Stage
             id="canvas-stage"
-            width={
-              window.innerWidth -
-              (showPalette ? 300 : 0) -
-              (!showDebugBox && !showPalette ? 50 : 0)
-            }
-            height={window.innerHeight}
+            width={window.innerWidth}
+            height={window.innerHeight - 48} // Adjust height to account for toolbar
             onMouseMove={handleStageMouseMove}
             onClick={handleStageClick}
             ref={stageRef}
@@ -597,10 +604,10 @@ export default function CircuitCanvas() {
             onWheel={handleWheel}
           >
             <Layer>
-              {/* Render wires */}
+              {/* Render Wires */}
               {wires.map((wire) => {
                 const points = getWirePoints(wire);
-                if (points.length == 4) {
+                if (points.length === 4) {
                   const [x1, y1, x2, y2] = points;
                   const midX = (x1 + x2) / 2;
                   const midY = (y1 + y2) / 2;
@@ -608,76 +615,67 @@ export default function CircuitCanvas() {
                 }
 
                 return (
-                  <React.Fragment key={wire.id}>
-                    <Line
-                      points={points}
-                      stroke={
-                        selectedElement?.id === wire.id
-                          ? "orange"
-                          : getWireColor(wire)
-                      }
-                      strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
-                      hitStrokeWidth={12}
-                      tension={0.5}
-                      lineCap="round"
-                      lineJoin="round"
-                      bezier={true}
-                      onClick={() => {
-                        setSelectedElement({
-                          id: wire.id,
-                          type: "wire",
-                          x: 0,
-                          y: 0,
-                          nodes: [],
-                        });
-                      }}
-                    />
-                  </React.Fragment>
+                  <Line
+                    key={wire.id}
+                    points={points}
+                    stroke={
+                      selectedElement?.id === wire.id
+                        ? "orange"
+                        : getWireColor(wire)
+                    }
+                    strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
+                    hitStrokeWidth={12}
+                    tension={0.5}
+                    lineCap="round"
+                    lineJoin="round"
+                    bezier
+                    onClick={() =>
+                      setSelectedElement({
+                        id: wire.id,
+                        type: "wire",
+                        x: 0,
+                        y: 0,
+                        nodes: [],
+                      })
+                    }
+                  />
                 );
               })}
 
-              {/* Wire being created */}
+              {/* In-Progress Wire Drawing */}
               {creatingWireStartNode &&
                 (() => {
                   const startNode = getNodeById(creatingWireStartNode);
                   if (!startNode) return null;
-
                   const startPos = {
                     x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
                     y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
                   };
-
                   const stage = stageRef.current;
                   if (!stage) return null;
-
                   const transform = stage.getAbsoluteTransform().copy();
                   transform.invert();
-                  const adjustedMousePos = transform.point(mousePos);
-
-                  const adjustedMouseX = adjustedMousePos.x;
-                  const adjustedMouseY = adjustedMousePos.y;
-
-                  const inProgressPoints: number[] = [
+                  const adjustedMouse = transform.point(mousePos);
+                  const inProgressPoints = [
                     startPos.x,
                     startPos.y,
                     ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
-                    adjustedMouseX,
-                    adjustedMouseY,
+                    adjustedMouse.x,
+                    adjustedMouse.y,
                   ];
-
                   return (
                     <Line
                       points={inProgressPoints}
                       stroke="black"
                       strokeWidth={2}
-                      // dash={[10, 5]}
                       pointerEvents="none"
                       lineCap="round"
                       lineJoin="round"
                     />
                   );
                 })()}
-              {/* Circuit Elements */}
+
+              {/* Render Elements */}
               {elements.map((element) => (
                 <RenderElement
                   key={element.id}
@@ -697,20 +695,15 @@ export default function CircuitCanvas() {
                     const id = e.target.id();
                     const x = e.target.x();
                     const y = e.target.y();
-
                     setElements((prev) =>
-                      prev.map((element) =>
-                        element.id === id ? { ...element, x, y } : element
-                      )
+                      prev.map((el) => (el.id === id ? { ...el, x, y } : el))
                     );
                   }}
                   onSelect={(id) => {
                     const element = getElementById(id);
                     setSelectedElement(element ?? null);
-
                     setActiveControllerId(null);
                     setOpenCodeEditor(false);
-
                     if (element?.type === "microbit") {
                       setActiveControllerId(element.id);
                     }
@@ -718,16 +711,9 @@ export default function CircuitCanvas() {
                   selectedElementId={selectedElement?.id || null}
                   onControllerInput={(elementId, input) => {
                     const sim = controllerMap[elementId];
-                    if (sim && sim.getMicrobitInstance()) {
-                      const microbitInstance = sim.getMicrobitInstance();
-                      if (
-                        microbitInstance?.input &&
-                        (input === "A" || input === "B")
-                      ) {
-                        microbitInstance.input._press_button(
-                          input as "A" | "B"
-                        );
-                      }
+                    const instance = sim?.getMicrobitInstance();
+                    if (instance?.input && (input === "A" || input === "B")) {
+                      instance.input._press_button(input);
                     }
                   }}
                 />
@@ -737,11 +723,12 @@ export default function CircuitCanvas() {
         </div>
       </div>
 
-      {/* Palette Panel */}
+      {/* ==================== Right Side: Palette ==================== */}
       <div
-        className={`${styles.panelRight} ${
-          showPalette ? styles.panelExpanded : styles.panelCollapsed
+        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${
+          showPalette ? "w-72" : "w-10"
         }`}
+        style={{ pointerEvents: "auto" }}
       >
         <button
           className={styles.toggleButton}
@@ -750,83 +737,109 @@ export default function CircuitCanvas() {
         >
           {showPalette ? "⇢" : "⇠"}
         </button>
-        {showPalette && <CircuitSelector />}
-        {showPalette && selectedElement && (
-          <PropertiesPanel
-            selectedElement={selectedElement}
-            wires={wires}
-            getNodeById={getNodeById}
-            onElementEdit={(updatedElement, deleteElement) => {
-              pushToHistory();
-              if (deleteElement) {
-                const updatedWires = wires.filter(
-                  (wire) =>
-                    getNodeParent(wire.fromNodeId)?.id !== updatedElement.id &&
-                    getNodeParent(wire.toNodeId)?.id !== updatedElement.id
-                );
 
-                setWires(updatedWires);
-                setElements((prev) =>
-                  prev.filter((el) => el.id !== updatedElement.id)
-                );
-                setSelectedElement(null);
-                setCreatingWireStartNode(null);
-                setEditingWire(null);
-                //computeCircuit(updatedWires);
-                stopSimulation();
-              } else {
-                setElements((prev) =>
-                  prev.map((el) =>
-                    el.id === updatedElement.id
-                      ? {
-                          ...el,
-                          ...updatedElement,
-                          x: el.x,
-                          y: el.y,
-                        }
-                      : el
-                  )
-                );
+        {showPalette && (
+          <>
+            <CircuitSelector />
+            {selectedElement && (
+              <PropertiesPanel
+                selectedElement={selectedElement}
+                wires={wires}
+                getNodeById={getNodeById}
+                onElementEdit={(updatedElement, deleteElement) => {
+                  pushToHistory();
+                  if (deleteElement) {
+                    const updatedWires = wires.filter(
+                      (w) =>
+                        getNodeParent(w.fromNodeId)?.id !== updatedElement.id &&
+                        getNodeParent(w.toNodeId)?.id !== updatedElement.id
+                    );
+                    setWires(updatedWires);
+                    setElements((prev) =>
+                      prev.filter((el) => el.id !== updatedElement.id)
+                    );
+                    setSelectedElement(null);
+                    setCreatingWireStartNode(null);
+                    setEditingWire(null);
+                    stopSimulation();
+                  } else {
+                    setElements((prev) =>
+                      prev.map((el) =>
+                        el.id === updatedElement.id
+                          ? { ...el, ...updatedElement, x: el.x, y: el.y }
+                          : el
+                      )
+                    );
+                    stopSimulation();
+                    setSelectedElement(updatedElement);
+                    setCreatingWireStartNode(null);
+                    setEditingWire(null);
+                  }
+                }}
+                onWireEdit={(updatedWire, deleteElement) => {
+                  pushToHistory();
+                  if (deleteElement) {
+                    setWires((prev) =>
+                      prev.filter((w) => w.id !== updatedWire.id)
+                    );
+                    setSelectedElement(null);
+                    setCreatingWireStartNode(null);
+                    setEditingWire(null);
+                    stopSimulation();
+                  } else {
+                    setWires((prev) =>
+                      prev.map((w) =>
+                        w.id === updatedWire.id ? { ...w, ...updatedWire } : w
+                      )
+                    );
+                    stopSimulation();
+                  }
+                }}
+                onEditWireSelect={(wire) => {
+                  setSelectedElement({
+                    id: wire.id,
+                    type: "wire",
+                    x: 0,
+                    y: 0,
+                    nodes: [],
+                  });
+                }}
+                setOpenCodeEditor={setOpenCodeEditor}
+              />
+            )}
+          </>
+        )}
 
-                //computeCircuit(wires);
-                stopSimulation();
-                setSelectedElement(updatedElement);
-                setCreatingWireStartNode(null);
-                setEditingWire(null);
-              }
+        {/* =============== Code Editor Overlay =============== */}
+        {openCodeEditor && (
+          <div
+            className="absolute right-0 top-0 h-full w-[500px] bg-white border-l border-gray-300 shadow-xl z-50 transition-transform duration-300"
+            style={{
+              transform: openCodeEditor ? "translateX(0)" : "translateX(100%)",
             }}
-            onWireEdit={(updatedWire, deleteElement) => {
-              pushToHistory();
-              if (deleteElement) {
-                setWires((prev) => prev.filter((w) => w.id !== updatedWire.id));
-                setSelectedElement(null);
-                setCreatingWireStartNode(null);
-                setEditingWire(null);
-                //computeCircuit(wires.filter((w) => w.id !== updatedWire.id));
-                stopSimulation();
-              } else {
-                setWires((prev) =>
-                  prev.map((w) =>
-                    w.id === updatedWire.id ? { ...w, ...updatedWire } : w
-                  )
-                );
-                //computeCircuit(wires);
-                stopSimulation();
-              }
-            }}
-            onEditWireSelect={(wire) => {
-              setSelectedElement({
-                id: wire.id,
-                type: "wire",
-                x: 0,
-                y: 0,
-                nodes: [],
-              });
-            }}
-            setOpenCodeEditor={function (open: boolean): void {
-              setOpenCodeEditor(open);
-            }}
-          />
+          >
+            <div className="flex justify-between items-center p-2 border-b border-gray-300 bg-gray-100">
+              <span className="font-semibold">Code Editor</span>
+              <button
+                className="text-sm text-gray-600 hover:text-black"
+                onClick={() => setOpenCodeEditor(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-4 overflow-auto h-full">
+              <CodeEditor
+                code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
+                onChange={(newCode) => {
+                  if (!activeControllerId) return;
+                  setControllerCodeMap((prev) => ({
+                    ...prev,
+                    [activeControllerId]: newCode,
+                  }));
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>
