@@ -11,6 +11,7 @@ import {
   overrideCircuit,
 } from "../../../utils/core/circuitStorage";
 import React from "react";
+import { FaFolder } from "react-icons/fa";
 
 type CircuitManagerProps = {
   onCircuitSelect: (circuitId: string) => void;
@@ -58,10 +59,11 @@ export default function CircuitStorage(props: CircuitManagerProps) {
   return (
     <>
       <button
-        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 cursor-pointer"
+        className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
         onClick={() => setIsOpen(true)}
       >
-        Circuit Storage
+        <FaFolder />
+        <span>Saved Circuits</span>
       </button>
 
       {isOpen &&
