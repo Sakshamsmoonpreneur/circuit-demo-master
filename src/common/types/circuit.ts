@@ -19,7 +19,7 @@ export type CircuitElement = {
     measurement?: number; // Specific reading for multimeter
   };
   controller?: {
-    [key: string]: any;
+    [key: string]: unknown;
   };
 };
 

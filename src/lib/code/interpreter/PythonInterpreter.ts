@@ -1,3 +1,4 @@
+/// <reference lib="webworker" />
 "use client";
 
 import type { PyodideInterface } from "pyodide";
@@ -14,9 +15,11 @@ const urls = {
 };
 
 declare global {
-  interface Window {
+  interface ConsoleWriterGlobal {
     writeToConsole?: (msg: string) => void;
   }
+
+  var globalThis: ConsoleWriterGlobal;
 }
 
 // Global script loading promise, shared across all instances
@@ -46,39 +49,44 @@ export class PythonInterpreter {
   async initialize(): Promise<void> {
     if (this.pyodide) return;
 
-    try {
-      if (!this.useRemote) {
-        await loadScript(urls.src.local);
-        if (!PythonInterpreter.scriptLoaded) {
-          console.log("Loaded local pyodide.js");
-          PythonInterpreter.scriptLoaded = true;
+    const checkUrlAvailable = (url: string): Promise<boolean> =>
+      fetch(url, { method: "HEAD" })
+        .then((res) => res.ok)
+        .catch(() => false);
+
+    const tryUrls = [
+      { indexURL: urls.indexURL.local, src: urls.src.local },
+      { indexURL: urls.indexURL.remote, src: urls.src.remote },
+    ];
+
+    for (const { indexURL, src } of tryUrls) {
+      try {
+        const available = await checkUrlAvailable(src);
+        if (!available) continue;
+
+        importScripts(src);
+        const loadPyodide = (globalThis as any).loadPyodide;
+        if (typeof loadPyodide !== "function") {
+          throw new Error("loadPyodide is not a function after importScripts");
         }
-      } else {
-        await loadScript(urls.src.remote);
-        if (!PythonInterpreter.scriptLoaded) {
-          console.log("Loaded remote pyodide.js");
-          PythonInterpreter.scriptLoaded = true;
-        }
-      }
-    } catch {
-      if (!this.useRemote) {
-        console.warn("Falling back to CDN for pyodide.js");
-        await loadScript(urls.src.remote);
+
+        this.pyodide = await loadPyodide({ indexURL });
+        this.isReady = true;
+        console.log("[Pyodide] Loaded from:", indexURL);
+        return;
+      } catch (e) {
+        console.warn("[Pyodide] Failed to load from:", src, e);
       }
     }
 
-    const loadPyodide = (globalThis as any)
-      .loadPyodide as typeof import("pyodide").loadPyodide;
-    this.pyodide = await loadPyodide({
-      indexURL: this.useRemote ? urls.indexURL.remote : urls.indexURL.local,
-    });
-
-    this.isReady = true;
+    throw new Error(
+      "Failed to load Pyodide from both local and remote sources."
+    );
   }
 
   setOutputCallback(callback: (line: string) => void) {
     this.outputCallback = callback;
-    window.writeToConsole = (msg: string) => {
+    (globalThis as any).writeToConsole = (msg: string) => {
       this.outputCallback?.(msg);
     };
   }

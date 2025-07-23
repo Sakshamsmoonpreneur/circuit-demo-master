@@ -118,7 +118,7 @@ export class MicrobitSimulator {
     return this.ledMatrix[x][y];
   }
 
-  private onButtonPressed(button: "A" | "B", handler: any) {
+  private onButtonPressed(button: "A" | "B", handler: () => void) {
     const proxy = this.pyodide.pyimport("pyodide.ffi.create_proxy")(handler);
     this.inputHandlers[button].push(proxy);
   }
