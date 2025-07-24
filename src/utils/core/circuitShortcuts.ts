@@ -108,7 +108,9 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
             if (!selectedElement) return;
             pushToHistory();
             if (selectedElement.type === "wire") {
-              setWires((prev) => prev.filter((w) => w.id !== selectedElement.id));
+              setWires((prev) =>
+                prev.filter((w) => w.id !== selectedElement.id)
+              );
             } else {
               setElements((prev) =>
                 prev.filter((el) => el.id !== selectedElement.id)
@@ -146,7 +148,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
       default:
         return {
           ...meta,
-          handler: () => { },
+          handler: () => {},
         };
     }
   });

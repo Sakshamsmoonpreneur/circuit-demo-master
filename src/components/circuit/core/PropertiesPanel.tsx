@@ -4,9 +4,14 @@ import {
   PropertiesPanelProps,
 } from "@/common/types/circuit";
 import { useEffect, useState } from "react";
+import {
+  ColorPaletteDropdown,
+  defaultColors,
+} from "../toolbar/customization/ColorPallete";
 
 export default function PropertiesPanel({
   selectedElement,
+  wireColor,
   onElementEdit,
   onWireEdit,
   wires,
@@ -17,6 +22,10 @@ export default function PropertiesPanel({
   const [resistance, setResistance] = useState<number | null>(null);
   const [voltage, setVoltage] = useState<number | null>(null);
   const [ratio, setRatio] = useState<number | null>(null);
+
+  const [selectedWireColor, setSelectedWireColor] = useState<string>(
+    wireColor || defaultColors[0].hex
+  );
 
   useEffect(() => {
     setResistance(selectedElement?.properties?.resistance ?? null);
@@ -30,6 +39,7 @@ export default function PropertiesPanel({
     if (selectedElement.type === "wire") {
       const wireToUpdate = wires.find((w) => w.id === selectedElement.id);
       if (wireToUpdate) {
+        wireToUpdate.color = selectedWireColor;
         onWireEdit(wireToUpdate, false);
       }
       return;
@@ -57,16 +67,6 @@ export default function PropertiesPanel({
     } else {
       onElementEdit(selectedElement, true);
     }
-  };
-
-  const getWireColor = (wire: Wire): string => {
-    const fromPolarity = getNodeById(wire.fromNodeId)?.polarity;
-    const toPolarity = getNodeById(wire.toNodeId)?.polarity;
-
-    if (fromPolarity === "negative" && toPolarity === "negative") return "red";
-    if (fromPolarity === "positive" && toPolarity === "positive")
-      return "green";
-    return "black";
   };
 
   const connectedWires = wires.filter(
@@ -147,17 +147,30 @@ export default function PropertiesPanel({
           </div>
         )}
 
+        {/* 🖌️ Color Picker */}
+        {/* if wire is selected */}
+        {selectedElement.type === "wire" && (
+          <div className="flex flex-col">
+            <label>Wire Color:</label>
+            <ColorPaletteDropdown
+              colors={defaultColors}
+              selectedColor={selectedWireColor}
+              onColorSelect={(color) => {
+                setSelectedWireColor(color);
+              }}
+            />
+          </div>
+        )}
+
         {/* 🛠️ Action Buttons */}
 
         <div className="flex gap-2 mt-2">
-          {selectedElement.type !== "wire" && (
-            <button
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              onClick={handleUpdate}
-            >
-              Update
-            </button>
-          )}
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+            onClick={handleUpdate}
+          >
+            Update
+          </button>
           <button
             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
             onClick={handleDelete}
@@ -181,7 +194,10 @@ export default function PropertiesPanel({
                   <span className="font-mono text-gray-800">
                     {wire.id}{" "}
                     <span className="text-gray-400">
-                      ({getWireColor(wire)})
+                      (
+                      {defaultColors.find((c) => c.hex === wire.color)?.name ||
+                        "Custom"}
+                      )
                     </span>
                   </span>
                   <button

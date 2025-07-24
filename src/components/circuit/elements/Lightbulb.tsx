@@ -20,11 +20,14 @@ export default function Lightbulb(props: LightbulbProps) {
 
   // Normalize brightness between 0 and 1
   // Clamp power to a minimum of 0
-  const power = Math.max(0, (props.power ?? 0) - 0.001);
-  // Assume max power for full brightness is 60 (adjust as needed)
-  const maxPower = 300;
-  // Normalize brightness between 0 and 1
-  const brightness = Math.min(1, power / maxPower);
+  const rawPower = Math.max(0, props.power ?? 0);
+
+  // Simulate a more natural perceived brightness curve
+  const maxPower = 5; // maximum power for full brightness
+  const normalizedPower = Math.min(rawPower / maxPower, 1);
+
+  // Apply square root to simulate human brightness perception
+  const brightness = Math.sqrt(normalizedPower);
   return (
     <BaseElement {...props}>
       <Group>
