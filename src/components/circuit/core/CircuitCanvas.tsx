@@ -17,10 +17,10 @@ import {
   getCircuitShortcuts,
   getShortcutMetadata,
 } from "@/utils/core/circuitShortcuts";
-import { Simulator } from "@/lib/code/Simulator";
-import PopupEditor from "@/components/code/PopupEditor";
+// import { Simulator } from "@/lib/code/Simulator";
+import { SimulatorProxy as Simulator } from "@/lib/code/SimulatorProxy";
 import CircuitSelector from "../toolbar/panels/Palette";
-import { FaArrowRight, FaCode, FaPause, FaPlay, FaStop } from "react-icons/fa6";
+import { FaArrowRight, FaCode, FaPlay, FaStop } from "react-icons/fa6";
 import { VscDebug } from "react-icons/vsc";
 import CodeEditor from "@/components/code/CodeEditor";
 
@@ -53,6 +53,7 @@ export default function CircuitCanvas() {
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
   >([]);
+  // @ts-ignore
   const [history, setHistory] = useState<
     { elements: CircuitElement[]; wires: Wire[] }[]
   >([]);
@@ -67,6 +68,7 @@ export default function CircuitCanvas() {
   const tempDragPositions = useRef<{ [id: string]: { x: number; y: number } }>(
     {}
   );
+  // @ts-ignore
   const [wireDragVersion, setWireDragVersion] = useState(0);
 
   useEffect(() => {
@@ -106,7 +108,7 @@ export default function CircuitCanvas() {
       }))
     );
     setControllerMap((prev) => {
-      Object.values(prev).forEach((sim) => sim.reset());
+      Object.values(prev).forEach((sim) => sim.disposeAndReload());
       return prev; // Keep the map intact!
     });
   }
@@ -365,6 +367,7 @@ export default function CircuitCanvas() {
   async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     pushToHistory();
+
     const elementData = e.dataTransfer.getData("application/element-type");
     if (!elementData) return;
 
@@ -374,7 +377,7 @@ export default function CircuitCanvas() {
     const stageY = e.clientY;
 
     const canvasOffsetLocal = document
-      .getElementById("canvas-stage") // optional: give your Stage a container ID
+      .getElementById("canvas-stage")
       ?.getBoundingClientRect();
 
     const canvasX =
@@ -391,30 +394,57 @@ export default function CircuitCanvas() {
 
     if (!newElement) return;
 
-    if (newElement.type === "microbit") {
-      const simulator = new Simulator({
-        language: "python",
-        controller: "microbit",
-        onOutput: (line) => console.log(`[${newElement.id}]`, line),
-        onEvent: (event) => {
-          if (event.type === "led-change" || event.type === "reset") {
-            const state = simulator.getStates();
-            setElements((prev) =>
-              prev.map((el) =>
-                el.id === newElement.id
-                  ? { ...el, controller: { leds: state.leds } }
-                  : el
-              )
-            );
-          }
-        },
-      });
-      await simulator.initialize();
-
-      setControllerMap((prev) => ({ ...prev, [newElement.id]: simulator }));
-      newElement.controller = { leds: simulator.getStates().leds };
-    }
+    // Immediately add to canvas
     setElements((prev) => [...prev, newElement]);
+
+    if (newElement.type === "microbit") {
+      // Init simulator in the background (non-blocking)
+      void (async () => {
+        const simulator = new Simulator({
+          language: "python",
+          controller: "microbit",
+          onOutput: (line) => console.log(`[${newElement.id}]`, line),
+          onEvent: async (event) => {
+            if (event.type === "reset") {
+              setElements((prev) =>
+                prev.map((el) =>
+                  el.id === newElement.id
+                    ? {
+                        ...el,
+                        controller: {
+                          leds: Array(5).fill(Array(5).fill(false)),
+                        },
+                      }
+                    : el
+                )
+              );
+            }
+            if (event.type === "led-change") {
+              const state = await simulator.getStates();
+              const leds = state.leds;
+              setElements((prev) =>
+                prev.map((el) =>
+                  el.id === newElement.id ? { ...el, controller: { leds } } : el
+                )
+              );
+            }
+          },
+        });
+
+        await simulator.initialize();
+        const states = await simulator.getStates();
+
+        // Update map and controller LED state
+        setControllerMap((prev) => ({ ...prev, [newElement.id]: simulator }));
+        setElements((prev) =>
+          prev.map((el) =>
+            el.id === newElement.id
+              ? { ...el, controller: { leds: states.leds } }
+              : el
+          )
+        );
+      })();
+    }
   }
 
   const getWireColor = (wire: Wire): string => {
@@ -708,12 +738,13 @@ export default function CircuitCanvas() {
                     }
                   }}
                   selectedElementId={selectedElement?.id || null}
+                  // @ts-ignore
                   onControllerInput={(elementId, input) => {
-                    const sim = controllerMap[elementId];
-                    const instance = sim?.getMicrobitInstance();
-                    if (instance?.input && (input === "A" || input === "B")) {
-                      instance.input._press_button(input);
-                    }
+                    // const sim = controllerMap[elementId];
+                    // const instance = sim?.getMicrobitInstance();
+                    // // if (instance?.input && (input === "A" || input === "B")) {
+                    // //   instance.input._press_button(input);
+                    // // }
                   }}
                 />
               ))}
