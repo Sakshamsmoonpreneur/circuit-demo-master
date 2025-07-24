@@ -10,19 +10,37 @@ import { Group, Image, Rect, Text } from "react-konva";
 interface MicrobitProps extends BaseElementProps {
   onControllerInput?: (input: "A" | "B") => void;
   leds: boolean[][];
+  isSimulationOn?: boolean;
 }
 
 export default function Microbit({
   leds,
   onControllerInput,
+  isSimulationOn,
   ...props
 }: MicrobitProps) {
-  const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [imgMicrobit, setImgMicrobit] = useState<HTMLImageElement | null>(null);
+  const [imgOnnState, setImgOnnState] = useState<HTMLImageElement | null>(null);
+  const [imgOffState, setImgOffState] = useState<HTMLImageElement | null>(null);
   const [btnPressed, setBtnPressed] = useState<'A' | 'B' | null>(null);
   useEffect(() => {
     const image = new window.Image();
     image.src = "/circuit_elements/microbit.svg";
-    image.onload = () => setImg(image);
+    image.onload = () => setImgMicrobit(image);
+    image.alt = "Microbit";
+  }, []);
+
+  useEffect(() => {
+    const image = new window.Image();
+    image.src = "/circuit_elements/microbit_usb_onn.svg";
+    image.onload = () => setImgOnnState(image);
+    image.alt = "Microbit";
+  }, []);
+
+  useEffect(() => {
+    const image = new window.Image();
+    image.src = "/circuit_elements/microbit_usb_off.svg";
+    image.onload = () => setImgOffState(image);
     image.alt = "Microbit";
   }, []);
 
@@ -36,9 +54,33 @@ export default function Microbit({
   return (
     <BaseElement {...props}>
       <Group>
-        {img && (
+        {imgOffState && !isSimulationOn && (
           <Image
-            image={img}
+            image={imgOffState}
+            width={220}
+            height={220}
+            shadowColor={props.selected ? "blue" : undefined}
+            shadowBlur={props.selected ? 15 : 0}
+            offset={{ x: 0, y: 10 }}
+            shadowOffset={{ x: 0, y: 0 }}
+            shadowOpacity={props.selected ? 0.6 : 0}
+          />
+        )}
+        {imgOnnState && isSimulationOn && (
+          <Image
+            image={imgOnnState}
+            width={220}
+            height={220}
+            shadowColor={props.selected ? "blue" : undefined}
+            shadowBlur={props.selected ? 15 : 0}
+            offset={{ x: 0, y: -2 }}
+            shadowOffset={{ x: 0, y: 0 }}
+            shadowOpacity={props.selected ? 0.6 : 0}
+          />
+        )}
+        {imgMicrobit && (
+          <Image
+            image={imgMicrobit}
             width={220}
             height={220}
             shadowColor={props.selected ? "blue" : undefined}

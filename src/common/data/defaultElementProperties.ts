@@ -25,7 +25,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "battery",
     label: "Battery",
     iconPath: "/circuit_elements/battery.svg",
-    defaultProps: { voltage: 55, resistance: 1 },
+    defaultProps: { voltage: 9, resistance: 1 },
   },
   {
     type: "resistor",
@@ -37,8 +37,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "multimeter",
     label: "Multimeter",
     iconPath: "/circuit_elements/Multimeter.svg",
-    defaultProps: { resistance: 1, mode: "voltage" },
-    // no props for this
+    defaultProps: { mode: "voltage" },
   },
   {
     type: "potentiometer",

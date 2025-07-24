@@ -19,6 +19,7 @@ type ShortcutArgs = {
   resetState: () => void;
   getNodeParent: (nodeId: string) => CircuitElement | null | undefined;
   undo: () => void;
+  toggleSimulation: () => void;
 };
 
 /**
@@ -51,6 +52,11 @@ export function getShortcutMetadata(): ShortcutMetadata[] {
       description: "Delete all wires",
       keys: ["shift", "w"],
     },
+    {
+      name: "Start/stop simulation",
+      description: "Start or stop the circuit simulation",
+      keys: ["space"],
+    },
   ];
 }
 
@@ -72,6 +78,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
     resetState,
     getNodeParent,
     undo,
+    toggleSimulation,
   } = args;
 
   return getShortcutMetadata().map((meta) => {
@@ -125,10 +132,17 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
             stopSimulation();
           },
         };
+      case "space":
+        return {
+          ...meta,
+          handler: () => {
+            toggleSimulation();
+          },
+        };
       default:
         return {
           ...meta,
-          handler: () => {},
+          handler: () => { },
         };
     }
   });

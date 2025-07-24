@@ -24,6 +24,7 @@ export default function RenderElement({
   onDragStart: () => void;
   onDragEnd: (e: KonvaEventObject<DragEvent>) => void;
   onControllerInput: (elementId: string, input: string) => void;
+  isSimulationOn?: boolean;
 }) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -110,6 +111,7 @@ export default function RenderElement({
             Array(5).fill(Array(5).fill(false))
           }
           selected={props.selectedElementId === element.id}
+          isSimulationOn={props.isSimulationOn}
         />
       )}
 
@@ -125,10 +127,8 @@ export default function RenderElement({
               width={5.6}
               height={5.6}
               cornerRadius={0.3}
-              // fill={isHovered && node.fillColor ? node.fillColor : "transparent"}
-              // stroke={isHovered ? "black" : "transparent"}
-              fill={node.fillColor}
-              stroke={isHovered ? "black" : node.fillColor}
+              fill={isHovered && node.fillColor ? node.fillColor : "transparent"}
+              stroke={isHovered ? "black" : "transparent"}
               strokeWidth={isHovered ? 1.4 : 0}
               onClick={() => props.handleNodeClick(node.id)}
               hitStrokeWidth={10}

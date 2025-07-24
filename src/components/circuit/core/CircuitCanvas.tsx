@@ -23,6 +23,7 @@ import CircuitSelector from "../toolbar/panels/Palette";
 import { FaArrowRight, FaCode, FaPlay, FaStop } from "react-icons/fa6";
 import { VscDebug } from "react-icons/vsc";
 import CodeEditor from "@/components/code/CodeEditor";
+import Loader from "@/utils/core/loader";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -70,6 +71,7 @@ export default function CircuitCanvas() {
   );
   // @ts-ignore
   const [wireDragVersion, setWireDragVersion] = useState(0);
+  const [loadingSavedCircuit, setLoadingSavedCircuit] = useState(false);
 
   useEffect(() => {
     elementsRef.current = elements;
@@ -185,6 +187,13 @@ export default function CircuitCanvas() {
         stopSimulation,
         resetState,
         getNodeParent,
+        toggleSimulation: () => {
+          if (simulationRunning) {
+            stopSimulation();
+          } else {
+            startSimulation();
+          }
+        },
         undo: () => {
           setHistory((prev) => {
             if (prev.length === 0) return prev;
@@ -320,7 +329,6 @@ export default function CircuitCanvas() {
 
       return prevElements.map((oldEl) => {
         const updated = solved.find((e) => e.id === oldEl.id);
-        console.log('jjjj' + JSON.stringify(updated))
         if (!updated) return oldEl; // If it's missing from the solved list, preserve it
 
         return {
@@ -373,17 +381,27 @@ export default function CircuitCanvas() {
 
     const element = JSON.parse(elementData);
 
-    const stageX = e.clientX;
-    const stageY = e.clientY;
+    const stage = stageRef.current;
+    if (!stage) return;
 
-    const canvasOffsetLocal = document
-      .getElementById("canvas-stage")
-      ?.getBoundingClientRect();
+    // DOM coordinates
+    const pointerX = e.clientX;
+    const pointerY = e.clientY;
 
-    const canvasX =
-      stageX - (canvasOffsetLocal?.left ?? 0) - (canvasOffset?.x || 0);
-    const canvasY =
-      stageY - (canvasOffsetLocal?.top ?? 0) - (canvasOffset?.y || 0);
+    // Get bounding box of canvas DOM
+    const containerRect = stage.container().getBoundingClientRect();
+
+    // Convert screen coords to stage coords
+    const xOnStage = pointerX - containerRect.left;
+    const yOnStage = pointerY - containerRect.top;
+
+    // Convert to actual canvas position (account for pan & zoom)
+    const scale = stage.scaleX();
+    const position = stage.position();
+
+    const canvasX = (xOnStage - position.x) / scale;
+    const canvasY = (yOnStage - position.y) / scale;
+
 
     const newElement = createElement({
       type: element.type,
@@ -410,11 +428,11 @@ export default function CircuitCanvas() {
                 prev.map((el) =>
                   el.id === newElement.id
                     ? {
-                        ...el,
-                        controller: {
-                          leds: Array(5).fill(Array(5).fill(false)),
-                        },
-                      }
+                      ...el,
+                      controller: {
+                        leds: Array(5).fill(Array(5).fill(false)),
+                      },
+                    }
                     : el
                 )
               );
@@ -460,37 +478,39 @@ export default function CircuitCanvas() {
   // for canvas zoom in and zoom out
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
     e.evt.preventDefault();
-    const scaleBy = 1.05;
-    const stage = stageRef.current;
 
-    // Ensure stage and pointer position exist
+    const stage = stageRef.current;
     if (!stage) return;
 
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return; // 🔒 safeguard against undefined
-
+    const scaleBy = 1.05;
     const oldScale = stage.scaleX();
-
-    const mousePointTo = {
-      x: pointer.x / oldScale - stage.x() / oldScale,
-      y: pointer.y / oldScale - stage.y() / oldScale,
-    };
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
 
     const direction = e.evt.deltaY > 0 ? 1 : -1;
     const newScale = direction > 0 ? oldScale / scaleBy : oldScale * scaleBy;
 
-    if (newScale > 2.5 || newScale < 0.5) return;
+    if (newScale < 0.5 || newScale > 2.5) return;
 
+    // Get the position of the pointer relative to the stage's current transform
+    const mousePointTo = {
+      x: (pointer.x - stage.x()) / oldScale,
+      y: (pointer.y - stage.y()) / oldScale,
+    };
+
+    // Apply the new scale
     stage.scale({ x: newScale, y: newScale });
 
+    // Calculate new position to keep pointer under cursor
     const newPos = {
-      x: -(mousePointTo.x - pointer.x / newScale) * newScale,
-      y: -(mousePointTo.y - pointer.y / newScale) * newScale,
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
     };
 
     stage.position(newPos);
     stage.batchDraw();
   };
+
   // end
 
   return (
@@ -564,12 +584,23 @@ export default function CircuitCanvas() {
                 if (!data) return;
                 pushToHistory();
                 resetState();
+                setLoadingSavedCircuit(true);
                 setElements(data.elements);
                 setWires(data.wires);
+
+                setTimeout(() => {
+                  const stage = stageRef.current;
+                  if (stage) {
+                    const pos = stage.getPointerPosition();
+                    if (pos) setMousePos(pos); // This triggers wire refresh
+                  }
+                }, 0);
+                setLoadingSavedCircuit(false);
               }}
               currentElements={elements}
               currentWires={wires}
               getSnapshot={() => stageRef.current?.toDataURL() || ""}
+
             />
           </div>
 
@@ -614,144 +645,150 @@ export default function CircuitCanvas() {
         </div>
 
         {/* Canvas Stage */}
-        <div className="border border-gray-800 inline-block p-1">
-          <Stage
-            id="canvas-stage"
-            width={window.innerWidth}
-            height={window.innerHeight - 48} // Adjust height to account for toolbar
-            onMouseMove={handleStageMouseMove}
-            onClick={handleStageClick}
-            ref={stageRef}
-            x={canvasOffset.x}
-            y={canvasOffset.y}
-            onDragMove={(e) => {
-              if (draggingElement !== null) return;
-              const stage = e.target;
-              setCanvasOffset({ x: stage.x(), y: stage.y() });
-            }}
-            draggable={draggingElement == null}
-          // onWheel={handleWheel}
-          >
-            <Layer>
-              {/* Render Wires */}
-              {wires.map((wire) => {
-                const points = getWirePoints(wire);
-                if (points.length === 4) {
-                  const [x1, y1, x2, y2] = points;
-                  const midX = (x1 + x2) / 2;
-                  const midY = (y1 + y2) / 2;
-                  points.splice(2, 0, midX, midY);
-                }
+        <div className="relative border border-gray-800 w-full flex-1 h-full p-1 overflow-hidden">
+          {loadingSavedCircuit ? (
+            <Loader />
+          ) : (
+            <Stage
+              id="canvas-stage"
+              width={window.innerWidth}
+              height={window.innerHeight - 48} // Adjust height to account for toolbar
+              onMouseMove={handleStageMouseMove}
+              onClick={handleStageClick}
+              ref={stageRef}
+              x={canvasOffset.x}
+              y={canvasOffset.y}
+              onDragMove={(e) => {
+                if (draggingElement !== null) return;
+                const stage = e.target;
+                setCanvasOffset({ x: stage.x(), y: stage.y() });
+              }}
+              draggable={draggingElement == null}
+              onWheel={handleWheel}
+            >
+              <Layer>
+                {/* Render Wires */}
+                {wires.map((wire) => {
+                  const points = getWirePoints(wire);
+                  if (points.length === 4) {
+                    const [x1, y1, x2, y2] = points;
+                    const midX = (x1 + x2) / 2;
+                    const midY = (y1 + y2) / 2;
+                    points.splice(2, 0, midX, midY);
+                  }
 
-                return (
-                  <Line
-                    key={wire.id}
-                    points={points}
-                    stroke={
-                      selectedElement?.id === wire.id
-                        ? "orange"
-                        : getWireColor(wire)
-                    }
-                    strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
-                    hitStrokeWidth={12}
-                    tension={0.5}
-                    lineCap="round"
-                    lineJoin="round"
-                    bezier
-                    onClick={() =>
-                      setSelectedElement({
-                        id: wire.id,
-                        type: "wire",
-                        x: 0,
-                        y: 0,
-                        nodes: [],
-                      })
-                    }
-                  />
-                );
-              })}
-
-              {/* In-Progress Wire Drawing */}
-              {creatingWireStartNode &&
-                (() => {
-                  const startNode = getNodeById(creatingWireStartNode);
-                  if (!startNode) return null;
-                  const startPos = {
-                    x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
-                    y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
-                  };
-                  const stage = stageRef.current;
-                  if (!stage) return null;
-                  const transform = stage.getAbsoluteTransform().copy();
-                  transform.invert();
-                  const adjustedMouse = transform.point(mousePos);
-                  const inProgressPoints = [
-                    startPos.x,
-                    startPos.y,
-                    ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
-                    adjustedMouse.x,
-                    adjustedMouse.y,
-                  ];
                   return (
                     <Line
-                      points={inProgressPoints}
-                      stroke="black"
-                      strokeWidth={2}
-                      pointerEvents="none"
+                      key={wire.id}
+                      points={points}
+                      stroke={
+                        selectedElement?.id === wire.id
+                          ? "orange"
+                          : getWireColor(wire)
+                      }
+                      strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
+                      hitStrokeWidth={12}
+                      tension={0.5}
                       lineCap="round"
                       lineJoin="round"
+                      bezier
+                      onClick={() =>
+                        setSelectedElement({
+                          id: wire.id,
+                          type: "wire",
+                          x: 0,
+                          y: 0,
+                          nodes: [],
+                        })
+                      }
                     />
                   );
-                })()}
+                })}
 
-              {/* Render Elements */}
-              {elements.map((element) => (
-                <RenderElement
-                  key={element.id}
-                  element={element}
-                  onDragMove={handleElementDragMove}
-                  handleNodeClick={handleNodeClick}
-                  handleRatioChange={handleRatioChange}
-                  handleModeChange={handleModeChange}
-                  onDragStart={() => {
-                    pushToHistory();
-                    setDraggingElement(element.id);
-                    stageRef.current?.draggable(false);
-                  }}
-                  onDragEnd={(e) => {
-                    setDraggingElement(null);
-                    stageRef.current?.draggable(true);
-                    const id = e.target.id();
-                    const x = e.target.x();
-                    const y = e.target.y();
-                    setElements((prev) =>
-                      prev.map((el) => (el.id === id ? { ...el, x, y } : el))
+                {/* In-Progress Wire Drawing */}
+                {creatingWireStartNode &&
+                  (() => {
+                    const startNode = getNodeById(creatingWireStartNode);
+                    if (!startNode) return null;
+                    const startPos = {
+                      x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
+                      y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
+                    };
+                    const stage = stageRef.current;
+                    if (!stage) return null;
+                    const transform = stage.getAbsoluteTransform().copy();
+                    transform.invert();
+                    const adjustedMouse = transform.point(mousePos);
+                    const inProgressPoints = [
+                      startPos.x,
+                      startPos.y,
+                      ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
+                      adjustedMouse.x,
+                      adjustedMouse.y,
+                    ];
+                    return (
+                      <Line
+                        points={inProgressPoints}
+                        stroke="black"
+                        strokeWidth={2}
+                        pointerEvents="none"
+                        lineCap="round"
+                        lineJoin="round"
+                      />
                     );
-                  }}
-                  onSelect={(id) => {
-                    const element = getElementById(id);
-                    setSelectedElement(element ?? null);
-                    setActiveControllerId(null);
-                    setOpenCodeEditor(false);
-                    if (element?.type === "microbit") {
-                      setActiveControllerId(element.id);
-                    }
-                  }}
-                  selectedElementId={selectedElement?.id || null}
-                  // @ts-ignore
-                  onControllerInput={(elementId, input) => {
-                    // const sim = controllerMap[elementId];
-                    // const instance = sim?.getMicrobitInstance();
-                    // // if (instance?.input && (input === "A" || input === "B")) {
-                    // //   instance.input._press_button(input);
-                    // // }
-                  }}
-                />
-              ))}
-            </Layer>
-          </Stage>
+                  })()}
+
+                {/* Render Elements */}
+                {elements.map((element) => (
+                  <RenderElement
+                    key={element.id}
+                    isSimulationOn={simulationRunning}
+                    element={element}
+                    onDragMove={handleElementDragMove}
+                    handleNodeClick={handleNodeClick}
+                    handleRatioChange={handleRatioChange}
+                    handleModeChange={handleModeChange}
+                    onDragStart={() => {
+                      pushToHistory();
+                      setDraggingElement(element.id);
+                      stageRef.current?.draggable(false);
+                    }}
+                    onDragEnd={(e) => {
+                      setDraggingElement(null);
+                      stageRef.current?.draggable(true);
+                      const id = e.target.id();
+                      const x = e.target.x();
+                      const y = e.target.y();
+                      setElements((prev) =>
+                        prev.map((el) => (el.id === id ? { ...el, x, y } : el))
+                      );
+                    }}
+                    onSelect={(id) => {
+                      const element = getElementById(id);
+                      setSelectedElement(element ?? null);
+                      setActiveControllerId(null);
+                      setOpenCodeEditor(false);
+                      if (element?.type === "microbit") {
+                        setActiveControllerId(element.id);
+                      }
+                    }}
+                    selectedElementId={selectedElement?.id || null}
+                    // @ts-ignore
+                    onControllerInput={(elementId, input) => {
+                      // const sim = controllerMap[elementId];
+                      // const instance = sim?.getMicrobitInstance();
+                      // // if (instance?.input && (input === "A" || input === "B")) {
+                      // //   instance.input._press_button(input);
+                      // // }
+                    }}
+                  />
+                ))}
+              </Layer>
+            </Stage>
+          )}
         </div>
       </div>
+
 
       {/* ==================== Right Side: Palette ==================== */}
       <div
@@ -874,7 +911,7 @@ export default function CircuitCanvas() {
                     ...prev,
                     [activeControllerId]: newCode,
                   }));
-                  setSimulationRunning(false);
+                  stopSimulation();
                 }}
               />
             </div>

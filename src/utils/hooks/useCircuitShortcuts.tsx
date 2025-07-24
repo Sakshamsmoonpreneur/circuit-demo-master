@@ -20,7 +20,9 @@ export default function useCircuitShortcuts({
       if (e.ctrlKey || e.metaKey) pressed.add("ctrl");
       if (e.shiftKey) pressed.add("shift");
       if (e.altKey) pressed.add("alt");
-      pressed.add(e.key.toLowerCase());
+      let key = e.key.toLowerCase();
+      if (key === " ") key = "space"; // ✅ normalize space key
+      pressed.add(key);
 
       return keys.every((key) => pressed.has(key));
     };
