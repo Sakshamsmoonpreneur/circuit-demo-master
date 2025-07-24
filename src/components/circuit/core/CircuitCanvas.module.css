@@ -98,7 +98,7 @@
 
 .tooltipWrapper {
   position: relative;
-  margin-left: 0.5rem;
+  margin-left: -0.5rem;
   margin-top: 1rem;
 }
 
@@ -119,6 +119,7 @@
   font-size: 0.875rem;
   cursor: pointer;
   transition: background 0.4s;
+  margin-bottom: 1rem;
 }
 
 .tooltipIcon:hover {

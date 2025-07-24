@@ -107,16 +107,20 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
           handler: () => {
             if (!selectedElement) return;
             pushToHistory();
-            setElements((prev) =>
-              prev.filter((el) => el.id !== selectedElement.id)
-            );
-            setWires((prev) =>
-              prev.filter(
-                (w) =>
-                  getNodeParent(w.fromNodeId)?.id !== selectedElement.id &&
-                  getNodeParent(w.toNodeId)?.id !== selectedElement.id
-              )
-            );
+            if (selectedElement.type === "wire") {
+              setWires((prev) => prev.filter((w) => w.id !== selectedElement.id));
+            } else {
+              setElements((prev) =>
+                prev.filter((el) => el.id !== selectedElement.id)
+              );
+              setWires((prev) =>
+                prev.filter(
+                  (w) =>
+                    getNodeParent(w.fromNodeId)?.id !== selectedElement.id &&
+                    getNodeParent(w.toNodeId)?.id !== selectedElement.id
+                )
+              );
+            }
             stopSimulation();
             setSelectedElement(null);
             setCreatingWireStartNode(null);

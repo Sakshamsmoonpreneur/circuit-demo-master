@@ -346,9 +346,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -363,9 +363,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -427,11 +427,11 @@ export default function CircuitCanvas() {
                 prev.map((el) =>
                   el.id === newElement.id
                     ? {
-                        ...el,
-                        controller: {
-                          leds: Array(5).fill(Array(5).fill(false)),
-                        },
-                      }
+                      ...el,
+                      controller: {
+                        leds: Array(5).fill(Array(5).fill(false)),
+                      },
+                    }
                     : el
                 )
               );
@@ -541,9 +541,8 @@ export default function CircuitCanvas() {
           {/* controls */}
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${
-                simulationRunning ? "bg-red-300" : "bg-emerald-300"
-              } flex items-center space-x-2`}
+              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
+                } flex items-center space-x-2`}
               onClick={() => {
                 simulationRunning ? stopSimulation() : startSimulation();
               }}
@@ -669,6 +668,29 @@ export default function CircuitCanvas() {
               draggable={draggingElement == null}
               onWheel={handleWheel}
             >
+              {/* for canvas grid */}
+              <Layer listening={false}>
+                {/* Guiding Grid */}
+                {Array.from({ length: Math.ceil(window.innerWidth / 20) }, (_, i) => (
+                  <Line
+                    key={`v-${i}`}
+                    points={[i * 20, 0, i * 20, window.innerHeight]}
+                    stroke="#e5e7eb" // Tailwind's gray-200
+                    strokeWidth={2}
+                    strokeDash={[2, 2]}
+                  />
+                ))}
+                {Array.from({ length: Math.ceil((window.innerHeight - 48) / 20) }, (_, i) => (
+                  <Line
+                    key={`h-${i}`}
+                    points={[0, i * 20, window.innerWidth, i * 20]}
+                    stroke="#e5e7eb"
+                    strokeWidth={2}
+                    strokeDash={[2, 2]}
+                  />
+                ))}
+              </Layer>
+              {/* // End of grid */}
               <Layer>
                 {/* Render Wires */}
                 {wires.map((wire) => {
@@ -690,8 +712,8 @@ export default function CircuitCanvas() {
                           : getWireColor(wire)
                       }
                       strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
-                      hitStrokeWidth={12}
-                      tension={0.5}
+                      hitStrokeWidth={10}
+                      tension={0.1}
                       lineCap="round"
                       lineJoin="round"
                       bezier
@@ -793,9 +815,8 @@ export default function CircuitCanvas() {
 
       {/* ==================== Right Side: Palette ==================== */}
       <div
-        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${
-          showPalette ? "w-72" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
+          }`}
         style={{ pointerEvents: "auto" }}
       >
         <button
