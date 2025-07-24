@@ -13,9 +13,9 @@ export default function Page() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowCanvas(true);
-    }, 1500); 
+    }, 400);
 
-    return () => clearTimeout(timer); 
+    return () => clearTimeout(timer);
   }, []);
 
   return (

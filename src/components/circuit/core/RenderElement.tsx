@@ -125,8 +125,10 @@ export default function RenderElement({
               width={5.6}
               height={5.6}
               cornerRadius={0.3}
-              fill={isHovered && node.fillColor ? node.fillColor : "transparent"}
-              stroke={isHovered ? "black" : "transparent"}
+              // fill={isHovered && node.fillColor ? node.fillColor : "transparent"}
+              // stroke={isHovered ? "black" : "transparent"}
+              fill={node.fillColor}
+              stroke={isHovered ? "black" : node.fillColor}
               strokeWidth={isHovered ? 1.4 : 0}
               onClick={() => props.handleNodeClick(node.id)}
               hitStrokeWidth={10}

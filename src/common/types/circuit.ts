@@ -5,6 +5,7 @@ export type CircuitElement = {
   x: number;
   y: number;
   nodes: Node[];
+  connecters?: ElementConnecter[];
   type: string;
   properties?: {
     voltage?: number; // for power sources like batteries
@@ -41,6 +42,14 @@ export type Node = {
   placeholder?: string;
   fillColor?: string;
 };
+
+export type ElementConnecter = {
+  id: string;
+  parentId: string;
+  x: number;
+  y: number;
+  state?: string;
+}
 
 export type Size =
   | { width: number; height: number; radius?: never }

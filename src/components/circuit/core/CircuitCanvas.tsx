@@ -318,7 +318,7 @@ export default function CircuitCanvas() {
 
       return prevElements.map((oldEl) => {
         const updated = solved.find((e) => e.id === oldEl.id);
-
+        console.log('jjjj' + JSON.stringify(updated))
         if (!updated) return oldEl; // If it's missing from the solved list, preserve it
 
         return {
@@ -336,9 +336,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -353,9 +353,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -492,9 +492,8 @@ export default function CircuitCanvas() {
           {/* controls */}
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${
-                simulationRunning ? "bg-red-300" : "bg-emerald-300"
-              } flex items-center space-x-2`}
+              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
+                } flex items-center space-x-2`}
               onClick={() => {
                 simulationRunning ? stopSimulation() : startSimulation();
               }}
@@ -601,7 +600,7 @@ export default function CircuitCanvas() {
               setCanvasOffset({ x: stage.x(), y: stage.y() });
             }}
             draggable={draggingElement == null}
-            onWheel={handleWheel}
+          // onWheel={handleWheel}
           >
             <Layer>
               {/* Render Wires */}
@@ -725,9 +724,8 @@ export default function CircuitCanvas() {
 
       {/* ==================== Right Side: Palette ==================== */}
       <div
-        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${
-          showPalette ? "w-72" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
+          }`}
         style={{ pointerEvents: "auto" }}
       >
         <button
@@ -845,6 +843,7 @@ export default function CircuitCanvas() {
                     ...prev,
                     [activeControllerId]: newCode,
                   }));
+                  setSimulationRunning(false);
                 }}
               />
             </div>

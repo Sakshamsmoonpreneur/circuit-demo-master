@@ -150,7 +150,7 @@ export default function createElement(
         y: 23,
         parentId: id,
         name: "A", // optional for clarity
-        placehodler: "Terminal 1",
+        placeholder: "Terminal 1",
         fillColor: "red",
       },
       {
@@ -159,7 +159,7 @@ export default function createElement(
         y: 23, // position it visually on top if needed
         parentId: id,
         name: "W",
-        placeholder: "black",
+        placeholder: "Wiper",
         fillColor: "red",
       },
       {
@@ -168,7 +168,7 @@ export default function createElement(
         y: 23,
         parentId: id,
         name: "B",
-        placehodler: "Terminal 2",
+        placeholder: "Terminal 2",
         fillColor: "red",
       },
     ],
@@ -262,10 +262,20 @@ export default function createElement(
         fillColor: "red",
       },
     ],
+    connecters: [
+      {
+        id: id + "-usb-connector-1",
+        parentId: id,
+        x: 150,
+        y: 227,
+        state: "off",
+      }
+    ],
     properties: {
       ...props.properties,
     },
   };
+
 
   // switch based on type
   let element;
