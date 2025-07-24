@@ -18,7 +18,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
   {
     type: "lightbulb",
     label: "Lightbulb",
-    iconPath: "/circuit_elements/bulb-off.svg",
+    iconPath: "/circuit_elements/bulb.svg",
     defaultProps: { resistance: 1 },
   },
   {

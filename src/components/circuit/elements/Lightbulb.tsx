@@ -13,7 +13,7 @@ export default function Lightbulb(props: LightbulbProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   useEffect(() => {
     const image = new window.Image();
-    image.src = "/circuit_elements/bulb-off.svg"; // Always use the "off" bulb
+    image.src = "/circuit_elements/bulb.svg";
     image.onload = () => setImg(image);
     image.alt = "Lightbulb";
   }, []);
@@ -31,9 +31,9 @@ export default function Lightbulb(props: LightbulbProps) {
         {/* Glow layer */}
         {brightness > 0 && (
           <Circle
-            x={20}
-            y={20}
-            radius={20 + 10 * brightness}
+            x={75}
+            y={60}
+            radius={20 + 50 * brightness}
             fill="yellow"
             opacity={0.2 + 0.4 * brightness}
             shadowBlur={10 + 30 * brightness}
@@ -44,8 +44,8 @@ export default function Lightbulb(props: LightbulbProps) {
         {img && (
           <Image
             image={img}
-            width={40}
-            height={40}
+            width={150}
+            height={150}
             shadowColor={props.selected ? "blue" : undefined}
             shadowBlur={props.selected ? 15 : 0}
             shadowOffset={{ x: 0, y: 0 }}

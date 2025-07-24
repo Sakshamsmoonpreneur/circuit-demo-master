@@ -14,8 +14,8 @@ export default function createElement(
     nodes: [
       {
         id: id + "-node-1",
-        x: 10,
-        y: -2,
+        x: 13,
+        y: 38,
         parentId: id,
         polarity: "positive",
         placeholder: "Positive",
@@ -23,8 +23,8 @@ export default function createElement(
       },
       {
         id: id + "-node-2",
-        x: 30,
-        y: -2,
+        x: 13,
+        y: 47,
         parentId: id,
         polarity: "negative",
         placeholder: "Negative",
@@ -48,16 +48,16 @@ export default function createElement(
     nodes: [
       {
         id: id + "-node-1",
-        x: 10,
-        y: 40,
+        x: 67,
+        y: 140,
         parentId: id,
         placeholder: "Terminal 1",
         fillColor: "red",
       },
       {
         id: id + "-node-2",
-        x: 30,
-        y: 40,
+        x: 79,
+        y: 140,
         parentId: id,
         placeholder: "Terminal 2",
         fillColor: "red",
@@ -269,13 +269,12 @@ export default function createElement(
         x: 150,
         y: 227,
         state: "off",
-      }
+      },
     ],
     properties: {
       ...props.properties,
     },
   };
-
 
   // switch based on type
   let element;
