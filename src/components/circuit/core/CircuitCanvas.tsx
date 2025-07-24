@@ -346,9 +346,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, ratio },
-          }
+              ...el,
+              properties: { ...el.properties, ratio },
+            }
           : el
       )
     );
@@ -363,9 +363,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
@@ -402,7 +402,6 @@ export default function CircuitCanvas() {
     const canvasX = (xOnStage - position.x) / scale;
     const canvasY = (yOnStage - position.y) / scale;
 
-
     const newElement = createElement({
       type: element.type,
       idNumber: elements.length + 1,
@@ -428,11 +427,11 @@ export default function CircuitCanvas() {
                 prev.map((el) =>
                   el.id === newElement.id
                     ? {
-                      ...el,
-                      controller: {
-                        leds: Array(5).fill(Array(5).fill(false)),
-                      },
-                    }
+                        ...el,
+                        controller: {
+                          leds: Array(5).fill(Array(5).fill(false)),
+                        },
+                      }
                     : el
                 )
               );
@@ -538,12 +537,13 @@ export default function CircuitCanvas() {
       {/* ==================== Left Side: Main Canvas ==================== */}
       <div className="flex-grow h-full flex flex-col">
         {/* Toolbar with center controls */}
-        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 shadow-md space-x-4 py-2 justify-between">
+        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 shadow-md space-x-4 py-2 justify-start">
           {/* controls */}
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
-                } flex items-center space-x-2`}
+              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${
+                simulationRunning ? "bg-red-300" : "bg-emerald-300"
+              } flex items-center space-x-2`}
               onClick={() => {
                 simulationRunning ? stopSimulation() : startSimulation();
               }}
@@ -595,12 +595,15 @@ export default function CircuitCanvas() {
                     if (pos) setMousePos(pos); // This triggers wire refresh
                   }
                 }, 0);
-                setLoadingSavedCircuit(false);
+
+                setLoadingSavedCircuit(true);
+                setTimeout(() => {
+                  setLoadingSavedCircuit(false);
+                }, 500);
               }}
               currentElements={elements}
               currentWires={wires}
               getSnapshot={() => stageRef.current?.toDataURL() || ""}
-
             />
           </div>
 
@@ -775,11 +778,10 @@ export default function CircuitCanvas() {
                     selectedElementId={selectedElement?.id || null}
                     // @ts-ignore
                     onControllerInput={(elementId, input) => {
-                      // const sim = controllerMap[elementId];
-                      // const instance = sim?.getMicrobitInstance();
-                      // // if (instance?.input && (input === "A" || input === "B")) {
-                      // //   instance.input._press_button(input);
-                      // // }
+                      const sim = controllerMap[elementId];
+                      if (sim && (input === "A" || input === "B")) {
+                        sim.simulateInput(input);
+                      }
                     }}
                   />
                 ))}
@@ -789,11 +791,11 @@ export default function CircuitCanvas() {
         </div>
       </div>
 
-
       {/* ==================== Right Side: Palette ==================== */}
       <div
-        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
-          }`}
+        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${
+          showPalette ? "w-72" : "w-10"
+        }`}
         style={{ pointerEvents: "auto" }}
       >
         <button
