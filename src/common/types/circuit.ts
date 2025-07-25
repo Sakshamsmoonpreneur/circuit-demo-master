@@ -49,7 +49,7 @@ export type ElementConnecter = {
   x: number;
   y: number;
   state?: string;
-}
+};
 
 export type Size =
   | { width: number; height: number; radius?: never }
@@ -91,4 +91,5 @@ export type PropertiesPanelProps = {
   onWireEdit: (updatedWire: Wire, deleteElement: boolean) => void;
   onEditWireSelect?: (wire: Wire) => void;
   setOpenCodeEditor: (open: boolean) => void;
+  wireColor?: string;
 };

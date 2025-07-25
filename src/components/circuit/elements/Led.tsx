@@ -43,8 +43,8 @@ export default function Led(props: Led) {
         {img && (
           <Image
             image={img}
-            width={40}
-            height={40}
+            width={75}
+            height={75}
             shadowColor={props.selected ? "blue" : undefined}
             shadowBlur={props.selected ? 15 : 0}
             shadowOffset={{ x: 0, y: 0 }}
