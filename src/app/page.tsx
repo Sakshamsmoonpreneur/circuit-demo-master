@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const CircuitCanvas = dynamic(
-  () => import("@/components/circuit/core/CircuitCanvasOptimized"),
+  () => import("@/components/circuit/core/CircuitCanvas"),
   {
     ssr: false,
   }

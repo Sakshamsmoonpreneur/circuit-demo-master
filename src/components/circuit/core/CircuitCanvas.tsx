@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Stage, Layer, Line, Rect, Star, Circle } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { CircuitElement, EditingWire, Wire } from "@/common/types/circuit";
@@ -31,7 +31,7 @@ import {
   defaultColors,
 } from "../toolbar/customization/ColorPallete";
 
-export default function CircuitCanvas() {
+export default function CircuitCanvasOptimized() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
@@ -53,6 +53,15 @@ export default function CircuitCanvas() {
   const [selectedWireColor, setSelectedWireColor] = useState<string>("#000000");
 
   const stageRef = useRef<Konva.Stage | null>(null);
+  const wireLayerRef = useRef<Konva.Layer | null>(null);
+
+  // Store refs to wire Line components for direct updates
+  const wireRefs = useRef<Record<string, Konva.Line>>({});
+
+  // Ref for the in-progress wire during creation
+  const inProgressWireRef = useRef<Konva.Line | null>(null);
+  const animatedCircleRef = useRef<Konva.Circle | null>(null);
+
   const [elements, setElements] = useState<CircuitElement[]>([]);
   const [wires, setWires] = useState<Wire[]>([]);
   const [wireCounter, setWireCounter] = useState(0);
@@ -77,8 +86,6 @@ export default function CircuitCanvas() {
   const tempDragPositions = useRef<{ [id: string]: { x: number; y: number } }>(
     {}
   );
-  // @ts-ignore
-  const [wireDragVersion, setWireDragVersion] = useState(0);
   const [loadingSavedCircuit, setLoadingSavedCircuit] = useState(false);
 
   useEffect(() => {
@@ -88,6 +95,7 @@ export default function CircuitCanvas() {
   useEffect(() => {
     resetState();
   }, []);
+
   function resetState() {
     pushToHistory();
     setElements([]);
@@ -95,13 +103,50 @@ export default function CircuitCanvas() {
     setWireCounter(0);
     setCreatingWireStartNode(null);
     setEditingWire(null);
+    // Clear wire refs
+    wireRefs.current = {};
+    // Hide in-progress wire components
+    if (inProgressWireRef.current) {
+      inProgressWireRef.current.visible(false);
+    }
+    if (animatedCircleRef.current) {
+      animatedCircleRef.current.visible(false);
+    }
   }
 
   //changing the element state on element position change
   useEffect(() => {
     elementsRef.current = elements;
+
+    // Clean up temp positions for elements that have been updated in state
+    // This prevents wire jumping after drag end
+    Object.keys(tempDragPositions.current).forEach((id) => {
+      const element = elements.find((el) => el.id === id);
+      const tempPos = tempDragPositions.current[id];
+      if (
+        element &&
+        tempPos &&
+        element.x === tempPos.x &&
+        element.y === tempPos.y
+      ) {
+        // Element state matches temp position, safe to clear
+        delete tempDragPositions.current[id];
+      }
+    });
   }, [elements]);
   //end
+
+  useEffect(() => {
+    if (!creatingWireStartNode) {
+      setCreatingWireJoints([]);
+      if (inProgressWireRef.current) {
+        inProgressWireRef.current.visible(false);
+      }
+      if (animatedCircleRef.current) {
+        animatedCircleRef.current.visible(false);
+      }
+    }
+  }, [creatingWireStartNode]);
 
   function stopSimulation() {
     setSimulationRunning(false);
@@ -154,7 +199,9 @@ export default function CircuitCanvas() {
   }
 
   function getNodeById(nodeId: string) {
-    return elements.flatMap((e) => e.nodes).find((n) => n.id === nodeId);
+    return elementsRef.current
+      .flatMap((e) => e.nodes)
+      .find((n) => n.id === nodeId);
   }
 
   const getElementById = React.useCallback(
@@ -178,6 +225,102 @@ export default function CircuitCanvas() {
       return getElementById(node.parentId);
     },
     [getElementById]
+  );
+
+  // Optimized function to calculate wire points
+  const getWirePoints = useCallback(
+    (wire: Wire): number[] => {
+      const fromNode = getNodeById(wire.fromNodeId);
+      const toNode = getNodeById(wire.toNodeId);
+      if (!fromNode || !toNode) return [];
+
+      const fromParent = getNodeParent(fromNode.id);
+      const toParent = getNodeParent(toNode.id);
+
+      const start = {
+        x: fromNode.x + (fromParent?.x ?? 0),
+        y: fromNode.y + (fromParent?.y ?? 0),
+      };
+
+      const end = {
+        x: toNode.x + (toParent?.x ?? 0),
+        y: toNode.y + (toParent?.y ?? 0),
+      };
+
+      // Include joints between start and end
+      const jointPoints = wire.joints.flatMap((pt) => [pt.x, pt.y]);
+
+      return [start.x, start.y, ...jointPoints, end.x, end.y];
+    },
+    [getNodeParent]
+  );
+
+  // Optimized function to update wires directly in Konva
+  const updateWiresDirect = useCallback(() => {
+    wires.forEach((wire) => {
+      const wireLineRef = wireRefs.current[wire.id];
+      if (wireLineRef) {
+        const newPoints = getWirePoints(wire);
+        // Apply the same midpoint logic as in JSX rendering
+        if (newPoints.length === 4) {
+          const [x1, y1, x2, y2] = newPoints;
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          newPoints.splice(2, 0, midX, midY);
+        }
+        wireLineRef.points(newPoints);
+      }
+    });
+
+    // Batch the layer redraw for performance
+    if (wireLayerRef.current) {
+      wireLayerRef.current.batchDraw();
+    }
+  }, [wires, getWirePoints]);
+
+  // Optimized function to update in-progress wire during creation
+  const updateInProgressWire = useCallback(
+    (mousePos: { x: number; y: number }) => {
+      if (!creatingWireStartNode || !stageRef.current) return;
+
+      const startNode = getNodeById(creatingWireStartNode);
+      if (!startNode) return;
+
+      const startPos = {
+        x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
+        y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
+      };
+
+      const stage = stageRef.current;
+      const transform = stage.getAbsoluteTransform().copy();
+      transform.invert();
+      const adjustedMouse = transform.point(mousePos);
+
+      const inProgressPoints = [
+        startPos.x,
+        startPos.y,
+        ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
+        adjustedMouse.x,
+        adjustedMouse.y,
+      ];
+
+      // Update in-progress wire directly
+      if (inProgressWireRef.current) {
+        inProgressWireRef.current.points(inProgressPoints);
+      }
+
+      // Update animated circle position
+      if (animatedCircleRef.current) {
+        animatedCircleRef.current.x(adjustedMouse.x);
+        animatedCircleRef.current.y(adjustedMouse.y);
+      }
+
+      // Batch redraw
+      if (wireLayerRef.current) {
+        wireLayerRef.current.batchDraw();
+      }
+    },
+    [creatingWireStartNode, creatingWireJoints, getNodeParent]
   );
 
   useCircuitShortcuts({
@@ -217,7 +360,17 @@ export default function CircuitCanvas() {
 
   function handleStageMouseMove(e: KonvaEventObject<PointerEvent>) {
     const pos = e.target.getStage()?.getPointerPosition();
-    if (pos) setMousePos(pos);
+    if (pos) {
+      // Only update React state if we're NOT creating a wire to avoid re-renders
+      if (!creatingWireStartNode) {
+        setMousePos(pos);
+      }
+
+      // If creating a wire, update in-progress wire directly without React re-render
+      if (creatingWireStartNode) {
+        updateInProgressWire(pos);
+      }
+    }
   }
 
   function handleStageClick(e: KonvaEventObject<MouseEvent>) {
@@ -245,9 +398,13 @@ export default function CircuitCanvas() {
         ...prev,
         { x: adjusted.x, y: adjusted.y },
       ]);
+
+      // Update in-progress wire to include the new joint
+      updateInProgressWire(pos);
     }
   }
 
+  // Optimized drag move handler - updates wires directly without React re-render
   function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
     e.cancelBubble = true;
     const id = e.target.id();
@@ -256,32 +413,8 @@ export default function CircuitCanvas() {
 
     tempDragPositions.current[id] = { x, y };
 
-    // Trigger a light render to update wires
-    setWireDragVersion((v) => v + 1); // 👈 create this state
-  }
-
-  function getWirePoints(wire: Wire): number[] {
-    const fromNode = getNodeById(wire.fromNodeId);
-    const toNode = getNodeById(wire.toNodeId);
-    if (!fromNode || !toNode) return [];
-
-    const fromParent = getNodeParent(fromNode.id);
-    const toParent = getNodeParent(toNode.id);
-
-    const start = {
-      x: fromNode.x + (fromParent?.x ?? 0),
-      y: fromNode.y + (fromParent?.y ?? 0),
-    };
-
-    const end = {
-      x: toNode.x + (toParent?.x ?? 0),
-      y: toNode.y + (toParent?.y ?? 0),
-    };
-
-    // Include joints between start and end
-    const jointPoints = wire.joints.flatMap((pt) => [pt.x, pt.y]);
-
-    return [start.x, start.y, ...jointPoints, end.x, end.y];
+    // Directly update wires in Konva without triggering React re-render
+    updateWiresDirect();
   }
 
   function handleNodeClick(nodeId: string) {
@@ -303,6 +436,25 @@ export default function CircuitCanvas() {
     if (!creatingWireStartNode) {
       setCreatingWireStartNode(nodeId);
       setCreatingWireJoints([]);
+
+      // Show and initialize in-progress wire components
+      if (
+        inProgressWireRef.current &&
+        animatedCircleRef.current &&
+        stageRef.current
+      ) {
+        const stage = stageRef.current;
+        const scaleFactor = 1 / stage.scaleX();
+
+        // Show components
+        inProgressWireRef.current.visible(true);
+        animatedCircleRef.current.visible(true);
+
+        // Initialize scaling
+        animatedCircleRef.current.scaleX(scaleFactor);
+        animatedCircleRef.current.scaleY(scaleFactor);
+        inProgressWireRef.current.strokeWidth(2 / stage.scaleX());
+      }
       return;
     }
 
@@ -310,6 +462,14 @@ export default function CircuitCanvas() {
     if (creatingWireStartNode === nodeId) {
       setCreatingWireStartNode(null);
       setCreatingWireJoints([]);
+
+      // Hide in-progress wire components
+      if (inProgressWireRef.current) {
+        inProgressWireRef.current.visible(false);
+      }
+      if (animatedCircleRef.current) {
+        animatedCircleRef.current.visible(false);
+      }
       return;
     }
 
@@ -330,6 +490,14 @@ export default function CircuitCanvas() {
 
     setCreatingWireStartNode(null);
     setCreatingWireJoints([]);
+
+    // Hide in-progress wire components
+    if (inProgressWireRef.current) {
+      inProgressWireRef.current.visible(false);
+    }
+    if (animatedCircleRef.current) {
+      animatedCircleRef.current.visible(false);
+    }
   }
 
   function computeCircuit(wiresSnapshot: Wire[]) {
@@ -408,8 +576,8 @@ export default function CircuitCanvas() {
     const scale = stage.scaleX();
     const position = stage.position();
 
-    const canvasX = (xOnStage - position.x) / scale;
-    const canvasY = (yOnStage - position.y) / scale;
+    const canvasX = (xOnStage - position.x) / scale - 33;
+    const canvasY = (yOnStage - position.y) / scale - 35;
 
     const newElement = createElement({
       type: element.type,
@@ -537,6 +705,36 @@ export default function CircuitCanvas() {
 
     return () => cancelAnimationFrame(rafId);
   }, []);
+
+  // Animate the in-progress wire circle
+  useEffect(() => {
+    let animationFrame: number;
+    let startTime: number | null = null;
+
+    const animateCircle = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+
+      if (animatedCircleRef.current && creatingWireStartNode) {
+        const scale = 1 + 0.2 * Math.sin(elapsed * 0.005);
+        const baseScale = stageRef.current ? 1 / stageRef.current.scaleX() : 1;
+        animatedCircleRef.current.scaleX(scale * baseScale);
+        animatedCircleRef.current.scaleY(scale * baseScale);
+      }
+
+      animationFrame = requestAnimationFrame(animateCircle);
+    };
+
+    if (creatingWireStartNode) {
+      animationFrame = requestAnimationFrame(animateCircle);
+    }
+
+    return () => {
+      if (animationFrame) {
+        cancelAnimationFrame(animationFrame);
+      }
+    };
+  }, [creatingWireStartNode]);
 
   return (
     <div
@@ -713,7 +911,8 @@ export default function CircuitCanvas() {
             >
               <InfiniteGrid />
 
-              <Layer>
+              {/* Optimized Wire Layer with refs */}
+              <Layer ref={wireLayerRef}>
                 {/* Render Wires */}
                 {wires.map((wire) => {
                   const points = getWirePoints(wire);
@@ -727,13 +926,15 @@ export default function CircuitCanvas() {
                   return (
                     <Line
                       key={wire.id}
+                      ref={(ref) => {
+                        if (ref) {
+                          wireRefs.current[wire.id] = ref;
+                        } else {
+                          delete wireRefs.current[wire.id];
+                        }
+                      }}
                       points={points}
-                      stroke={
-                        // selectedElement?.id === wire.id
-                        //   ? "gray" // Tailwind's orange-500
-                        //   : getWireColor(wire)
-                        getWireColor(wire) || "black"
-                      }
+                      stroke={getWireColor(wire) || "black"}
                       strokeWidth={selectedElement?.id === wire.id ? 4 : 3.5}
                       hitStrokeWidth={16} // easier click/touch target
                       tension={0.3} // smoother bezier curve
@@ -763,50 +964,44 @@ export default function CircuitCanvas() {
                   );
                 })}
 
-                {/* In-Progress Wire Drawing */}
-                {creatingWireStartNode &&
-                  (() => {
-                    const startNode = getNodeById(creatingWireStartNode);
-                    if (!startNode) return null;
-                    const startPos = {
-                      x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
-                      y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
-                    };
-                    const stage = stageRef.current;
-                    if (!stage) return null;
-                    const transform = stage.getAbsoluteTransform().copy();
-                    transform.invert();
-                    const adjustedMouse = transform.point(mousePos);
-                    const inProgressPoints = [
-                      startPos.x,
-                      startPos.y,
-                      ...creatingWireJoints.flatMap((p) => [p.x, p.y]),
-                      adjustedMouse.x,
-                      adjustedMouse.y,
-                    ];
-                    return (
-                      <>
-                        <AnimatedCircle
-                          x={adjustedMouse.x}
-                          y={adjustedMouse.y}
-                          scaleFactor={1 / stage.scaleX()}
-                        />
-                        <Line
-                          points={inProgressPoints}
-                          stroke="blue"
-                          strokeWidth={2 / stageRef.current!.scaleX()}
-                          pointerEvents="none"
-                          lineCap="round"
-                          lineJoin="round"
-                          dash={[3, 3]}
-                          shadowColor="blue"
-                          shadowBlur={4}
-                          shadowOpacity={0.4}
-                        />
-                      </>
-                    );
-                  })()}
+                {/* In-Progress Wire Drawing - Optimized with refs */}
+                <Circle
+                  ref={(ref) => {
+                    animatedCircleRef.current = ref;
+                  }}
+                  x={0}
+                  y={0}
+                  radius={5}
+                  fill="yellow"
+                  shadowColor="red"
+                  shadowBlur={10}
+                  shadowOpacity={1}
+                  shadowForStrokeEnabled={true}
+                  stroke="orange"
+                  strokeWidth={3}
+                  opacity={1}
+                  visible={false}
+                />
+                <Line
+                  ref={(ref) => {
+                    inProgressWireRef.current = ref;
+                  }}
+                  points={[]}
+                  stroke="blue"
+                  strokeWidth={2}
+                  pointerEvents="none"
+                  lineCap="round"
+                  lineJoin="round"
+                  dash={[3, 3]}
+                  shadowColor="blue"
+                  shadowBlur={4}
+                  shadowOpacity={0.4}
+                  visible={false}
+                />
+              </Layer>
 
+              {/* Elements Layer */}
+              <Layer>
                 {/* Render Elements */}
                 {elements.map((element) => (
                   <RenderElement
@@ -828,9 +1023,13 @@ export default function CircuitCanvas() {
                       const id = e.target.id();
                       const x = e.target.x();
                       const y = e.target.y();
+
+                      // Update React state with final position
                       setElements((prev) =>
                         prev.map((el) => (el.id === id ? { ...el, x, y } : el))
                       );
+
+                      // Temp positions will be cleaned up in useEffect after state updates
                     }}
                     onSelect={(id) => {
                       const element = getElementById(id);
@@ -916,7 +1115,6 @@ export default function CircuitCanvas() {
                     stopSimulation();
                     setSelectedElement(updatedElement);
                     setCreatingWireStartNode(null);
-                    setSelectedElement(null);
                   }
                 }}
                 onWireEdit={(updatedWire, deleteElement) => {
