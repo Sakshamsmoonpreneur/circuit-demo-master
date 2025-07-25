@@ -234,6 +234,9 @@ export default function PropertiesPanel({
               />
             </svg>
             <span className="text-sm font-medium">
+              {selectedElement?.type
+                ? selectedElement.type.charAt(0).toUpperCase() + selectedElement.type.slice(1)
+                : ""}{" "}
               Properties updated successfully!
             </span>
           </div>
