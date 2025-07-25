@@ -32,6 +32,7 @@ export default function PropertiesPanel({
     setResistance(selectedElement?.properties?.resistance ?? null);
     setVoltage(selectedElement?.properties?.voltage ?? null);
     setRatio(selectedElement?.properties?.ratio ?? null);
+    setSelectedWireColor(wireColor || defaultColors[0].hex);
   }, [selectedElement]);
 
   if (!selectedElement) return null;
@@ -60,7 +61,6 @@ export default function PropertiesPanel({
     setShowUpdateMessage(true);
     setTimeout(() => setShowUpdateMessage(false), 2000);
   };
-
 
   const handleDelete = () => {
     if (selectedElement.type === "wire") {
@@ -233,7 +233,9 @@ export default function PropertiesPanel({
                 d="M5 13l4 4L19 7"
               />
             </svg>
-            <span className="text-sm font-medium">Properties updated successfully!</span>
+            <span className="text-sm font-medium">
+              Properties updated successfully!
+            </span>
           </div>
         </div>
       )}
