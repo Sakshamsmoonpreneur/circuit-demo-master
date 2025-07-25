@@ -31,8 +31,8 @@ export default function Led(props: Led) {
         {/* Glow layer */}
         {brightness > 0 && (
           <Circle
-            x={20}
-            y={20}
+            x={34.3}
+            y={36}
             radius={20 + 10 * brightness}
             fill="red"
             opacity={0.2 + 0.4 * brightness}

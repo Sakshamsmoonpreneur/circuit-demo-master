@@ -1,33 +1,30 @@
-import { useEffect, useState } from "react";
+// useDimensions.ts
+import { useEffect, useRef, useState } from "react";
 
-interface IUseDimensionsProps {
-    resize?: boolean;
-}
-
-const useDimensions = ({ resize = true }: IUseDimensionsProps = {}) => {
-    const [dimensions, setDimensions] = useState({
-        height: 0,
-        width: 0,
-    });
+const useDimensions = () => {
+    const ref = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
     useEffect(() => {
-        function handleResize() {
-            setDimensions({
-                height: document.documentElement.clientHeight,
-                width: document.documentElement.clientWidth,
-            });
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (let entry of entries) {
+                const { width, height } = entry.contentRect;
+                setDimensions({ width, height });
+            }
+        });
+
+        if (ref.current) {
+            resizeObserver.observe(ref.current);
         }
 
-        // Set initial dimensions on mount
-        handleResize();
+        return () => {
+            if (ref.current) {
+                resizeObserver.unobserve(ref.current);
+            }
+        };
+    }, []);
 
-        if (resize) {
-            window.addEventListener("resize", handleResize);
-            return () => window.removeEventListener("resize", handleResize);
-        }
-    }, [resize]);
-
-    return dimensions;
+    return { ref, ...dimensions };
 };
 
 export default useDimensions;

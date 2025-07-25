@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, useRef, JSX } from "react";
-import { Stage, Layer, Line } from "react-konva";
+import React, { useState, useEffect, useRef } from "react";
+import { Stage, Layer, Line, Rect, Star, Circle } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { CircuitElement, EditingWire, Wire } from "@/common/types/circuit";
 import RenderElement from "./RenderElement";
@@ -24,11 +24,8 @@ import { FaArrowRight, FaCode, FaPlay, FaStop } from "react-icons/fa6";
 import { VscDebug } from "react-icons/vsc";
 import CodeEditor from "@/components/code/CodeEditor";
 import Loader from "@/utils/core/loader";
-import useDimensions from "@/utils/hooks/useDimentions";
-import {
-  ColorPaletteDropdown,
-  defaultColors,
-} from "../toolbar/customization/ColorPallete";
+import InfiniteGrid from "./InfiniteGrid";
+import AnimatedCircle from "./AnimatedCircle";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -36,7 +33,6 @@ export default function CircuitCanvas() {
     y: 0,
   });
   const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-  const [canvasScale, setCanvasScale] = useState(1);
   const [draggingElement, setDraggingElement] = useState<string | null>(null);
   const [activeControllerId, setActiveControllerId] = useState<string | null>(
     null
@@ -49,8 +45,6 @@ export default function CircuitCanvas() {
   const [controllerMap, setControllerMap] = useState<Record<string, Simulator>>(
     {}
   );
-
-  const [selectedWireColor, setSelectedWireColor] = useState<string>("#000000");
 
   const stageRef = useRef<Konva.Stage | null>(null);
   const [elements, setElements] = useState<CircuitElement[]>([]);
@@ -80,8 +74,6 @@ export default function CircuitCanvas() {
   // @ts-ignore
   const [wireDragVersion, setWireDragVersion] = useState(0);
   const [loadingSavedCircuit, setLoadingSavedCircuit] = useState(false);
-
-  const { width, height } = useDimensions();
 
   useEffect(() => {
     elementsRef.current = elements;
@@ -323,7 +315,6 @@ export default function CircuitCanvas() {
       fromNodeId: creatingWireStartNode,
       toNodeId: nodeId,
       joints: creatingWireJoints,
-      color: selectedWireColor,
     };
 
     setWires([...wires, newWire]);
@@ -357,9 +348,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -374,9 +365,9 @@ export default function CircuitCanvas() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -438,11 +429,11 @@ export default function CircuitCanvas() {
                 prev.map((el) =>
                   el.id === newElement.id
                     ? {
-                        ...el,
-                        controller: {
-                          leds: Array(5).fill(Array(5).fill(false)),
-                        },
-                      }
+                      ...el,
+                      controller: {
+                        leds: Array(5).fill(Array(5).fill(false)),
+                      },
+                    }
                     : el
                 )
               );
@@ -476,7 +467,13 @@ export default function CircuitCanvas() {
   }
 
   const getWireColor = (wire: Wire): string => {
-    return wire.color || "#000000"; // Default to black if no color is set
+    const fromPolarity = getNodeById(wire.fromNodeId)?.polarity;
+    const toPolarity = getNodeById(wire.toNodeId)?.polarity;
+
+    if (fromPolarity === "negative" && toPolarity === "negative") return "red";
+    if (fromPolarity === "positive" && toPolarity === "positive")
+      return "green";
+    return "black";
   };
 
   // for canvas zoom in and zoom out
@@ -513,12 +510,33 @@ export default function CircuitCanvas() {
 
     stage.position(newPos);
     stage.batchDraw();
-
-    setCanvasScale(newScale);
-    setCanvasOffset({ x: newPos.x, y: newPos.y });
   };
 
   // end
+  const [pulse, setPulse] = useState(1);
+
+  useEffect(() => {
+    let scale = 1;
+    let direction = 1;
+    let rafId: number;
+    let frameCount = 0;
+
+    const animate = () => {
+      scale += direction * 0.03;
+      if (scale > 1.5) direction = -1;
+      if (scale < 1) direction = 1;
+
+      frameCount++;
+      if (frameCount % 5 === 0) {
+        setPulse(scale); // 🔄 Update every 5 frames (~12 FPS)
+      }
+
+      rafId = requestAnimationFrame(animate);
+    };
+
+    return () => cancelAnimationFrame(rafId);
+  }, []);
+
 
   return (
     <div
@@ -545,24 +563,12 @@ export default function CircuitCanvas() {
       {/* ==================== Left Side: Main Canvas ==================== */}
       <div className="flex-grow h-full flex flex-col">
         {/* Toolbar with center controls */}
-        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4  space-x-4 py-2 justify-between">
+        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 shadow-md space-x-4 py-2 justify-start">
           {/* controls */}
-
-          <div>
-            {/* wire color selector dropdown; grayed out if no wire is selected otherwise can pick between 4 colors */}
-            <ColorPaletteDropdown
-              colors={defaultColors}
-              selectedColor={selectedWireColor}
-              onColorSelect={(color) => {
-                setSelectedWireColor(color);
-              }}
-            />
-          </div>
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${
-                simulationRunning ? "bg-red-300" : "bg-emerald-300"
-              } flex items-center space-x-2`}
+              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
+                } flex items-center space-x-2`}
               onClick={() => {
                 simulationRunning ? stopSimulation() : startSimulation();
               }}
@@ -624,50 +630,50 @@ export default function CircuitCanvas() {
               currentWires={wires}
               getSnapshot={() => stageRef.current?.toDataURL() || ""}
             />
+          </div>
 
-            {/* Keyboard Shortcut Tooltip */}
-            <div className={styles.tooltipWrapper}>
-              <div className={styles.tooltipIcon}>?</div>
-              <div className={styles.tooltipContent}>
-                <div className={styles.tooltipTitle}>Keyboard Shortcuts</div>
-                <table className="w-full text-sm border-separate border-spacing-y-1">
-                  <thead>
-                    <tr>
-                      <th className="text-left w-32 font-medium text-gray-700">
-                        Keybind
-                      </th>
-                      <th className="text-left font-medium text-gray-700">
-                        Action
-                      </th>
+          {/* Keyboard Shortcut Tooltip */}
+          <div className={styles.tooltipWrapper}>
+            <div className={styles.tooltipIcon}>?</div>
+            <div className={styles.tooltipContent}>
+              <div className={styles.tooltipTitle}>Keyboard Shortcuts</div>
+              <table className="w-full text-sm border-separate border-spacing-y-1">
+                <thead>
+                  <tr>
+                    <th className="text-left w-32 font-medium text-gray-700">
+                      Keybind
+                    </th>
+                    <th className="text-left font-medium text-gray-700">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getShortcutMetadata().map((s) => (
+                    <tr key={s.name}>
+                      <td className="py-1 pr-4 align-top">
+                        {s.keys.map((k, i) => (
+                          <React.Fragment key={`${s.name}-key-${k}`}>
+                            <kbd className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded border border-gray-300 text-xs font-mono">
+                              {k}
+                            </kbd>
+                            {i < s.keys.length - 1 && (
+                              <span className="mx-1">+</span>
+                            )}
+                          </React.Fragment>
+                        ))}
+                      </td>
+                      <td className="py-1 align-middle">{s.description}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {getShortcutMetadata().map((s) => (
-                      <tr key={s.name}>
-                        <td className="py-1 pr-4 align-top">
-                          {s.keys.map((k, i) => (
-                            <React.Fragment key={`${s.name}-key-${k}`}>
-                              <kbd className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded border border-gray-300 text-xs font-mono">
-                                {k}
-                              </kbd>
-                              {i < s.keys.length - 1 && (
-                                <span className="mx-1">+</span>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </td>
-                        <td className="py-1 align-middle">{s.description}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
         {/* Canvas Stage */}
-        <div className="relative w-full flex-1 h-full p-1 overflow-hidden">
+        <div className="relative border border-gray-800 w-full flex-1 h-full p-1 overflow-hidden">
           {loadingSavedCircuit ? (
             <Loader />
           ) : (
@@ -688,68 +694,8 @@ export default function CircuitCanvas() {
               draggable={draggingElement == null}
               onWheel={handleWheel}
             >
-              {/* for canvas grid */}
-              <Layer listening={false}>
-                {/* Grid lines that adapt to zoom and pan */}
-                {(() => {
-                  const scale = canvasScale;
-                  const position = canvasOffset;
-                  const gridSize = 20;
+              <InfiniteGrid />
 
-                  const startX = -position.x / scale;
-                  const startY = -position.y / scale;
-
-                  const endX = startX + window.innerWidth / scale;
-                  const endY = startY + window.innerHeight / scale;
-
-                  const lines: JSX.Element[] = [];
-
-                  for (
-                    let x = Math.floor(startX / gridSize) * gridSize;
-                    x < endX;
-                    x += gridSize
-                  ) {
-                    lines.push(
-                      <Line
-                        key={`v-${x}`}
-                        points={[
-                          x * scale + position.x,
-                          0,
-                          x * scale + position.x,
-                          window.innerHeight,
-                        ]}
-                        stroke="#e5e7eb"
-                        strokeWidth={1}
-                        strokeDash={[2, 2]}
-                      />
-                    );
-                  }
-
-                  for (
-                    let y = Math.floor(startY / gridSize) * gridSize;
-                    y < endY;
-                    y += gridSize
-                  ) {
-                    lines.push(
-                      <Line
-                        key={`h-${y}`}
-                        points={[
-                          0,
-                          y * scale + position.y,
-                          window.innerWidth,
-                          y * scale + position.y,
-                        ]}
-                        stroke="#e5e7eb"
-                        strokeWidth={1}
-                        strokeDash={[2, 2]}
-                      />
-                    );
-                  }
-
-                  return lines;
-                })()}
-              </Layer>
-              {/* // End of grid */}
               <Layer>
                 {/* Render Wires */}
                 {wires.map((wire) => {
@@ -767,15 +713,23 @@ export default function CircuitCanvas() {
                       points={points}
                       stroke={
                         selectedElement?.id === wire.id
-                          ? "orange"
+                          ? "#f97316" // Tailwind's orange-500
                           : getWireColor(wire)
                       }
-                      strokeWidth={selectedElement?.id === wire.id ? 6 : 4}
-                      hitStrokeWidth={10}
-                      tension={0.1}
+                      strokeWidth={selectedElement?.id === wire.id ? 5 : 3.5}
+                      hitStrokeWidth={16} // easier click/touch target
+                      tension={0.3} // smoother bezier curve
                       lineCap="round"
                       lineJoin="round"
                       bezier
+                      shadowColor={
+                        selectedElement?.id === wire.id
+                          ? "#f97316"
+                          : getWireColor(wire)
+                      }
+                      shadowBlur={selectedElement?.id === wire.id ? 12 : 6}
+                      shadowOpacity={selectedElement?.id === wire.id ? 0.5 : 0.25}
+                      opacity={0.95}
                       onClick={() =>
                         setSelectedElement({
                           id: wire.id,
@@ -786,6 +740,7 @@ export default function CircuitCanvas() {
                         })
                       }
                     />
+
                   );
                 })}
 
@@ -811,14 +766,25 @@ export default function CircuitCanvas() {
                       adjustedMouse.y,
                     ];
                     return (
-                      <Line
-                        points={inProgressPoints}
-                        stroke="black"
-                        strokeWidth={2}
-                        pointerEvents="none"
-                        lineCap="round"
-                        lineJoin="round"
-                      />
+                      <>
+                        <AnimatedCircle
+                          x={adjustedMouse.x}
+                          y={adjustedMouse.y}
+                          scaleFactor={1 / stage.scaleX()}
+                        />
+                        <Line
+                          points={inProgressPoints}
+                          stroke="blue"
+                          strokeWidth={2 / stageRef.current!.scaleX()}
+                          pointerEvents="none"
+                          lineCap="round"
+                          lineJoin="round"
+                          dash={[3, 3]}
+                          shadowColor="blue"
+                          shadowBlur={4}
+                          shadowOpacity={0.4}
+                        />
+                      </>
                     );
                   })()}
 
@@ -874,9 +840,8 @@ export default function CircuitCanvas() {
 
       {/* ==================== Right Side: Palette ==================== */}
       <div
-        className={`transition-all duration-300 h-screen mt-12 bg-[#F4F5F6] overflow-visible absolute top-0 right-0 z-30 ${
-          showPalette ? "w-72" : "w-10"
-        }`}
+        className={`transition-all duration-300 h-screen bg-white overflow-visible shadow-[0_0_6px_rgba(0,0,0,0.1)] border-l border-gray-200 absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
+          }`}
         style={{ pointerEvents: "auto" }}
       >
         <button
