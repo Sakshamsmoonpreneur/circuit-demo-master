@@ -4,7 +4,7 @@ import {
   BaseElementProps,
 } from "@/components/circuit/core/BaseElement";
 import { useEffect, useState } from "react";
-import { Image } from "react-konva";
+import { Image, Line } from "react-konva";
 
 export default function Resistor(props: BaseElementProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
@@ -29,6 +29,26 @@ export default function Resistor(props: BaseElementProps) {
           shadowOpacity={props.selected ? 0.6 : 0}
         />
       )}
+      <Line
+        points={[0, 0, 0, -3]}
+        stroke="black"
+        strokeWidth={4}
+        hitStrokeWidth={10}
+        lineCap="round"
+        x={-5}
+        y={20}
+        rotation={90}
+      />
+      <Line
+        points={[0, 0, 0, -3]}
+        stroke="black"
+        strokeWidth={4}
+        hitStrokeWidth={10}
+        lineCap="round"
+        x={42}
+        y={20}
+        rotation={90}
+      />
     </BaseElement>
   );
 }

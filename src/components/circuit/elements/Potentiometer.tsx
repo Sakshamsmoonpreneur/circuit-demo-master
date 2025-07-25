@@ -84,6 +84,33 @@ function Potentiometer(props: PotentiometerProps) {
         onMouseUp={() => setIsDragging(false)}
         onTouchEnd={() => setIsDragging(false)}
       >
+        <Line
+          points={[0, 0, 0, -15]}
+          stroke="black"
+          strokeWidth={4}
+          hitStrokeWidth={10}
+          lineCap="round"
+          x={centerX + 15}
+          y={centerY - 10}
+        />
+        <Line
+          points={[0, 0, 0, -15]}
+          stroke="black"
+          strokeWidth={4}
+          hitStrokeWidth={10}
+          lineCap="round"
+          x={centerX - 0}
+          y={centerY - 15}
+        />
+        <Line
+          points={[0, 0, 0, -15]}
+          stroke="black"
+          strokeWidth={4}
+          hitStrokeWidth={10}
+          lineCap="round"
+          x={centerX - 15}
+          y={centerY - 10}
+        />
         <Circle
           x={centerX}
           y={centerY}

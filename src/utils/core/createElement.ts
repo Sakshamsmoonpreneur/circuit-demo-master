@@ -80,7 +80,7 @@ export default function createElement(
     nodes: [
       {
         id: id + "-node-1",
-        x: 1,
+        x: -7,
         y: 42,
         parentId: id,
         placeholder: "Terminal 1",
@@ -88,7 +88,7 @@ export default function createElement(
       },
       {
         id: id + "-node-2",
-        x: 42,
+        x: 48,
         y: 42,
         parentId: id,
         placeholder: "Terminal 1",
@@ -112,8 +112,8 @@ export default function createElement(
     nodes: [
       {
         id: id + "-node-1",
-        x: 10,
-        y: 20,
+        x: 10.3,
+        y: 14,
         parentId: id,
         polarity: "negative",
         placeholder: "Negative",
@@ -121,8 +121,8 @@ export default function createElement(
       },
       {
         id: id + "-node-2",
-        x: 30,
-        y: 20,
+        x: 30.6,
+        y: 14,
         parentId: id,
         polarity: "positive",
         placeholder: "Positive",
@@ -146,8 +146,8 @@ export default function createElement(
     nodes: [
       {
         id: id + "-node-A", // Terminal A
-        x: 10,
-        y: 23,
+        x: 11.3,
+        y: 20,
         parentId: id,
         name: "A", // optional for clarity
         placeholder: "Terminal 1",
@@ -155,8 +155,8 @@ export default function createElement(
       },
       {
         id: id + "-node-W", // Wiper
-        x: 26.5,
-        y: 23, // position it visually on top if needed
+        x: 26,
+        y: 16, // position it visually on top if needed
         parentId: id,
         name: "W",
         placeholder: "Wiper",
@@ -164,8 +164,8 @@ export default function createElement(
       },
       {
         id: id + "-node-B", // Terminal B
-        x: 43,
-        y: 23,
+        x: 41.3,
+        y: 20,
         parentId: id,
         name: "B",
         placeholder: "Terminal 2",

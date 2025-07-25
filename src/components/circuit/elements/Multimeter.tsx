@@ -4,7 +4,7 @@ import {
   BaseElementProps,
 } from "@/components/circuit/core/BaseElement";
 import { useEffect, useState } from "react";
-import { Image, Text, Rect, Group } from "react-konva";
+import { Image, Text, Rect, Group, Line } from "react-konva";
 
 interface MultimeterProps extends BaseElementProps {
   measurement?: number;
@@ -73,6 +73,26 @@ export default function Multimeter(props: MultimeterProps) {
             shadowOpacity={props.selected ? 0.6 : 0}
           />
         )}
+        <Line
+          points={[0, 0, 0, -5]}
+          stroke="black"
+          strokeWidth={4}
+          hitStrokeWidth={10}
+          lineCap="round"
+          x={12.5}
+          y={-1}
+          height={-1}
+        />
+        <Line
+          points={[0, 0, 0, -5]}
+          stroke="black"
+          strokeWidth={4}
+          hitStrokeWidth={10}
+          lineCap="round"
+          x={40}
+          y={-1}
+          height={-1}
+        />
         <Text
           x={10}
           y={40}
