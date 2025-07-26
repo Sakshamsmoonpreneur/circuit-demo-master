@@ -1,8 +1,8 @@
 // src/workers/simulator.worker.ts
 import * as Comlink from "comlink";
-import { PythonInterpreter } from "@/lib/code/interpreter/PythonInterpreter";
-import { MicrobitSimulator } from "@/lib/code/mock/microbitInstance";
-import type { MicrobitEvent } from "@/lib/code/mock/microbitInstance";
+import { PythonInterpreter } from "@/lib/python_code_editor/interpreter/PythonInterpreter";
+import { MicrobitSimulator } from "@/lib/python_code_editor/mock/microbitInstance";
+import type { MicrobitEvent } from "@/lib/python_code_editor/mock/microbitInstance";
 
 type SupportedLanguage = "python";
 type SupportedController = "microbit";
