@@ -36,6 +36,9 @@
       ],
       "@/python_code_editor/*": [
         "./src/python_code_editor/*"
+      ],
+      "@/blockly_editor/*": [
+        "./src/blockly_editor/*"
       ]
     }
   },
