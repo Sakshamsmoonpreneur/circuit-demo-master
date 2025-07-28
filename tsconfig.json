@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,8 +23,20 @@
         "name": "next"
       }
     ],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/circuit_canvas/*": [
+        "./src/circuit_canvas/*"
+      ],
+      "@/common/*": [
+        "./src/common/*"
+      ],
+      "@/python_code_editor/*": [
+        "./src/python_code_editor/*"
+      ]
     }
   },
   "include": [
@@ -30,5 +46,7 @@
     ".next/types/**/*.ts",
     "src/lib/code/workers/pyodideWorkerClient"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

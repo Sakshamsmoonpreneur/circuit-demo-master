@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 
-const CircuitCanvas = dynamic(() => import('@/components/circuit_canvas/core/CircuitCanvas'), {
+const CircuitCanvas = dynamic(() => import('@/circuit_canvas/components/core/CircuitCanvas'), {
   ssr: false,
 });
 

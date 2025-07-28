@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const CircuitCanvas = dynamic(
-  () => import("@/components/circuit_canvas/core/CircuitCanvas"),
+  () => import("@/circuit_canvas/components/core/CircuitCanvas"),
   {
     ssr: false,
   }
@@ -28,7 +28,7 @@ export default function Page() {
       ) : (
         <div className="flex items-center justify-center h-screen">
           <img
-            src="/common/moonpreneur_logo.svg"
+            src="/assets/common/moonpreneur_logo.svg"
             alt="Loading..."
             className="w-100 h-60 animate-bounce"
           />

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import SimulatorEditor from "@/components/python_code_editor/SimulatorCodeEditor";
-import { Simulator } from "@/lib/python_code_editor/Simulator";
-import type { MicrobitEvent } from "@/lib/python_code_editor/mock/microbitInstance";
+import SimulatorEditor from "@/python_code_editor/components/SimulatorCodeEditor";
+import { Simulator } from "@/python_code_editor/lib/Simulator";
+import type { MicrobitEvent } from "@/python_code_editor/mock/microbitInstance";
 
 export default function Page() {
   const [output, setOutput] = useState("");
