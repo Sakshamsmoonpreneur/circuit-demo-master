@@ -10,7 +10,7 @@ import solveCircuit from "@/circuit_canvas/utils/kirchhoffSolver";
 import PropertiesPanel from "@/circuit_canvas/components/core/PropertiesPanel";
 import { getCircuitById } from "@/circuit_canvas/utils/circuitStorage";
 import Konva from "konva";
-import styles from "@/circuit_canvas/components/core/CircuitCanvas.module.css";
+import styles from "@/circuit_canvas/styles/CircuitCanvas.module.css";
 import CircuitStorage from "@/circuit_canvas/components/core/CircuitStorage";
 import useCircuitShortcuts from "@/circuit_canvas/hooks/useCircuitShortcuts";
 import {
@@ -742,7 +742,7 @@ export default function CircuitCanvasOptimized() {
       onDrop={handleDrop}
       onDragOver={(e) => e.preventDefault()}
     >
-      {/* ==================== Debug Panel ==================== */}
+      {/* Debug Panel */}
       {showDebugBox && (
         <DebugBox
           data={{
@@ -758,14 +758,12 @@ export default function CircuitCanvasOptimized() {
         />
       )}
 
-      {/* ==================== Left Side: Main Canvas ==================== */}
+      {/* Left Side: Main Canvas */}
       <div className="flex-grow h-full flex flex-col">
-        {/* Toolbar with center controls */}
-        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4  space-x-4 py-2 justify-between">
-          {/* controls */}
-
-          <div>
-            {/* wire color selector dropdown; grayed out if no wire is selected otherwise can pick between 4 colors */}
+        {/* Toolbar */}
+        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 space-x-4 py-2 justify-between">
+          {/* Controls */}
+          <div className="flex items-center gap-4">
             <ColorPaletteDropdown
               colors={defaultColors}
               selectedColor={selectedWireColor}
@@ -778,14 +776,51 @@ export default function CircuitCanvasOptimized() {
                 }
               }}
             />
+
+            {/* Tooltip Group */}
+            <div className="relative group">
+              {/* Trigger Button */}
+              <div className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full cursor-pointer hover:bg-gray-300 transition">
+                ?
+              </div>
+
+              {/* Tooltip Box */}
+              <div className="absolute backdrop-blur-sm bg-white/10 bg-clip-padding border border-gray-300 shadow-2xl rounded-xl text-sm top-full left-0 mt-2 w-[300px] z-50 p-3  opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none group-hover:pointer-events-auto">
+                <div className="font-semibold text-sm mb-2 text-gray-800">Keyboard Shortcuts</div>
+                <table className="w-full text-sm border-separate border-spacing-y-1">
+                  <thead>
+                    <tr>
+                      <th className="text-left w-32 font-medium text-gray-700">Keybind</th>
+                      <th className="text-left font-medium text-gray-700">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getShortcutMetadata().map((s) => (
+                      <tr key={s.name}>
+                        <td className="py-1 pr-4 align-top">
+                          {s.keys.map((k, i) => (
+                            <React.Fragment key={`${s.name}-key-${k}`}>
+                              <kbd className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded border border-gray-300 text-xs font-mono">
+                                {k}
+                              </kbd>
+                              {i < s.keys.length - 1 && <span className="mx-1">+</span>}
+                            </React.Fragment>
+                          ))}
+                        </td>
+                        <td className="py-1 align-middle">{s.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
+
+
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
-                } flex items-center space-x-2`}
-              onClick={() => {
-                simulationRunning ? stopSimulation() : startSimulation();
-              }}
+              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"} flex items-center space-x-2`}
+              onClick={() => simulationRunning ? stopSimulation() : startSimulation()}
             >
               {simulationRunning ? (
                 <>
@@ -805,12 +840,11 @@ export default function CircuitCanvasOptimized() {
               className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
             >
               <FaCode />
-
               <span>Code</span>
             </button>
 
             <button
-              onClick={() => setShowDebugBox((showDebugBox) => !showDebugBox)}
+              onClick={() => setShowDebugBox((prev) => !prev)}
               className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
             >
               <VscDebug />
@@ -826,16 +860,10 @@ export default function CircuitCanvasOptimized() {
                 setLoadingSavedCircuit(true);
                 setElements(data.elements);
                 setWires(data.wires);
-
                 setTimeout(() => {
-                  const stage = stageRef.current;
-                  if (stage) {
-                    const pos = stage.getPointerPosition();
-                    if (pos) setMousePos(pos); // This triggers wire refresh
-                  }
+                  const pos = stageRef.current?.getPointerPosition();
+                  if (pos) setMousePos(pos);
                 }, 0);
-
-                setLoadingSavedCircuit(true);
                 setTimeout(() => {
                   setLoadingSavedCircuit(false);
                 }, 500);
@@ -844,244 +872,19 @@ export default function CircuitCanvasOptimized() {
               currentWires={wires}
               getSnapshot={() => stageRef.current?.toDataURL() || ""}
             />
-
-            {/* Keyboard Shortcut Tooltip */}
-            <div className={styles.tooltipWrapper}>
-              <div className={styles.tooltipIcon}>?</div>
-              <div className={styles.tooltipContent}>
-                <div className={styles.tooltipTitle}>Keyboard Shortcuts</div>
-                <table className="w-full text-sm border-separate border-spacing-y-1">
-                  <thead>
-                    <tr>
-                      <th className="text-left w-32 font-medium text-gray-700">
-                        Keybind
-                      </th>
-                      <th className="text-left font-medium text-gray-700">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getShortcutMetadata().map((s) => (
-                      <tr key={s.name}>
-                        <td className="py-1 pr-4 align-top">
-                          {s.keys.map((k, i) => (
-                            <React.Fragment key={`${s.name}-key-${k}`}>
-                              <kbd className="inline-block bg-gray-100 text-gray-800 px-2 py-1 rounded border border-gray-300 text-xs font-mono">
-                                {k}
-                              </kbd>
-                              {i < s.keys.length - 1 && (
-                                <span className="mx-1">+</span>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </td>
-                        <td className="py-1 align-middle">{s.description}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
           </div>
         </div>
+        {selectedElement && (
+          <div className="absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl">
+            <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
+              <button
+                onClick={() => setSelectedElement(null)}
+                className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
+                title="Close"
+              />
+            </div>
 
-        {/* Canvas Stage */}
-        <div className="relative w-full flex-1 h-full p-1 overflow-hidden">
-          {loadingSavedCircuit ? (
-            <Loader />
-          ) : (
-            <Stage
-              id="canvas-stage"
-              width={window.innerWidth}
-              height={window.innerHeight - 48} // Adjust height to account for toolbar
-              onMouseMove={handleStageMouseMove}
-              onClick={handleStageClick}
-              ref={stageRef}
-              x={canvasOffset.x}
-              y={canvasOffset.y}
-              onDragMove={(e) => {
-                if (draggingElement !== null) return;
-                const stage = e.target;
-                setCanvasOffset({ x: stage.x(), y: stage.y() });
-              }}
-              draggable={draggingElement == null}
-              onWheel={handleWheel}
-            >
-              <InfiniteGrid />
-
-              {/* Optimized Wire Layer with refs */}
-              <Layer ref={wireLayerRef}>
-                {/* Render Wires */}
-                {wires.map((wire) => {
-                  const points = getWirePoints(wire);
-                  if (points.length === 4) {
-                    const [x1, y1, x2, y2] = points;
-                    const midX = (x1 + x2) / 2;
-                    const midY = (y1 + y2) / 2;
-                    points.splice(2, 0, midX, midY);
-                  }
-
-                  return (
-                    <Line
-                      key={wire.id}
-                      ref={(ref) => {
-                        if (ref) {
-                          wireRefs.current[wire.id] = ref;
-                        } else {
-                          delete wireRefs.current[wire.id];
-                        }
-                      }}
-                      points={points}
-                      stroke={getWireColor(wire) || "black"}
-                      strokeWidth={selectedElement?.id === wire.id ? 4 : 3.5}
-                      hitStrokeWidth={16} // easier click/touch target
-                      tension={0.3} // smoother bezier curve
-                      lineCap="round"
-                      lineJoin="round"
-                      bezier
-                      shadowColor={
-                        selectedElement?.id === wire.id
-                          ? "#f97316"
-                          : getWireColor(wire)
-                      }
-                      shadowBlur={selectedElement?.id === wire.id ? 8 : 2}
-                      shadowOpacity={
-                        selectedElement?.id === wire.id ? 0.9 : 0.25
-                      }
-                      opacity={0.95}
-                      onClick={() =>
-                        setSelectedElement({
-                          id: wire.id,
-                          type: "wire",
-                          x: 0,
-                          y: 0,
-                          nodes: [],
-                        })
-                      }
-                    />
-                  );
-                })}
-
-                {/* In-Progress Wire Drawing - Optimized with refs */}
-                <Circle
-                  ref={(ref) => {
-                    animatedCircleRef.current = ref;
-                  }}
-                  x={0}
-                  y={0}
-                  radius={5}
-                  fill="yellow"
-                  shadowColor="red"
-                  shadowBlur={10}
-                  shadowOpacity={1}
-                  shadowForStrokeEnabled={true}
-                  stroke="orange"
-                  strokeWidth={3}
-                  opacity={1}
-                  visible={false}
-                />
-                <Line
-                  ref={(ref) => {
-                    inProgressWireRef.current = ref;
-                  }}
-                  points={[]}
-                  stroke="blue"
-                  strokeWidth={2}
-                  pointerEvents="none"
-                  lineCap="round"
-                  lineJoin="round"
-                  dash={[3, 3]}
-                  shadowColor="blue"
-                  shadowBlur={4}
-                  shadowOpacity={0.4}
-                  visible={false}
-                />
-              </Layer>
-
-              {/* Elements Layer */}
-              <Layer>
-                {/* Render Elements */}
-                {elements.map((element) => (
-                  <RenderElement
-                    key={element.id}
-                    isSimulationOn={simulationRunning}
-                    element={element}
-                    onDragMove={handleElementDragMove}
-                    handleNodeClick={handleNodeClick}
-                    handleRatioChange={handleRatioChange}
-                    handleModeChange={handleModeChange}
-                    onDragStart={() => {
-                      pushToHistory();
-                      setDraggingElement(element.id);
-                      stageRef.current?.draggable(false);
-                    }}
-                    onDragEnd={(e) => {
-                      setDraggingElement(null);
-                      stageRef.current?.draggable(true);
-                      const id = e.target.id();
-                      const x = e.target.x();
-                      const y = e.target.y();
-
-                      // Update React state with final position
-                      setElements((prev) =>
-                        prev.map((el) => (el.id === id ? { ...el, x, y } : el))
-                      );
-
-                      // Temp positions will be cleaned up in useEffect after state updates
-                    }}
-                    onSelect={(id) => {
-                      const element = getElementById(id);
-                      setSelectedElement(element ?? null);
-                      setActiveControllerId(null);
-                      setOpenCodeEditor(false);
-                      if (element?.type === "microbit") {
-                        setActiveControllerId(element.id);
-                      }
-                    }}
-                    selectedElementId={selectedElement?.id || null}
-                    // @ts-ignore
-                    onControllerInput={(elementId, input) => {
-                      const sim = controllerMap[elementId];
-                      if (sim && (input === "A" || input === "B")) {
-                        sim.simulateInput(input);
-                      }
-                    }}
-                  />
-                ))}
-              </Layer>
-            </Stage>
-          )}
-        </div>
-      </div>
-
-      {/* ==================== Right Side: Palette ==================== */}
-      <div
-        className={`transition-all duration-300 h-screen mt-12 bg-[#F4F5F6] overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
-          }`}
-        style={{ pointerEvents: "auto" }}
-      >
-        <button
-          className={styles.toggleButton}
-          style={{ left: "-0.5rem" }}
-          onClick={() => setShowPalette((prev) => !prev)}
-        >
-          <span
-            style={{
-              display: "inline-block",
-              transition: "transform 0.5s",
-              transform: showPalette ? "rotate(0deg)" : "rotate(180deg)",
-            }}
-            className="flex items-center justify-center w-full h-full text-center "
-          >
-            <FaArrowRight />
-          </span>
-        </button>
-
-        {showPalette && (
-          <>
-            <CircuitSelector />
-            {selectedElement && (
+            <div className="p-1">
               <PropertiesPanel
                 selectedElement={selectedElement}
                 wires={wires}
@@ -1118,9 +921,7 @@ export default function CircuitCanvasOptimized() {
                 onWireEdit={(updatedWire, deleteElement) => {
                   pushToHistory();
                   if (deleteElement) {
-                    setWires((prev) =>
-                      prev.filter((w) => w.id !== updatedWire.id)
-                    );
+                    setWires((prev) => prev.filter((w) => w.id !== updatedWire.id));
                     setSelectedElement(null);
                     setCreatingWireStartNode(null);
                     setEditingWire(null);
@@ -1146,47 +947,224 @@ export default function CircuitCanvasOptimized() {
                   });
                 }}
                 setOpenCodeEditor={setOpenCodeEditor}
-                wireColor={
-                  wires.find((w) => w.id === selectedElement.id)?.color
-                }
-              />
-            )}
-          </>
-        )}
-
-        {/* =============== Code Editor Overlay =============== */}
-        {openCodeEditor && (
-          <div
-            className="absolute right-0 top-0 h-full w-[500px] bg-white border-l border-gray-300 shadow-xl z-50 transition-transform duration-300"
-            style={{
-              transform: openCodeEditor ? "translateX(0)" : "translateX(100%)",
-            }}
-          >
-            <div className="flex justify-between items-center p-2 border-b border-gray-300 bg-gray-100">
-              <span className="font-semibold">Code Editor</span>
-              <button
-                className="text-sm text-gray-600 hover:text-black"
-                onClick={() => setOpenCodeEditor(false)}
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-4 overflow-auto h-full">
-              <CodeEditor
-                code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
-                onChange={(newCode) => {
-                  if (!activeControllerId) return;
-                  setControllerCodeMap((prev) => ({
-                    ...prev,
-                    [activeControllerId]: newCode,
-                  }));
-                  stopSimulation();
-                }}
+                wireColor={wires.find((w) => w.id === selectedElement.id)?.color}
               />
             </div>
           </div>
         )}
+
+
+
+        <div className="relative w-full flex-1 h-full p-1 overflow-hidden">
+          {/* Stage Canvas */}
+          {loadingSavedCircuit ? (
+            <Loader />
+          ) : (
+            <Stage
+              id="canvas-stage"
+              width={window.innerWidth}
+              height={window.innerHeight - 48}
+              onMouseMove={handleStageMouseMove}
+              onClick={handleStageClick}
+              ref={stageRef}
+              x={canvasOffset.x}
+              y={canvasOffset.y}
+              onDragMove={(e) => {
+                if (draggingElement !== null) return;
+                const stage = e.target;
+                setCanvasOffset({ x: stage.x(), y: stage.y() });
+              }}
+              draggable={draggingElement == null}
+              onWheel={handleWheel}
+            >
+              <InfiniteGrid />
+              <Layer ref={wireLayerRef}>
+                {wires.map((wire) => {
+                  const points = getWirePoints(wire);
+                  if (points.length === 4) {
+                    const [x1, y1, x2, y2] = points;
+                    const midX = (x1 + x2) / 2;
+                    const midY = (y1 + y2) / 2;
+                    points.splice(2, 0, midX, midY);
+                  }
+
+                  return (
+                    <Line
+                      key={wire.id}
+                      ref={(ref) => {
+                        if (ref) {
+                          wireRefs.current[wire.id] = ref;
+                        } else {
+                          delete wireRefs.current[wire.id];
+                        }
+                      }}
+                      points={points}
+                      stroke={getWireColor(wire) || "black"}
+                      strokeWidth={selectedElement?.id === wire.id ? 4 : 3.5}
+                      hitStrokeWidth={16}
+                      tension={0.3}
+                      lineCap="round"
+                      lineJoin="round"
+                      bezier
+                      shadowColor={
+                        selectedElement?.id === wire.id ? "#f97316" : getWireColor(wire)
+                      }
+                      shadowBlur={selectedElement?.id === wire.id ? 8 : 2}
+                      shadowOpacity={selectedElement?.id === wire.id ? 0.9 : 0.25}
+                      opacity={0.95}
+                      onClick={() =>
+                        setSelectedElement({
+                          id: wire.id,
+                          type: "wire",
+                          x: 0,
+                          y: 0,
+                          nodes: [],
+                        })
+                      }
+                    />
+                  );
+                })}
+
+                <Circle
+                  ref={(ref) => {
+                    animatedCircleRef.current = ref;
+                  }}
+                  x={0}
+                  y={0}
+                  radius={5}
+                  fill="yellow"
+                  shadowColor="red"
+                  shadowBlur={10}
+                  shadowOpacity={1}
+                  shadowForStrokeEnabled={true}
+                  stroke="orange"
+                  strokeWidth={3}
+                  opacity={1}
+                  visible={false}
+                />
+                <Line
+                  ref={(ref) => {
+                    inProgressWireRef.current = ref;
+                  }}
+                  points={[]}
+                  stroke="blue"
+                  strokeWidth={2}
+                  pointerEvents="none"
+                  lineCap="round"
+                  lineJoin="round"
+                  dash={[3, 3]}
+                  shadowColor="blue"
+                  shadowBlur={4}
+                  shadowOpacity={0.4}
+                  visible={false}
+                />
+              </Layer>
+
+              <Layer>
+                {elements.map((element) => (
+                  <RenderElement
+                    key={element.id}
+                    isSimulationOn={simulationRunning}
+                    element={element}
+                    onDragMove={handleElementDragMove}
+                    handleNodeClick={handleNodeClick}
+                    handleRatioChange={handleRatioChange}
+                    handleModeChange={handleModeChange}
+                    onDragStart={() => {
+                      pushToHistory();
+                      setDraggingElement(element.id);
+                      stageRef.current?.draggable(false);
+                    }}
+                    onDragEnd={(e) => {
+                      setDraggingElement(null);
+                      stageRef.current?.draggable(true);
+                      const id = e.target.id();
+                      const x = e.target.x();
+                      const y = e.target.y();
+                      setElements((prev) =>
+                        prev.map((el) => (el.id === id ? { ...el, x, y } : el))
+                      );
+                    }}
+                    onSelect={(id) => {
+                      const element = getElementById(id);
+                      setSelectedElement(element ?? null);
+                      setActiveControllerId(null);
+                      setOpenCodeEditor(false);
+                      if (element?.type === "microbit") {
+                        setActiveControllerId(element.id);
+                      }
+                    }}
+                    selectedElementId={selectedElement?.id || null}
+                    // @ts-ignore
+                    onControllerInput={(elementId, input) => {
+                      const sim = controllerMap[elementId];
+                      if (sim && (input === "A" || input === "B")) {
+                        sim.simulateInput(input);
+                      }
+                    }}
+                  />
+                ))}
+              </Layer>
+            </Stage>
+          )}
+        </div>
       </div>
+
+      <div
+        className={`transition-all duration-300 h-screen mt-12 bg-[#F4F5F6] overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"}`}
+        style={{ pointerEvents: "auto" }}
+      >
+        <button
+          className={styles.toggleButton}
+          style={{ left: "-0.5rem" }}
+          onClick={() => setShowPalette((prev) => !prev)}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              transition: "transform 0.5s",
+              transform: showPalette ? "rotate(0deg)" : "rotate(180deg)",
+            }}
+            className="flex items-center justify-center w-full h-full text-center"
+          >
+            <FaArrowRight />
+          </span>
+        </button>
+        {showPalette && <CircuitSelector />}
+      </div>
+
+      {/* Code Editor */}
+      {openCodeEditor && (
+        <div className="absolute right-0 top-0 h-full w-[500px] bg-white border-l border-gray-300 shadow-xl z-50 transition-transform duration-300"
+          style={{
+            transform: openCodeEditor ? "translateX(0)" : "translateX(100%)",
+          }}
+        >
+          <div className="flex justify-between items-center p-2 border-b border-gray-300 bg-gray-100">
+            <span className="font-semibold">Code Editor</span>
+            <button
+              className="text-sm text-gray-600 hover:text-black"
+              onClick={() => setOpenCodeEditor(false)}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="p-4 overflow-auto h-full">
+            <CodeEditor
+              code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
+              onChange={(newCode) => {
+                if (!activeControllerId) return;
+                setControllerCodeMap((prev) => ({
+                  ...prev,
+                  [activeControllerId]: newCode,
+                }));
+                stopSimulation();
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
+
 }
