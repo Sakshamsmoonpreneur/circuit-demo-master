@@ -1,0 +1,432 @@
+import * as Blockly from "blockly";
+
+/**
+ * Shared interface for block definitions that works for both
+ * Blockly-to-Python and Python-to-Blockly conversions
+ */
+export interface SharedBlockDefinition {
+  type: string;
+  blockDefinition: any; // Blockly block definition JSON
+  pythonPattern: RegExp;
+  pythonGenerator: (block: any, generator?: any) => string | [string, number];
+  pythonExtractor: (match: RegExpMatchArray) => Record<string, any>;
+  blockCreator: (
+    workspace: Blockly.Workspace,
+    values: Record<string, any>
+  ) => Blockly.Block;
+}
+
+/**
+ * Shared block definitions for micro:bit blocks
+ * This ensures consistency between Python generation and parsing
+ */
+export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
+  {
+    type: "show_string",
+    blockDefinition: {
+      type: "show_string",
+      message0: "show string %1",
+      args0: [
+        {
+          type: "field_input",
+          name: "TEXT",
+          text: "Hello!",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 230,
+      tooltip: "Show a string on the display",
+    },
+    pythonPattern: /print\((['""])(.+?)\1\)/g,
+    pythonGenerator: (block) => {
+      const text = block.getFieldValue("TEXT");
+      return `print(${JSON.stringify(text)})\n`;
+    },
+    pythonExtractor: (match) => ({
+      TEXT: match[2],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("show_string");
+      block.setFieldValue(values.TEXT, "TEXT");
+      return block;
+    },
+  },
+  {
+    type: "pause",
+    blockDefinition: {
+      type: "pause",
+      message0: "pause %1 ms",
+      args0: [
+        {
+          type: "field_number",
+          name: "TIME",
+          value: 1000,
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 60,
+      tooltip: "Pause execution",
+    },
+    pythonPattern: /time\.sleep\((\d+(?:\.\d+)?)(?:\s*\/\s*1000)?\)/g,
+    pythonGenerator: (block) => {
+      const time = block.getFieldValue("TIME");
+      return `import time\ntime.sleep(${time / 1000})\n`;
+    },
+    pythonExtractor: (match) => ({
+      TIME: match[1].includes("/")
+        ? parseFloat(match[1])
+        : parseFloat(match[1]) * 1000,
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("pause");
+      block.setFieldValue(values.TIME, "TIME");
+      return block;
+    },
+  },
+  {
+    type: "set_led",
+    blockDefinition: {
+      type: "set_led",
+      message0: "set led x: %1 y: %2 %3 %4",
+      args0: [
+        { type: "field_number", name: "X", value: 0, min: 0, max: 4 },
+        { type: "field_number", name: "Y", value: 0, min: 0, max: 4 },
+        { type: "input_dummy" },
+        {
+          type: "field_dropdown",
+          name: "STATE",
+          options: [
+            ["on", "on"],
+            ["off", "off"],
+          ],
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 230,
+      tooltip: "Set LED on or off at (x, y)",
+    },
+    pythonPattern: /led\.(plot|unplot)\((\d+),\s*(\d+)\)/g,
+    pythonGenerator: (block) => {
+      const x = block.getFieldValue("X");
+      const y = block.getFieldValue("Y");
+      const state = block.getFieldValue("STATE");
+
+      if (state === "on") {
+        return `led.plot(${x}, ${y})\n`;
+      } else {
+        return `led.unplot(${x}, ${y})\n`;
+      }
+    },
+    pythonExtractor: (match) => ({
+      X: parseInt(match[2]),
+      Y: parseInt(match[3]),
+      STATE: match[1] === "plot" ? "on" : "off",
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("set_led");
+      block.setFieldValue(values.X, "X");
+      block.setFieldValue(values.Y, "Y");
+      block.setFieldValue(values.STATE, "STATE");
+      return block;
+    },
+  },
+  {
+    type: "button_is_pressed",
+    blockDefinition: {
+      type: "button_is_pressed",
+      message0: "button %1 is pressed",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "BUTTON",
+          options: [
+            ["A", "A"],
+            ["B", "B"],
+          ],
+        },
+      ],
+      output: "Boolean",
+      colour: 120,
+      tooltip: "Check if button is pressed",
+    },
+    pythonPattern: /button_([ab])\.is_pressed\(\)/gi,
+    pythonGenerator: (block, generator) => {
+      const button = block.getFieldValue("BUTTON").toLowerCase();
+      return [
+        `button_${button}.is_pressed()`,
+        (generator as any).ORDER_NONE || 0,
+      ];
+    },
+    pythonExtractor: (match) => ({
+      BUTTON: match[1].toUpperCase(),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("button_is_pressed");
+      block.setFieldValue(values.BUTTON, "BUTTON");
+      return block;
+    },
+  },
+  {
+    type: "show_leds",
+    blockDefinition: {
+      type: "show_leds",
+      message0: "show leds %1",
+      args0: [
+        {
+          type: "field_multilinetext",
+          name: "PATTERN",
+          text: "00000\n00000\n00000\n00000\n00000",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 230,
+      tooltip: "Display pattern on LEDs",
+    },
+    pythonPattern: /display\.show\(Image\((['"'])((?:[01]{5}\n?){5})\1\)\)/g,
+    pythonGenerator: (block) => {
+      const pattern = block.getFieldValue("PATTERN");
+      return `display.show(Image("${pattern}"))\n`;
+    },
+    pythonExtractor: (match) => ({
+      PATTERN: match[2],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("show_leds");
+      block.setFieldValue(values.PATTERN, "PATTERN");
+      return block;
+    },
+  },
+  {
+    type: "forever",
+    blockDefinition: {
+      type: "forever",
+      message0: "forever %1 %2",
+      args0: [{ type: "input_dummy" }, { type: "input_statement", name: "DO" }],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 30,
+      tooltip: "Runs code forever",
+    },
+    pythonPattern: /while\s+True\s*:([\s\S]*?)(?=\n(?:\S|$))/g,
+    pythonGenerator: (block, generator) => {
+      const statements = generator.statementToCode(block, "DO");
+      return `while True:\n${statements.replace(/^/gm, "    ")}\n`;
+    },
+    pythonExtractor: (match) => ({
+      STATEMENTS: match[1].trim(),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("forever");
+      // Note: Nested statements need to be handled separately
+      return block;
+    },
+  },
+  {
+    type: "on_start",
+    blockDefinition: {
+      type: "on_start",
+      message0: "on start %1 %2",
+      args0: [{ type: "input_dummy" }, { type: "input_statement", name: "DO" }],
+      colour: 30,
+      tooltip: "Runs once at the start",
+      nextStatement: null,
+    },
+    pythonPattern: /def\s+on_start\(\s*\)\s*:([\s\S]*?)(?=\n(?:\S|$))/g,
+    pythonGenerator: (block, generator) => {
+      const statements = generator.statementToCode(block, "DO");
+      return `def on_start():\n${statements.replace(
+        /^/gm,
+        "    "
+      )}\non_start()\n`;
+    },
+    pythonExtractor: (match) => ({
+      STATEMENTS: match[1].trim(),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("on_start");
+      // Note: Nested statements need to be handled separately
+      return block;
+    },
+  },
+];
+
+/**
+ * Utility functions for working with shared block definitions
+ */
+export class SharedBlockRegistry {
+  /**
+   * Register all shared blocks with Blockly
+   */
+  static registerBlocks(): void {
+    const blockDefinitions = SHARED_MICROBIT_BLOCKS.map(
+      (block) => block.blockDefinition
+    );
+    Blockly.defineBlocksWithJsonArray(blockDefinitions);
+  }
+
+  /**
+   * Register all Python generators
+   */
+  static registerPythonGenerators(pythonGenerator: any): void {
+    SHARED_MICROBIT_BLOCKS.forEach((block) => {
+      pythonGenerator.forBlock[block.type] = block.pythonGenerator;
+    });
+  }
+
+  /**
+   * Get block definition by type
+   */
+  static getBlockDefinition(type: string): SharedBlockDefinition | undefined {
+    return SHARED_MICROBIT_BLOCKS.find((block) => block.type === type);
+  }
+
+  /**
+   * Get all block types
+   */
+  static getBlockTypes(): string[] {
+    return SHARED_MICROBIT_BLOCKS.map((block) => block.type);
+  }
+
+  /**
+   * Test if Python code matches any known pattern
+   */
+  static matchesPythonPattern(code: string): SharedBlockDefinition[] {
+    const matches: SharedBlockDefinition[] = [];
+
+    SHARED_MICROBIT_BLOCKS.forEach((block) => {
+      block.pythonPattern.lastIndex = 0; // Reset regex
+      if (block.pythonPattern.test(code)) {
+        matches.push(block);
+      }
+    });
+
+    return matches;
+  }
+
+  /**
+   * Create a block from Python code
+   */
+  static createBlockFromPython(
+    workspace: Blockly.Workspace,
+    pythonCode: string,
+    blockType: string
+  ): Blockly.Block | null {
+    const blockDef = this.getBlockDefinition(blockType);
+    if (!blockDef) return null;
+
+    blockDef.pythonPattern.lastIndex = 0; // Reset regex
+    const match = blockDef.pythonPattern.exec(pythonCode);
+    if (!match) return null;
+
+    const values = blockDef.pythonExtractor(match);
+    return blockDef.blockCreator(workspace, values);
+  }
+}
+
+/**
+ * Enhanced converter that uses shared definitions
+ */
+export class EnhancedPythonToBlocklyConverter {
+  private workspace: Blockly.Workspace;
+
+  constructor(workspace: Blockly.Workspace) {
+    this.workspace = workspace;
+  }
+
+  /**
+   * Convert Python code to Blockly blocks using shared definitions
+   */
+  convertPythonToBlocks(pythonCode: string): Blockly.Block[] {
+    const blocks: Blockly.Block[] = [];
+    const lines = pythonCode.split("\n");
+    let currentLine = 0;
+
+    while (currentLine < lines.length) {
+      const line = lines[currentLine].trim();
+
+      if (!line || line.startsWith("#")) {
+        currentLine++;
+        continue;
+      }
+
+      // Try to match the line with known patterns
+      const matchingBlocks = SharedBlockRegistry.matchesPythonPattern(line);
+
+      if (matchingBlocks.length > 0) {
+        // Use the first matching block type
+        const blockDef = matchingBlocks[0];
+        const block = SharedBlockRegistry.createBlockFromPython(
+          this.workspace,
+          line,
+          blockDef.type
+        );
+
+        if (block) {
+          blocks.push(block);
+        }
+      }
+
+      currentLine++;
+    }
+
+    // Connect blocks in sequence
+    this.connectSequentialBlocks(blocks);
+
+    return blocks;
+  }
+
+  /**
+   * Connect blocks that should be in sequence
+   */
+  private connectSequentialBlocks(blocks: Blockly.Block[]): void {
+    for (let i = 0; i < blocks.length - 1; i++) {
+      const currentBlock = blocks[i];
+      const nextBlock = blocks[i + 1];
+
+      if (currentBlock.nextConnection && nextBlock.previousConnection) {
+        try {
+          currentBlock.nextConnection.connect(nextBlock.previousConnection);
+        } catch (error) {
+          console.warn("Failed to connect blocks:", error);
+        }
+      }
+    }
+  }
+
+  /**
+   * Convert Python code to a specific block type
+   */
+  convertToSpecificBlock(
+    pythonCode: string,
+    blockType: string
+  ): Blockly.Block | null {
+    return SharedBlockRegistry.createBlockFromPython(
+      this.workspace,
+      pythonCode,
+      blockType
+    );
+  }
+}
+
+/**
+ * Utility function to update existing BlocklyEditor to use shared definitions
+ */
+export function createUpdatedBlocklyEditor() {
+  return {
+    initializeSharedBlocks: () => {
+      SharedBlockRegistry.registerBlocks();
+    },
+
+    setupPythonGenerators: (pythonGenerator: any) => {
+      SharedBlockRegistry.registerPythonGenerators(pythonGenerator);
+    },
+
+    createConverter: (workspace: Blockly.Workspace) => {
+      return new EnhancedPythonToBlocklyConverter(workspace);
+    },
+  };
+}
