@@ -1127,7 +1127,7 @@ export default function CircuitCanvasOptimized() {
       </div>
 
       <div
-        className={`transition-all duration-300 h-[510px] mt-13 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"} `}
+        className={`transition-all duration-300 h-max mt-14 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"} `}
         style={{
           pointerEvents: "auto",
           // Glass effect
