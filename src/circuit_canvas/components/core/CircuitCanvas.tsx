@@ -30,6 +30,8 @@ import {
   ColorPaletteDropdown,
   defaultColors,
 } from "@/circuit_canvas/components/toolbar/customization/ColorPallete";
+import BlocklyEditor from "@/blockly_editor/components/BlocklyEditor";
+import BlockPlusTextEditor from "@/blockly_editor/components/BlockPlusCodeEditor";
 
 export default function CircuitCanvasOptimized() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -79,6 +81,7 @@ export default function CircuitCanvasOptimized() {
   const [selectedElement, setSelectedElement] = useState<CircuitElement | null>(
     null
   );
+  const [showPropertiesPannel, setShowPropertiesPannel] = useState(false);
   const [creatingWireStartNode, setCreatingWireStartNode] = useState<
     string | null
   >(null);
@@ -736,6 +739,14 @@ export default function CircuitCanvasOptimized() {
     };
   }, [creatingWireStartNode]);
 
+
+  const [editorType, setEditorType] = useState("text");
+
+  const handlePropertiesPannelClose = () => {
+    // setSelectedElement(null);
+    setShowPropertiesPannel(false);
+  };
+
   return (
     <div
       className={styles.canvasContainer}
@@ -761,7 +772,7 @@ export default function CircuitCanvasOptimized() {
       {/* Left Side: Main Canvas */}
       <div className="flex-grow h-full flex flex-col">
         {/* Toolbar */}
-        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 space-x-4 py-2 justify-between">
+        <div className="w-full h-12 bg-[#F4F5F6] flex items-center px-4 space-x-4 py-2 justify-between mt-1">
           {/* Controls */}
           <div className="flex items-center gap-4">
             <ColorPaletteDropdown
@@ -780,7 +791,7 @@ export default function CircuitCanvasOptimized() {
             {/* Tooltip Group */}
             <div className="relative group">
               {/* Trigger Button */}
-              <div className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full cursor-pointer hover:bg-gray-300 transition">
+              <div className="w-6 h-6 flex items-center justify-center shadow-lg bg-gray-200 rounded-full cursor-pointer hover:shadow-blue-400 hover:scale-105 transition">
                 ?
               </div>
 
@@ -819,7 +830,7 @@ export default function CircuitCanvasOptimized() {
 
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-sm text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"} flex items-center space-x-2`}
+              className={`rounded-sm border-2 border-gray-300 shadow-lg text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"} flex items-center space-x-2 hover:shadow-emerald-600 hover:scale-105`}
               onClick={() => simulationRunning ? stopSimulation() : startSimulation()}
             >
               {simulationRunning ? (
@@ -837,7 +848,7 @@ export default function CircuitCanvasOptimized() {
 
             <button
               onClick={() => setOpenCodeEditor((prev) => !prev)}
-              className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
+              className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-lg text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center hover:shadow-blue-400 hover:scale-105"
             >
               <FaCode />
               <span>Code</span>
@@ -845,7 +856,7 @@ export default function CircuitCanvasOptimized() {
 
             <button
               onClick={() => setShowDebugBox((prev) => !prev)}
-              className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-sm text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center"
+              className="px-1 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-lg text-black text-sm cursor-pointer flex flex-row gap-2 items-center justify-center hover:shadow-blue-400 hover:scale-105"
             >
               <VscDebug />
               <span>Debugger</span>
@@ -875,87 +886,86 @@ export default function CircuitCanvasOptimized() {
           </div>
         </div>
         {selectedElement && (
-          <div className="absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl">
-            <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
-              <button
-                onClick={() => setSelectedElement(null)}
-                className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
-                title="Close"
-              />
+          showPropertiesPannel ? (
+            <div className="absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl">
+              <div className="p-1">
+                <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
+                  <button
+                    onClick={handlePropertiesPannelClose}
+                    className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
+                    title="Close"
+                  />
+                </div>
+                <PropertiesPanel
+                  selectedElement={selectedElement}
+                  wires={wires}
+                  getNodeById={getNodeById}
+                  onElementEdit={(updatedElement, deleteElement) => {
+                    pushToHistory();
+                    if (deleteElement) {
+                      const updatedWires = wires.filter(
+                        (w) =>
+                          getNodeParent(w.fromNodeId)?.id !== updatedElement.id &&
+                          getNodeParent(w.toNodeId)?.id !== updatedElement.id
+                      );
+                      setWires(updatedWires);
+                      setElements((prev) =>
+                        prev.filter((el) => el.id !== updatedElement.id)
+                      );
+                      setSelectedElement(null);
+                      setCreatingWireStartNode(null);
+                      setEditingWire(null);
+                      stopSimulation();
+                    } else {
+                      setElements((prev) =>
+                        prev.map((el) =>
+                          el.id === updatedElement.id
+                            ? { ...el, ...updatedElement, x: el.x, y: el.y }
+                            : el
+                        )
+                      );
+                      stopSimulation();
+                      setSelectedElement(updatedElement);
+                      setCreatingWireStartNode(null);
+                    }
+                  }}
+                  onWireEdit={(updatedWire, deleteElement) => {
+                    pushToHistory();
+                    if (deleteElement) {
+                      setWires((prev) => prev.filter((w) => w.id !== updatedWire.id));
+                      setSelectedElement(null);
+                      setCreatingWireStartNode(null);
+                      setEditingWire(null);
+                      stopSimulation();
+                    } else {
+                      setWires((prev) =>
+                        prev.map((w) =>
+                          w.id === updatedWire.id ? { ...w, ...updatedWire } : w
+                        )
+                      );
+                      stopSimulation();
+                      setSelectedElement(null);
+                      setEditingWire(null);
+                    }
+                  }}
+                  onEditWireSelect={(wire) => {
+                    setSelectedElement({
+                      id: wire.id,
+                      type: "wire",
+                      x: 0,
+                      y: 0,
+                      nodes: [],
+                    });
+                  }}
+                  setOpenCodeEditor={setOpenCodeEditor}
+                  wireColor={wires.find((w) => w.id === selectedElement.id)?.color}
+                />
+              </div>
             </div>
-
-            <div className="p-1">
-              <PropertiesPanel
-                selectedElement={selectedElement}
-                wires={wires}
-                getNodeById={getNodeById}
-                onElementEdit={(updatedElement, deleteElement) => {
-                  pushToHistory();
-                  if (deleteElement) {
-                    const updatedWires = wires.filter(
-                      (w) =>
-                        getNodeParent(w.fromNodeId)?.id !== updatedElement.id &&
-                        getNodeParent(w.toNodeId)?.id !== updatedElement.id
-                    );
-                    setWires(updatedWires);
-                    setElements((prev) =>
-                      prev.filter((el) => el.id !== updatedElement.id)
-                    );
-                    setSelectedElement(null);
-                    setCreatingWireStartNode(null);
-                    setEditingWire(null);
-                    stopSimulation();
-                  } else {
-                    setElements((prev) =>
-                      prev.map((el) =>
-                        el.id === updatedElement.id
-                          ? { ...el, ...updatedElement, x: el.x, y: el.y }
-                          : el
-                      )
-                    );
-                    stopSimulation();
-                    setSelectedElement(updatedElement);
-                    setCreatingWireStartNode(null);
-                  }
-                }}
-                onWireEdit={(updatedWire, deleteElement) => {
-                  pushToHistory();
-                  if (deleteElement) {
-                    setWires((prev) => prev.filter((w) => w.id !== updatedWire.id));
-                    setSelectedElement(null);
-                    setCreatingWireStartNode(null);
-                    setEditingWire(null);
-                    stopSimulation();
-                  } else {
-                    setWires((prev) =>
-                      prev.map((w) =>
-                        w.id === updatedWire.id ? { ...w, ...updatedWire } : w
-                      )
-                    );
-                    stopSimulation();
-                    setSelectedElement(null);
-                    setEditingWire(null);
-                  }
-                }}
-                onEditWireSelect={(wire) => {
-                  setSelectedElement({
-                    id: wire.id,
-                    type: "wire",
-                    x: 0,
-                    y: 0,
-                    nodes: [],
-                  });
-                }}
-                setOpenCodeEditor={setOpenCodeEditor}
-                wireColor={wires.find((w) => w.id === selectedElement.id)?.color}
-              />
-            </div>
-          </div>
+          ) : null
         )}
 
-
-
-        <div className="relative w-full flex-1 h-full p-1 overflow-hidden">
+        <div className="relative w-full flex-1 h-[460px] p-1 overflow-hidden">
           {/* Stage Canvas */}
           {loadingSavedCircuit ? (
             <Loader />
@@ -1000,26 +1010,29 @@ export default function CircuitCanvasOptimized() {
                       }}
                       points={points}
                       stroke={getWireColor(wire) || "black"}
-                      strokeWidth={selectedElement?.id === wire.id ? 4 : 3.5}
+                      strokeWidth={selectedElement?.id === wire.id ? 4 : 3}
                       hitStrokeWidth={16}
-                      tension={0.3}
+                      tension={0.1}
                       lineCap="round"
                       lineJoin="round"
                       bezier
                       shadowColor={
-                        selectedElement?.id === wire.id ? "#f97316" : getWireColor(wire)
+                        selectedElement?.id === wire.id ? "blue" : getWireColor(wire)
                       }
-                      shadowBlur={selectedElement?.id === wire.id ? 8 : 2}
+                      shadowEnabled={true}
+                      shadowBlur={selectedElement?.id === wire.id ? 5 : 2}
                       shadowOpacity={selectedElement?.id === wire.id ? 0.9 : 0.25}
                       opacity={0.95}
-                      onClick={() =>
+                      onClick={() => {
                         setSelectedElement({
                           id: wire.id,
                           type: "wire",
                           x: 0,
                           y: 0,
                           nodes: [],
-                        })
+                        });
+                        setShowPropertiesPannel(true);
+                      }
                       }
                     />
                   );
@@ -1033,14 +1046,16 @@ export default function CircuitCanvasOptimized() {
                   y={0}
                   radius={5}
                   fill="yellow"
-                  shadowColor="red"
-                  shadowBlur={10}
-                  shadowOpacity={1}
+                  shadowColor="yellow"
+                  shadowOpacity={2}
                   shadowForStrokeEnabled={true}
                   stroke="orange"
                   strokeWidth={3}
                   opacity={1}
                   visible={false}
+                  shadowBlur={15}
+                  shadowEnabled={true}
+                  shadowOffset={{ x: 2, y: 2 }}
                 />
                 <Line
                   ref={(ref) => {
@@ -1088,6 +1103,7 @@ export default function CircuitCanvasOptimized() {
                     onSelect={(id) => {
                       const element = getElementById(id);
                       setSelectedElement(element ?? null);
+                      setShowPropertiesPannel(true);
                       setActiveControllerId(null);
                       setOpenCodeEditor(false);
                       if (element?.type === "microbit") {
@@ -1111,8 +1127,17 @@ export default function CircuitCanvasOptimized() {
       </div>
 
       <div
-        className={`transition-all duration-300 h-screen mt-12 bg-[#F4F5F6] overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"}`}
-        style={{ pointerEvents: "auto" }}
+        className={`transition-all duration-300 h-[510px] mt-13 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"} `}
+        style={{
+          pointerEvents: "auto",
+          // Glass effect
+          background: "rgba(255, 255, 255, 0.1)", // white with 10% opacity
+          backdropFilter: "blur(15px)",           // blur the background behind
+          WebkitBackdropFilter: "blur(15px)",    // fix for Safari
+          border: "0.3px solid rgba(255, 255, 255, 0.3)", // subtle white border
+          boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.37)", // soft shadow for depth
+          borderRadius: "15px",                   // rounded corners
+        }}
       >
         <button
           className={styles.toggleButton}
@@ -1133,38 +1158,76 @@ export default function CircuitCanvasOptimized() {
         {showPalette && <CircuitSelector />}
       </div>
 
-      {/* Code Editor */}
-      {openCodeEditor && (
-        <div className="absolute right-0 top-0 h-full w-[500px] bg-white border-l border-gray-300 shadow-xl z-50 transition-transform duration-300"
-          style={{
-            transform: openCodeEditor ? "translateX(0)" : "translateX(100%)",
-          }}
-        >
-          <div className="flex justify-between items-center p-2 border-b border-gray-300 bg-gray-100">
-            <span className="font-semibold">Code Editor</span>
-            <button
-              className="text-sm text-gray-600 hover:text-black"
-              onClick={() => setOpenCodeEditor(false)}
-            >
-              ✕
-            </button>
+      {/* ...other code... */}
+      {
+        openCodeEditor && (
+          <div className="absolute right-0 top-10 h-[460px] w-[700px] bg-white border-l border-gray-300 shadow-xl z-50 transition-transform duration-300"
+            style={{
+              transform: openCodeEditor ? "translateX(0)" : "translateX(100%)",
+            }}
+          >
+            {/* Header with close */}
+            <div className="flex justify-between items-center p-2 border-b border-gray-300 bg-gray-100">
+              <span className="font-semibold">Editor</span>
+              <button
+                className="text-sm text-gray-600 hover:text-black"
+                onClick={() => setOpenCodeEditor(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Dropdown for editor selection */}
+            <div className="p-2 border-b border-gray-300 flex items-center gap-2 bg-gray-50">
+              <label htmlFor="editorType" className="text-gray-700 text-sm font-medium">
+                Editor Type:
+              </label>
+              <select
+                id="editorType"
+                value={editorType}
+                onChange={e => setEditorType(e.target.value)}
+                className="border rounded p-1 text-sm"
+              >
+                <option value="text">Text</option>
+                <option value="block">Block</option>
+                <option value="block+text">Block + Text</option>
+              </select>
+            </div>
+            {/* Editor(s) */}
+            <div className="flex flex-col h-full w-full">
+              {/* ...header, dropdown, etc... */}
+              <div className="flex-1 overflow-hidden">
+                {editorType === "text" && (
+                  <CodeEditor
+                    code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
+                    onChange={(newCode) => {
+                      if (!activeControllerId) return;
+                      setControllerCodeMap((prev) => ({
+                        ...prev,
+                        [activeControllerId]: newCode,
+                      }));
+                      stopSimulation();
+                    }}
+                  />
+                )}
+                {editorType === "block" && (
+                  <BlocklyEditor />
+                )}
+                {editorType === 'block+text' && (
+                  <BlockPlusTextEditor
+                    controllerCodeMap={controllerCodeMap}
+                    activeControllerId={activeControllerId}
+                    setControllerCodeMap={setControllerCodeMap}
+                    stopSimulation={stopSimulation}
+                  />
+                )}
+              </div>
+            </div>
+
           </div>
-          <div className="p-4 overflow-auto h-full">
-            <CodeEditor
-              code={controllerCodeMap[activeControllerId ?? ""] ?? ""}
-              onChange={(newCode) => {
-                if (!activeControllerId) return;
-                setControllerCodeMap((prev) => ({
-                  ...prev,
-                  [activeControllerId]: newCode,
-                }));
-                stopSimulation();
-              }}
-            />
-          </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 
 }

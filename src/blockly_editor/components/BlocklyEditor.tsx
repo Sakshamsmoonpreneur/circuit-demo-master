@@ -204,7 +204,7 @@ export default function BlocklyEditor() {
     }, []);
 
     return (
-        <div style={{ display: 'flex', width: '100%', height: '100vh' }}>
+        <div style={{ display: 'flex', width: '100%', height: '460px' }}>
             <div ref={blocklyRef} style={{ flex: 1, border: '1px solid #ccc' }}></div>
             <textarea
                 ref={codeRef}
