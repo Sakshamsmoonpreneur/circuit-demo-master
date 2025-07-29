@@ -59,6 +59,8 @@ export default function Microbit({
             image={imgOffState}
             width={220}
             height={220}
+            x={0}
+            y={-25}
             shadowColor={props.selected ? "#000000" : undefined}
             shadowBlur={props.selected ? 6 : 0}
             shadowOffset={{ x: 15, y: -15 }}
