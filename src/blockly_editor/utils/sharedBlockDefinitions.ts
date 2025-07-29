@@ -35,6 +35,37 @@ export interface SharedBlockDefinition {
 }
 
 /**
+ * Helper function to safely create and initialize a block
+ * Handles both headless and rendered workspaces properly
+ */
+function createAndInitializeBlock(
+  workspace: Blockly.Workspace,
+  blockType: string,
+  fieldUpdates?: Record<string, any>
+): Blockly.Block {
+  const block = workspace.newBlock(blockType);
+
+  // Apply field updates first
+  if (fieldUpdates) {
+    for (const [fieldName, value] of Object.entries(fieldUpdates)) {
+      block.setFieldValue(value, fieldName);
+    }
+  }
+
+  // Only initialize SVG if workspace supports rendering (not headless)
+  if (workspace.rendered && (block as any).initSvg) {
+    try {
+      (block as any).initSvg();
+      (block as any).render();
+    } catch (error) {
+      console.warn("Could not initialize SVG for block:", error);
+    }
+  }
+
+  return block;
+}
+
+/**
  * Shared block definitions for micro:bit blocks
  * This ensures consistency between Python generation and parsing
  */
@@ -65,9 +96,9 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       TEXT: match[2],
     }),
     blockCreator: (workspace, values) => {
-      const block = workspace.newBlock("show_string");
-      block.setFieldValue(values.TEXT, "TEXT");
-      return block;
+      return createAndInitializeBlock(workspace, "show_string", {
+        TEXT: values.TEXT,
+      });
     },
   },
   {
@@ -98,9 +129,9 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
         : parseFloat(match[1]) * 1000,
     }),
     blockCreator: (workspace, values) => {
-      const block = workspace.newBlock("pause");
-      block.setFieldValue(values.TIME, "TIME");
-      return block;
+      return createAndInitializeBlock(workspace, "pause", {
+        TIME: values.TIME,
+      });
     },
   },
   {
@@ -267,6 +298,212 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
     blockCreator: (workspace, values) => {
       const block = workspace.newBlock("on_start");
       // Note: Nested statements need to be handled separately
+      return block;
+    },
+  },
+  {
+    type: "microbit_display_scroll",
+    blockDefinition: {
+      type: "microbit_display_scroll",
+      message0: "scroll text %1",
+      args0: [
+        {
+          type: "field_input",
+          name: "TEXT",
+          text: "Hello!",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 230,
+      tooltip: "Scroll text across the display",
+    },
+    pythonPattern: /display\.scroll\(['"](.+?)['"]\)/g,
+    pythonGenerator: (block) => {
+      const text = block.getFieldValue("TEXT");
+      return `display.scroll(${JSON.stringify(text)})\n`;
+    },
+    pythonExtractor: (match) => ({
+      TEXT: match[1],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("microbit_display_scroll");
+      block.setFieldValue(values.TEXT, "TEXT");
+      return block;
+    },
+  },
+  {
+    type: "microbit_accelerometer",
+    blockDefinition: {
+      type: "microbit_accelerometer",
+      message0: "accelerometer %1",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "AXIS",
+          options: [
+            ["x", "x"],
+            ["y", "y"],
+            ["z", "z"],
+          ],
+        },
+      ],
+      output: "Number",
+      colour: 160,
+      tooltip: "Get accelerometer reading",
+    },
+    pythonPattern: /accelerometer\.get_([xyz])\(\)/g,
+    pythonGenerator: (block, generator) => {
+      const axis = block.getFieldValue("AXIS");
+      return [
+        `accelerometer.get_${axis}()`,
+        (generator as any).ORDER_NONE || 0,
+      ];
+    },
+    pythonExtractor: (match) => ({
+      AXIS: match[1],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("microbit_accelerometer");
+      block.setFieldValue(values.AXIS, "AXIS");
+      return block;
+    },
+  },
+  {
+    type: "microbit_temperature",
+    blockDefinition: {
+      type: "microbit_temperature",
+      message0: "temperature",
+      output: "Number",
+      colour: 160,
+      tooltip: "Get temperature reading in Celsius",
+    },
+    pythonPattern: /temperature\(\)/g,
+    pythonGenerator: (block, generator) => {
+      return ["temperature()", (generator as any).ORDER_NONE || 0];
+    },
+    pythonExtractor: (match) => ({}),
+    blockCreator: (workspace, values) => {
+      return workspace.newBlock("microbit_temperature");
+    },
+  },
+  {
+    type: "microbit_pin_read",
+    blockDefinition: {
+      type: "microbit_pin_read",
+      message0: "read analog pin %1",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "PIN",
+          options: [
+            ["0", "0"],
+            ["1", "1"],
+            ["2", "2"],
+          ],
+        },
+      ],
+      output: "Number",
+      colour: 280,
+      tooltip: "Read analog value from pin",
+    },
+    pythonPattern: /pin(\d+)\.read_analog\(\)/g,
+    pythonGenerator: (block, generator) => {
+      const pin = block.getFieldValue("PIN");
+      return [`pin${pin}.read_analog()`, (generator as any).ORDER_NONE || 0];
+    },
+    pythonExtractor: (match) => ({
+      PIN: match[1],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("microbit_pin_read");
+      block.setFieldValue(values.PIN, "PIN");
+      return block;
+    },
+  },
+  {
+    type: "microbit_pin_write",
+    blockDefinition: {
+      type: "microbit_pin_write",
+      message0: "write analog pin %1 value %2",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "PIN",
+          options: [
+            ["0", "0"],
+            ["1", "1"],
+            ["2", "2"],
+          ],
+        },
+        {
+          type: "field_number",
+          name: "VALUE",
+          value: 512,
+          min: 0,
+          max: 1023,
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 280,
+      tooltip: "Write analog value to pin",
+    },
+    pythonPattern: /pin(\d+)\.write_analog\((\d+)\)/g,
+    pythonGenerator: (block) => {
+      const pin = block.getFieldValue("PIN");
+      const value = block.getFieldValue("VALUE");
+      return `pin${pin}.write_analog(${value})\n`;
+    },
+    pythonExtractor: (match) => ({
+      PIN: match[1],
+      VALUE: parseInt(match[2]),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("microbit_pin_write");
+      block.setFieldValue(values.PIN, "PIN");
+      block.setFieldValue(values.VALUE, "VALUE");
+      return block;
+    },
+  },
+  {
+    type: "microbit_music_play",
+    blockDefinition: {
+      type: "microbit_music_play",
+      message0: "play melody %1",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "MELODY",
+          options: [
+            ["birthday", "BIRTHDAY"],
+            ["funeral", "FUNERAL"],
+            ["prelude", "PRELUDE"],
+            ["ode", "ODE"],
+            ["nyan", "NYAN"],
+            ["ringtone", "RINGTONE"],
+            ["funk", "FUNK"],
+            ["blues", "BLUES"],
+            ["entertainer", "ENTERTAINER"],
+          ],
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 200,
+      tooltip: "Play a built-in melody",
+    },
+    pythonPattern: /music\.play\(music\.([A-Z_]+)\)/g,
+    pythonGenerator: (block) => {
+      const melody = block.getFieldValue("MELODY");
+      return `import music\nmusic.play(music.${melody})\n`;
+    },
+    pythonExtractor: (match) => ({
+      MELODY: match[1],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("microbit_music_play");
+      block.setFieldValue(values.MELODY, "MELODY");
       return block;
     },
   },
