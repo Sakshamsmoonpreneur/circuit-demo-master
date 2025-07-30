@@ -41,15 +41,49 @@ export default function UnifiedEditor({
   const [isUpdatingFromBlocks, setIsUpdatingFromBlocks] = useState(false);
   const [isUpdatingFromCode, setIsUpdatingFromCode] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
+  const [localCode, setLocalCode] = useState<string>(""); // Local state for code editing
 
   // Refs
   const blocklyRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef<Blockly.Workspace | null>(null);
   const mountedRef = useRef(false);
   const lastCodeRef = useRef<string>("");
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevControllerRef = useRef<string | null>(activeControllerId);
 
   // Get current code
   const currentCode = controllerCodeMap[activeControllerId ?? ""] ?? "";
+
+  // Update local code when controller changes or when blocks update the code
+  useEffect(() => {
+    if (!isUpdatingFromBlocks) {
+      setLocalCode(currentCode);
+    }
+  }, [currentCode, activeControllerId, isUpdatingFromBlocks]);
+
+  // Save any pending changes when switching controllers
+  useEffect(() => {
+    const prevController = prevControllerRef.current;
+
+    // If controller changed and we have a previous controller with pending changes
+    if (prevController && prevController !== activeControllerId) {
+      if (
+        debounceTimeoutRef.current &&
+        localCode !== controllerCodeMap[prevController]
+      ) {
+        clearTimeout(debounceTimeoutRef.current);
+        debounceTimeoutRef.current = null;
+
+        // Immediately save changes for the previous controller
+        setControllerCodeMap((prev) => ({
+          ...prev,
+          [prevController]: localCode,
+        }));
+      }
+    }
+
+    prevControllerRef.current = activeControllerId;
+  }, [activeControllerId, localCode, controllerCodeMap]);
 
   /**
    * Initialize Blockly workspace with proper error handling
@@ -232,9 +266,26 @@ export default function UnifiedEditor({
     setTimeout(checkAndInitialize, 50);
 
     return () => {
+      // Flush any pending changes before unmounting
+      if (
+        debounceTimeoutRef.current &&
+        activeControllerId &&
+        localCode !== currentCode
+      ) {
+        clearTimeout(debounceTimeoutRef.current);
+        setControllerCodeMap((prev) => ({
+          ...prev,
+          [activeControllerId]: localCode,
+        }));
+      }
+
       if (workspaceRef.current) {
         workspaceRef.current.dispose();
         workspaceRef.current = null;
+      }
+      // Clean up debounce timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
     };
   }, [initializeWorkspace]);
@@ -308,9 +359,12 @@ export default function UnifiedEditor({
       // Clear workspace
       workspaceRef.current?.clear();
 
+      // Use the most current code (localCode if it exists and differs, otherwise currentCode)
+      const codeToConvert = localCode !== currentCode ? localCode : currentCode;
+
       // Convert code to blocks
-      bidirectionalConverter.pythonToBlocks(currentCode);
-      lastCodeRef.current = currentCode;
+      bidirectionalConverter.pythonToBlocks(codeToConvert);
+      lastCodeRef.current = codeToConvert;
     } catch (error) {
       console.error("Error converting Python to blocks:", error);
     } finally {
@@ -320,25 +374,36 @@ export default function UnifiedEditor({
     bidirectionalConverter,
     workspaceReady,
     currentCode,
+    localCode,
     isUpdatingFromBlocks,
   ]);
 
   /**
-   * Handle Python code changes in text mode
+   * Handle Python code changes in text mode with debouncing
    */
   const handleCodeChange = useCallback(
     (newCode: string) => {
       if (!activeControllerId || isUpdatingFromBlocks) return;
 
-      // Only update if the code actually changed
-      if (newCode !== currentCode) {
-        setControllerCodeMap((prev) => ({
-          ...prev,
-          [activeControllerId]: newCode,
-        }));
-        stopSimulation();
-        lastCodeRef.current = newCode;
+      // Update local state immediately for responsive UI
+      setLocalCode(newCode);
+
+      // Clear existing timeout
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
       }
+
+      // Debounce the actual controller code map update and simulation stop
+      debounceTimeoutRef.current = setTimeout(() => {
+        if (newCode !== currentCode) {
+          setControllerCodeMap((prev) => ({
+            ...prev,
+            [activeControllerId]: newCode,
+          }));
+          stopSimulation();
+          lastCodeRef.current = newCode;
+        }
+      }, 1000); // Wait 1 second after user stops typing
     },
     [
       activeControllerId,
@@ -350,10 +415,33 @@ export default function UnifiedEditor({
   );
 
   /**
+   * Immediately save any pending changes in localCode
+   */
+  const flushPendingChanges = useCallback(() => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+      debounceTimeoutRef.current = null;
+    }
+
+    if (activeControllerId && localCode !== currentCode) {
+      setControllerCodeMap((prev) => ({
+        ...prev,
+        [activeControllerId]: localCode,
+      }));
+      lastCodeRef.current = localCode;
+      return localCode; // Return the saved code
+    }
+    return currentCode; // Return current code if no changes
+  }, [activeControllerId, localCode, currentCode, setControllerCodeMap]);
+
+  /**
    * Handle mode switch with conversion
    */
   const handleModeChange = (newMode: EditorMode) => {
     if (newMode === editorMode) return;
+
+    // First, flush any pending changes to avoid losing work
+    const latestCode = flushPendingChanges();
 
     if (newMode === "block") {
       // Converting to block mode
@@ -395,11 +483,12 @@ export default function UnifiedEditor({
             "characters"
           );
 
-          // Update the code map with the generated code
+          // Update both the controller code map and local code
           setControllerCodeMap((prev) => ({
             ...prev,
             [activeControllerId]: generatedCode,
           }));
+          setLocalCode(generatedCode);
 
           lastCodeRef.current = generatedCode;
           stopSimulation();
@@ -504,7 +593,7 @@ export default function UnifiedEditor({
       {/* Editor Content */}
       <div className="flex-1 overflow-hidden">
         {editorMode === "text" ? (
-          <CodeEditor code={currentCode} onChange={handleCodeChange} />
+          <CodeEditor code={localCode} onChange={handleCodeChange} />
         ) : (
           <div
             ref={blocklyRef}

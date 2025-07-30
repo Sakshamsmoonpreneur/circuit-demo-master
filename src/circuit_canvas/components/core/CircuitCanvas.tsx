@@ -29,6 +29,7 @@ import { VscDebug } from "react-icons/vsc";
 import CodeEditor from "@/python_code_editor/components/CodeEditor";
 import Loader from "@/common/utils/loader";
 import InfiniteGrid from "@/circuit_canvas/components/core/InfiniteGrid";
+import OptimizedGrid from "@/circuit_canvas/components/core/OptimizedGrid";
 import AnimatedCircle from "@/circuit_canvas/components/core/AnimatedCircle";
 import {
   ColorPaletteDropdown,
@@ -37,6 +38,8 @@ import {
 import BlocklyEditor from "@/blockly_editor/components/BlocklyEditor";
 import BlockPlusTextEditor from "@/blockly_editor/components/BlockPlusCodeEditor";
 import UnifiedEditor from "@/blockly_editor/components/UnifiedEditor";
+import { useViewport } from "@/circuit_canvas/hooks/useViewport";
+import HighPerformanceGrid from "./HighPerformanceGrid";
 
 export default function CircuitCanvasOptimized() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -61,6 +64,9 @@ export default function CircuitCanvasOptimized() {
 
   const stageRef = useRef<Konva.Stage | null>(null);
   const wireLayerRef = useRef<Konva.Layer | null>(null);
+
+  // Viewport tracking for grid optimization
+  const { viewport, updateViewport } = useViewport(stageRef);
 
   // Store refs to wire Line components for direct updates
   const wireRefs = useRef<Record<string, Konva.Line>>({});
@@ -103,6 +109,14 @@ export default function CircuitCanvasOptimized() {
   useEffect(() => {
     resetState();
   }, []);
+
+  // Update viewport on mount and resize
+  useEffect(() => {
+    const handleResize = () => updateViewport();
+    updateViewport(); // Initial update
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [updateViewport]);
 
   function resetState() {
     pushToHistory();
@@ -157,6 +171,8 @@ export default function CircuitCanvasOptimized() {
   }, [creatingWireStartNode]);
 
   function stopSimulation() {
+    if (!simulationRunning) return;
+
     setSimulationRunning(false);
     setElements((prev) =>
       prev.map((el) => ({
@@ -687,6 +703,9 @@ export default function CircuitCanvasOptimized() {
 
     stage.position(newPos);
     stage.batchDraw();
+
+    // Update viewport for grid optimization
+    updateViewport();
   };
 
   // end
@@ -1000,11 +1019,12 @@ export default function CircuitCanvasOptimized() {
                 if (draggingElement !== null) return;
                 const stage = e.target;
                 setCanvasOffset({ x: stage.x(), y: stage.y() });
+                updateViewport();
               }}
               draggable={draggingElement == null}
               onWheel={handleWheel}
             >
-              <InfiniteGrid />
+              <HighPerformanceGrid viewport={viewport} gridSize={25} />
               <Layer ref={wireLayerRef}>
                 {wires.map((wire) => {
                   const points = getWirePoints(wire);
@@ -1142,6 +1162,7 @@ export default function CircuitCanvasOptimized() {
                   />
                 ))}
               </Layer>
+              {/* draggable circle for testing purposes */}
             </Stage>
           )}
         </div>
