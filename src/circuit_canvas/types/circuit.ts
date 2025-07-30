@@ -4,6 +4,7 @@ export type CircuitElement = {
   id: string;
   x: number;
   y: number;
+  rotation?: number; // rotation angle in degrees (0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330)
   nodes: Node[];
   connecters?: ElementConnecter[];
   type: string;
@@ -64,6 +65,7 @@ export type CircuitElementProps = {
   type: string;
   idNumber: number;
   pos: { x: number; y: number };
+  rotation?: number;
   properties?: {
     resistance?: number;
     voltage?: number;

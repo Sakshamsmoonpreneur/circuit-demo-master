@@ -10,13 +10,14 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-1",
         x: 13,
         y: 38,
         parentId: id,
-        polarity: "positive",
+        polarity: "positive" as const,
         placeholder: "Positive",
         fillColor: "green",
       },
@@ -25,7 +26,7 @@ export default function createElement(
         x: 13,
         y: 47,
         parentId: id,
-        polarity: "negative",
+        polarity: "negative" as const,
         placeholder: "Negative",
         fillColor: "red",
       },
@@ -44,6 +45,7 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-1",
@@ -76,6 +78,7 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-1",
@@ -108,13 +111,14 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-1",
         x: 10.3,
         y: 14,
         parentId: id,
-        polarity: "negative",
+        polarity: "negative" as const,
         placeholder: "Negative",
         fillColor: "red",
       },
@@ -123,7 +127,7 @@ export default function createElement(
         x: 30.6,
         y: 14,
         parentId: id,
-        polarity: "positive",
+        polarity: "positive" as const,
         placeholder: "Positive",
         fillColor: "green",
       },
@@ -142,13 +146,13 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-A", // Terminal A
         x: 11.3,
         y: 20,
         parentId: id,
-        name: "A", // optional for clarity
         placeholder: "Terminal 1",
         fillColor: "red",
       },
@@ -157,7 +161,6 @@ export default function createElement(
         x: 26,
         y: 16, // position it visually on top if needed
         parentId: id,
-        name: "W",
         placeholder: "Wiper",
         fillColor: "red",
       },
@@ -166,7 +169,6 @@ export default function createElement(
         x: 41.3,
         y: 20,
         parentId: id,
-        name: "B",
         placeholder: "Terminal 2",
         fillColor: "red",
       },
@@ -185,13 +187,14 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-1",
         x: 27,
         y: 60,
         parentId: id,
-        polarity: "positive",
+        polarity: "positive" as const,
         placeholder: "Cathode",
         fillColor: "red",
       },
@@ -200,7 +203,7 @@ export default function createElement(
         x: 41,
         y: 60,
         parentId: id,
-        polarity: "negative",
+        polarity: "negative" as const,
         placeholder: "Anode",
         fillColor: "red",
       },
@@ -219,6 +222,7 @@ export default function createElement(
     type: props.type,
     x: props.pos.x,
     y: props.pos.y,
+    rotation: props.rotation ?? 0,
     nodes: [
       {
         id: id + "-node-0",

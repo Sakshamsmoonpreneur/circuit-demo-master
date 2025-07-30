@@ -17,6 +17,7 @@ import Konva from "konva";
 import styles from "@/circuit_canvas/styles/CircuitCanvas.module.css";
 import CircuitStorage from "@/circuit_canvas/components/core/CircuitStorage";
 import useCircuitShortcuts from "@/circuit_canvas/hooks/useCircuitShortcuts";
+import { getAbsoluteNodePosition } from "@/circuit_canvas/utils/rotationUtils";
 import {
   getCircuitShortcuts,
   getShortcutMetadata,
@@ -260,16 +261,11 @@ export default function CircuitCanvasOptimized() {
 
       const fromParent = getNodeParent(fromNode.id);
       const toParent = getNodeParent(toNode.id);
+      if (!fromParent || !toParent) return [];
 
-      const start = {
-        x: fromNode.x + (fromParent?.x ?? 0),
-        y: fromNode.y + (fromParent?.y ?? 0),
-      };
-
-      const end = {
-        x: toNode.x + (toParent?.x ?? 0),
-        y: toNode.y + (toParent?.y ?? 0),
-      };
+      // Use rotation-aware absolute position calculation
+      const start = getAbsoluteNodePosition(fromNode, fromParent);
+      const end = getAbsoluteNodePosition(toNode, toParent);
 
       // Include joints between start and end
       const jointPoints = wire.joints.flatMap((pt) => [pt.x, pt.y]);
@@ -310,10 +306,11 @@ export default function CircuitCanvasOptimized() {
       const startNode = getNodeById(creatingWireStartNode);
       if (!startNode) return;
 
-      const startPos = {
-        x: startNode.x + (getNodeParent(startNode.id)?.x ?? 0),
-        y: startNode.y + (getNodeParent(startNode.id)?.y ?? 0),
-      };
+      const startParent = getNodeParent(startNode.id);
+      if (!startParent) return;
+
+      // Use rotation-aware absolute position calculation
+      const startPos = getAbsoluteNodePosition(startNode, startParent);
 
       const stage = stageRef.current;
       const transform = stage.getAbsoluteTransform().copy();
@@ -547,9 +544,9 @@ export default function CircuitCanvasOptimized() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, ratio },
-          }
+              ...el,
+              properties: { ...el.properties, ratio },
+            }
           : el
       )
     );
@@ -564,9 +561,9 @@ export default function CircuitCanvasOptimized() {
       prev.map((el) =>
         el.id === elementId
           ? {
-            ...el,
-            properties: { ...el.properties, mode },
-          }
+              ...el,
+              properties: { ...el.properties, mode },
+            }
           : el
       )
     );
@@ -628,11 +625,11 @@ export default function CircuitCanvasOptimized() {
                 prev.map((el) =>
                   el.id === newElement.id
                     ? {
-                      ...el,
-                      controller: {
-                        leds: Array(5).fill(Array(5).fill(false)),
-                      },
-                    }
+                        ...el,
+                        controller: {
+                          leds: Array(5).fill(Array(5).fill(false)),
+                        },
+                      }
                     : el
                 )
               );
@@ -858,8 +855,9 @@ export default function CircuitCanvasOptimized() {
 
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-lg text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
-                } flex items-center space-x-2 hover:shadow-emerald-600 hover:scale-105`}
+              className={`rounded-sm border-2 border-gray-300 shadow-lg text-black px-1 py-1 text-sm cursor-pointer ${
+                simulationRunning ? "bg-red-300" : "bg-emerald-300"
+              } flex items-center space-x-2 hover:shadow-emerald-600 hover:scale-105`}
               onClick={() =>
                 simulationRunning ? stopSimulation() : startSimulation()
               }
@@ -937,7 +935,7 @@ export default function CircuitCanvasOptimized() {
                       const updatedWires = wires.filter(
                         (w) =>
                           getNodeParent(w.fromNodeId)?.id !==
-                          updatedElement.id &&
+                            updatedElement.id &&
                           getNodeParent(w.toNodeId)?.id !== updatedElement.id
                       );
                       setWires(updatedWires);
@@ -1168,8 +1166,9 @@ export default function CircuitCanvasOptimized() {
       </div>
 
       <div
-        className={`transition-all duration-300 h-max mt-15 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
-          } `}
+        className={`transition-all duration-300 h-max mt-15 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${
+          showPalette ? "w-72" : "w-10"
+        } `}
         style={{
           pointerEvents: "auto",
           // Glass effect
