@@ -32,6 +32,7 @@ export default function RenderElement({
     <Group
       x={element.x}
       y={element.y}
+      rotation={element.rotation || 0}
       onDragMove={props.onDragMove}
       onDragStart={props.onDragStart}
       onDragEnd={props.onDragEnd}
@@ -134,7 +135,7 @@ export default function RenderElement({
               strokeWidth={isHovered ? 1.4 : 0}
               onClick={(e) => {
                 e.cancelBubble = true;
-                props.handleNodeClick(node.id)
+                props.handleNodeClick(node.id);
               }}
               hitStrokeWidth={10}
               onMouseEnter={(e) => {
