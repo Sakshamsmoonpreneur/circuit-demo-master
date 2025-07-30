@@ -1101,6 +1101,7 @@ export default function CircuitCanvasOptimized() {
                       );
                     }}
                     onSelect={(id) => {
+                      if (creatingWireStartNode) return;
                       const element = getElementById(id);
                       setSelectedElement(element ?? null);
                       setShowPropertiesPannel(true);
