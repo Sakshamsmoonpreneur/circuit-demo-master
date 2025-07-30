@@ -12,18 +12,24 @@ interface LightbulbProps extends BaseElementProps {
 
 export default function Lightbulb(props: LightbulbProps) {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
+  const [explosion, setExplosion] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
     const image = new window.Image();
     image.src = "assets/circuit_canvas/elements/bulb.svg";
     image.onload = () => setImg(image);
     image.alt = "Lightbulb";
+
+    const explosionImage = new window.Image();
+    explosionImage.src = "assets/circuit_canvas/elements/Explosion.svg";
+    explosionImage.onload = () => setExplosion(explosionImage);
+    explosionImage.alt = "Bulb Explosion";
   }, []);
 
   // Clamp power to minimum of 0
   const rawPower = Math.max(0, props.power ?? 0);
   // Constants for display/thresholds
-  const maxPower = 5;     // for normal brightness scaling (visual only)
+  const maxPower = 5; // for normal brightness scaling (visual only)
   const maxSafePower = 7; // safe max; anything above triggers "overload"
   const normalizedPower = Math.min(rawPower / maxPower, 1);
   const brightness = Math.sqrt(normalizedPower);
@@ -35,31 +41,27 @@ export default function Lightbulb(props: LightbulbProps) {
         {/* Overloaded visual: short circuit */}
         {isOverloaded ? (
           <>
-            {/* Red flash for overload */}
-            <Circle
-              x={75}
-              y={60}
-              radius={45}
-              fill="red"
-              opacity={0.5}
-              shadowBlur={30}
-              shadowColor="red"
-            />
-            <Line
-              points={[90, 100, 70, 40, 60, 100]}
-              stroke="white"
-              strokeWidth={6}
-              tension={0.8}
-              lineCap="round"
-              lineJoin="round"
-              opacity={100}
-              shadowBlur={1}
-              shadowColor="red"
-            />
+            {/* Explosion effect */}
+            {explosion && (
+              <Image
+                image={explosion}
+                x={37.5}
+                y={30}
+                width={75}
+                height={75}
+                shadowColor="#000000"
+                shadowBlur={12}
+                shadowOffset={{ x: 1, y: -1 }}
+                shadowOpacity={2}
+                zIndex={1000}
+              />
+            )}
             {/* Notification overlay */}
             <ShortCircuitNotification
               show={isOverloaded}
-              message={`Current through the LED is ${rawPower.toFixed(2)} W, while absolute maximum is ${maxPower} W`}
+              message={`Current through the LED is ${rawPower.toFixed(
+                2
+              )} W, while absolute maximum is ${maxPower} W`}
             />
           </>
         ) : (
@@ -86,7 +88,7 @@ export default function Lightbulb(props: LightbulbProps) {
             shadowBlur={props.selected ? 12 : 0}
             shadowOffset={{ x: 15, y: -15 }}
             shadowOpacity={props.selected ? 2 : 0}
-            opacity={isOverloaded ? 0.4 : 1}
+            opacity={isOverloaded ? 0.8 : 1}
           />
         )}
       </Group>
