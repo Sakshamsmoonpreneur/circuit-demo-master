@@ -547,9 +547,9 @@ export default function CircuitCanvasOptimized() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, ratio },
-            }
+            ...el,
+            properties: { ...el.properties, ratio },
+          }
           : el
       )
     );
@@ -564,9 +564,9 @@ export default function CircuitCanvasOptimized() {
       prev.map((el) =>
         el.id === elementId
           ? {
-              ...el,
-              properties: { ...el.properties, mode },
-            }
+            ...el,
+            properties: { ...el.properties, mode },
+          }
           : el
       )
     );
@@ -628,11 +628,11 @@ export default function CircuitCanvasOptimized() {
                 prev.map((el) =>
                   el.id === newElement.id
                     ? {
-                        ...el,
-                        controller: {
-                          leds: Array(5).fill(Array(5).fill(false)),
-                        },
-                      }
+                      ...el,
+                      controller: {
+                        leds: Array(5).fill(Array(5).fill(false)),
+                      },
+                    }
                     : el
                 )
               );
@@ -858,9 +858,8 @@ export default function CircuitCanvasOptimized() {
 
           <div className="flex flex-row items-center gap-2">
             <button
-              className={`rounded-sm border-2 border-gray-300 shadow-lg text-black px-1 py-1 text-sm cursor-pointer ${
-                simulationRunning ? "bg-red-300" : "bg-emerald-300"
-              } flex items-center space-x-2 hover:shadow-emerald-600 hover:scale-105`}
+              className={`rounded-sm border-2 border-gray-300 shadow-lg text-black px-1 py-1 text-sm cursor-pointer ${simulationRunning ? "bg-red-300" : "bg-emerald-300"
+                } flex items-center space-x-2 hover:shadow-emerald-600 hover:scale-105`}
               onClick={() =>
                 simulationRunning ? stopSimulation() : startSimulation()
               }
@@ -938,7 +937,7 @@ export default function CircuitCanvasOptimized() {
                       const updatedWires = wires.filter(
                         (w) =>
                           getNodeParent(w.fromNodeId)?.id !==
-                            updatedElement.id &&
+                          updatedElement.id &&
                           getNodeParent(w.toNodeId)?.id !== updatedElement.id
                       );
                       setWires(updatedWires);
@@ -1169,9 +1168,8 @@ export default function CircuitCanvasOptimized() {
       </div>
 
       <div
-        className={`transition-all duration-300 h-max mt-14 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${
-          showPalette ? "w-72" : "w-10"
-        } `}
+        className={`transition-all duration-300 h-max mt-15 m-0.5 overflow-visible absolute top-0 right-0 z-30 ${showPalette ? "w-72" : "w-10"
+          } `}
         style={{
           pointerEvents: "auto",
           // Glass effect
