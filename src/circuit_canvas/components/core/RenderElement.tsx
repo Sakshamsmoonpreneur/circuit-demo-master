@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CircuitElement } from "@/circuit_canvas/types/circuit";
 import { Rect, Group, Text, Label, Tag } from "react-konva"; // <-- Add Text
 import { KonvaEventObject } from "konva/lib/Node";
+import { getElementCenter } from "@/circuit_canvas/utils/rotationUtils";
 import Lightbulb from "@/circuit_canvas/components/elements/Lightbulb";
 import Battery from "@/circuit_canvas/components/elements/Battery";
 import Led from "@/circuit_canvas/components/elements/Led";
@@ -27,11 +28,14 @@ export default function RenderElement({
   isSimulationOn?: boolean;
 }) {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const center = getElementCenter(element);
 
   return (
     <Group
       x={element.x}
       y={element.y}
+      offsetX={center.x}
+      offsetY={center.y}
       rotation={element.rotation || 0}
       onDragMove={props.onDragMove}
       onDragStart={props.onDragStart}
