@@ -21,6 +21,7 @@ type ShortcutArgs = {
   getNodeParent: (nodeId: string) => CircuitElement | null | undefined;
   undo: () => void;
   toggleSimulation: () => void;
+  updateWiresDirect?: () => void; // Add wire update function
 };
 
 /**
@@ -168,6 +169,13 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
                   : el
               )
             );
+            // Update wires immediately after rotation to prevent lag
+            if (args.updateWiresDirect) {
+              // Use setTimeout to ensure the element state update is processed first
+              setTimeout(() => {
+                args.updateWiresDirect!();
+              }, 0);
+            }
             stopSimulation();
           },
         };
