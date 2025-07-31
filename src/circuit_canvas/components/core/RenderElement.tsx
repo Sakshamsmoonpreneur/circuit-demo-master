@@ -117,6 +117,12 @@ export default function RenderElement({
           }
           selected={props.selectedElementId === element.id}
           isSimulationOn={props.isSimulationOn}
+          pins={
+            (element.controller?.pins as Record<
+              string,
+              { digital?: number }
+            >) ?? {}
+          }
         />
       )}
 
