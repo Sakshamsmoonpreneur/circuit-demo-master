@@ -629,6 +629,7 @@ export default function CircuitCanvasOptimized() {
                         ...el,
                         controller: {
                           leds: Array(5).fill(Array(5).fill(false)),
+                          pins: {},
                         },
                       }
                     : el
@@ -641,6 +642,15 @@ export default function CircuitCanvasOptimized() {
               setElements((prev) =>
                 prev.map((el) =>
                   el.id === newElement.id ? { ...el, controller: { leds } } : el
+                )
+              );
+            }
+            if (event.type === "pin-change") {
+              const state = await simulator.getStates();
+              const pins = state.pins;
+              setElements((prev) =>
+                prev.map((el) =>
+                  el.id === newElement.id ? { ...el, controller: { pins } } : el
                 )
               );
             }

@@ -79,9 +79,7 @@ export default function Page() {
       <div style={{ marginTop: 20 }}>
         <button
           onClick={() =>
-            simulatorRef.current
-              ?.getMicrobitInstance()
-              ?.input._press_button("A")
+            simulatorRef.current?.getMicrobitInstance()?.pressButton("A")
           }
           style={{
             borderRadius: "50%",
@@ -98,9 +96,7 @@ export default function Page() {
         </button>
         <button
           onClick={() =>
-            simulatorRef.current
-              ?.getMicrobitInstance()
-              ?.input._press_button("B")
+            simulatorRef.current?.getMicrobitInstance()?.pressButton("B")
           }
           style={{
             borderRadius: "50%",

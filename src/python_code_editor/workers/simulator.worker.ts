@@ -105,7 +105,7 @@ class Simulator {
     if (event !== "A" && event !== "B") {
       throw new Error(`Unsupported input event: ${event}`);
     }
-    this.microbit.input._press_button(event);
+    this.microbit.pressButton(event);
   }
 }
 
