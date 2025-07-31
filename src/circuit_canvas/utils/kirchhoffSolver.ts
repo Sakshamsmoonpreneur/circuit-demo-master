@@ -181,6 +181,7 @@ function getElementsWithCurrent(elements: CircuitElement[]) {
   return elements.filter(
     (e) =>
       (e.type === "battery" && e.nodes.length === 2) ||
+      e.type === "microbit" ||
       (e.type === "multimeter" && e.properties?.mode === "current")
   );
 }
@@ -265,6 +266,19 @@ function buildMNAMatrices(
         el.nodes.find((n) => n.polarity === "negative")?.id ?? el.nodes[0].id;
       const pIdx = nodeIndex.get(nodeMap.get(pos)!);
       const nIdx = nodeIndex.get(nodeMap.get(neg)!);
+      const idx = currentMap.get(el.id)!;
+      if (pIdx !== undefined) B[pIdx][idx] -= 1;
+      if (nIdx !== undefined) B[nIdx][idx] += 1;
+      if (pIdx !== undefined) C[idx][pIdx] += 1;
+      if (nIdx !== undefined) C[idx][nIdx] -= 1;
+      D[idx][idx] += el.properties?.resistance ?? 0;
+      E[idx] = el.properties?.voltage ?? 0;
+    } else if (el.type === "microbit") {
+      // get ground and 3.3v pins (nodes)
+      const pos = el.nodes.find((n) => n.placeholder === "3.3V")?.id;
+      const neg = el.nodes.find((n) => n.placeholder === "GND")?.id;
+      const pIdx = nodeIndex.get(nodeMap.get(pos!)!);
+      const nIdx = nodeIndex.get(nodeMap.get(neg!)!);
       const idx = currentMap.get(el.id)!;
       if (pIdx !== undefined) B[pIdx][idx] -= 1;
       if (nIdx !== undefined) B[nIdx][idx] += 1;
@@ -362,6 +376,10 @@ function computeElementResults(
       voltage = totalVoltage;
       power = totalPower;
     } else if (el.type === "battery") {
+      const idx = currentMap.get(el.id);
+      if (idx !== undefined) current = x[n + idx];
+      power = voltage * current;
+    } else if (el.type === "microbit") {
       const idx = currentMap.get(el.id);
       if (idx !== undefined) current = x[n + idx];
       power = voltage * current;
