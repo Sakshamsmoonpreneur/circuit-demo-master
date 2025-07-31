@@ -275,6 +275,8 @@ export default function createElement(
       },
     ],
     properties: {
+      voltage: props.properties?.voltage ?? 3.3,
+      resistance: props.properties?.resistance ?? 0,
       ...props.properties,
     },
   };

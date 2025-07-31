@@ -56,5 +56,6 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "microbit",
     label: "Microbit",
     iconPath: "assets/circuit_canvas/elements/microbit.svg",
+    defaultProps: { voltage: 3.3, resistance: 0 },
   },
 ];
