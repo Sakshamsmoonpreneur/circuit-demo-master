@@ -304,12 +304,32 @@ function getNodeMappings(effectiveNodeIds: Set<string>) {
 }
 
 function getElementsWithCurrent(elements: CircuitElement[]) {
-  return elements.filter(
+  const result = elements.filter(
     (e) =>
       (e.type === "battery" && e.nodes.length === 2) ||
       e.type === "microbit" ||
       (e.type === "multimeter" && e.properties?.mode === "current")
   );
+
+  // Add extra entries for microbit pins that are powered on (digital: 1)
+  for (const e of elements) {
+    if (e.type === "microbit") {
+      const pins =
+        (e.controller?.pins as Record<string, { digital?: number }>) ?? {};
+      for (const node of e.nodes) {
+        const pinName = node.placeholder;
+        if (pinName && pinName.startsWith("P")) {
+          const pinState = pins[pinName];
+          // Only add if the pin is powered on (digital: 1)
+          if (pinState?.digital === 1) {
+            result.push({ ...e, id: e.id + `-${pinName}` });
+          }
+        }
+      }
+    }
+  }
+
+  return result;
 }
 
 function mapCurrentSourceIndices(elements: CircuitElement[]) {
@@ -462,6 +482,47 @@ function buildMNAMatrices(
       if (nIdx !== undefined) C[idx][nIdx] -= 1;
       D[idx][idx] += el.properties?.resistance ?? 0;
       E[idx] = el.properties?.voltage ?? 3.3;
+
+      // Handle programmable pins (P0, P1, P2, etc.)
+      console.log(el.controller ?? "No controller found");
+      const pins =
+        (el.controller?.pins as Record<string, { digital?: number }>) ?? {};
+      for (const node of el.nodes) {
+        const pinName = node.placeholder;
+        console.log(`      Processing pin: ${pinName}`);
+        if (pinName && pinName.startsWith("P") && nodeMap.has(node.id)) {
+          const pinState = pins[pinName];
+          // test P0
+          // if (pinName == "P0") {
+          //   pinState.digital = 1; // Simulate pin P0 being active
+          // }
+          if (pinState?.digital === 1) {
+            // Create another voltage source for this active pin to GND
+            const pinIdx = nodeIndex.get(nodeMap.get(node.id)!);
+            const pinCurrentIdx = currentMap.get(el.id + `-${pinName}`);
+
+            if (
+              pinIdx !== undefined &&
+              pinCurrentIdx !== undefined &&
+              nIdx !== undefined
+            ) {
+              console.log(
+                `      Active pin ${pinName}: creating 3.3V source (pin index: ${pinIdx}, current index: ${pinCurrentIdx})`
+              );
+              B[pinIdx][pinCurrentIdx] -= 1;
+              B[nIdx][pinCurrentIdx] += 1;
+              C[pinCurrentIdx][pinIdx] += 1;
+              C[pinCurrentIdx][nIdx] -= 1;
+              D[pinCurrentIdx][pinCurrentIdx] += el.properties?.resistance ?? 0;
+              E[pinCurrentIdx] = 3.3;
+            }
+          } else {
+            console.log(
+              `      Pin ${pinName}: inactive (digital: ${pinState?.digital})`
+            );
+          }
+        }
+      }
     } else if (el.type === "multimeter" && el.properties?.mode === "current") {
       const idx = currentMap.get(el.id)!;
       if (ai !== undefined) B[ai][idx] -= 1;
