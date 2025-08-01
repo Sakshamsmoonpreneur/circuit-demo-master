@@ -51,15 +51,17 @@ export default function UnifiedEditor({
   const lastCodeRef = useRef<string>("");
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevControllerRef = useRef<string | null>(activeControllerId);
+  const localCodeRef = useRef<string>("");
 
   // Get current code
-  const currentCode = controllerCodeMap[activeControllerId ?? ""] ?? "";
+  let currentCode = controllerCodeMap[activeControllerId ?? ""] ?? "";
 
   // Update local code when controller changes or when blocks update the code
   useEffect(() => {
     if (!isUpdatingFromBlocks) {
       setLocalCode(currentCode);
     }
+    localCodeRef.current = currentCode;
   }, [currentCode, activeControllerId, isUpdatingFromBlocks]);
 
   // Save any pending changes when switching controllers
@@ -174,6 +176,7 @@ export default function UnifiedEditor({
               setIsUpdatingFromBlocks(true);
 
               const generatedCode = converter.blocksToPython();
+              console.log("generated code:", generatedCode);
 
               // Only update if code actually changed
               if (generatedCode !== lastCodeRef.current) {
@@ -200,7 +203,10 @@ export default function UnifiedEditor({
 
       // Step 6: Convert current code to blocks if we have code
       setTimeout(() => {
+        const currentCode = localCodeRef.current;
+        console.log(currentCode);
         if (workspace && currentCode.trim() && converter) {
+          console.log("hello world!!!");
           try {
             converter.pythonToBlocks(currentCode);
             lastCodeRef.current = currentCode;
@@ -388,7 +394,6 @@ export default function UnifiedEditor({
 
       // Update local state immediately for responsive UI
       setLocalCode(newCode);
-
       // Clear existing timeout
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
