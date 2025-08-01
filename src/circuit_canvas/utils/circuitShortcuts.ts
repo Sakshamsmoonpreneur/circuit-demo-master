@@ -62,7 +62,7 @@ export function getShortcutMetadata(): ShortcutMetadata[] {
     {
       name: "Rotate element",
       description: "Rotate selected element by 30 degrees clockwise",
-      keys: ["r"],
+      keys: ["shift", "r"],
     },
   ];
 }
@@ -102,7 +102,10 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
       case "ctrl+l":
         return {
           ...meta,
-          handler: () => resetState(),
+          handler: () => {
+            setSelectedElement(null);
+            resetState();
+          }
         };
       case "ctrl+z":
         return {
@@ -153,7 +156,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
             toggleSimulation();
           },
         };
-      case "r":
+      case "shift+r":
         return {
           ...meta,
           handler: () => {
@@ -163,9 +166,9 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
               prev.map((el) =>
                 el.id === selectedElement.id
                   ? {
-                      ...el,
-                      rotation: ((el.rotation || 0) + 30) % 360,
-                    }
+                    ...el,
+                    rotation: ((el.rotation || 0) + 30) % 360,
+                  }
                   : el
               )
             );
@@ -182,7 +185,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
       default:
         return {
           ...meta,
-          handler: () => {},
+          handler: () => { },
         };
     }
   });
