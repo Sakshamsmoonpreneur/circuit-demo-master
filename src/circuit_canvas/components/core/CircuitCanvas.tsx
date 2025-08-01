@@ -27,17 +27,11 @@ import { SimulatorProxy as Simulator } from "@/python_code_editor/lib/SimulatorP
 import CircuitSelector from "@/circuit_canvas/components/toolbar/panels/Palette";
 import { FaArrowRight, FaCode, FaPlay, FaStop } from "react-icons/fa6";
 import { VscDebug } from "react-icons/vsc";
-import CodeEditor from "@/python_code_editor/components/CodeEditor";
-import Loader from "@/common/utils/loader";
-import InfiniteGrid from "@/circuit_canvas/components/core/InfiniteGrid";
-import OptimizedGrid from "@/circuit_canvas/components/core/OptimizedGrid";
-import AnimatedCircle from "@/circuit_canvas/components/core/AnimatedCircle";
+import Loader from "@/circuit_canvas/utils/loadingCircuit";
 import {
   ColorPaletteDropdown,
   defaultColors,
 } from "@/circuit_canvas/components/toolbar/customization/ColorPallete";
-import BlocklyEditor from "@/blockly_editor/components/BlocklyEditor";
-import BlockPlusTextEditor from "@/blockly_editor/components/BlockPlusCodeEditor";
 import UnifiedEditor from "@/blockly_editor/components/UnifiedEditor";
 import { useViewport } from "@/circuit_canvas/hooks/useViewport";
 import HighPerformanceGrid from "./HighPerformanceGrid";
@@ -1230,12 +1224,6 @@ export default function CircuitCanvasOptimized() {
           {/* Editor */}
           <div className="flex flex-col h-full w-full">
             <div className="flex-1 overflow-hidden">
-              {/* <UnifiedEditor
-                controllerCodeMap={controllerCodeMap}
-                activeControllerId={activeControllerId}
-                setControllerCodeMap={setControllerCodeMap}
-                stopSimulation={stopSimulation}
-              /> */}
               <UnifiedEditor
                 controllerCodeMap={controllerCodeMap}
                 activeControllerId={activeControllerId}

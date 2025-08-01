@@ -14,7 +14,8 @@ import { pythonGenerator } from "blockly/python";
 import {
   BlocklyPythonIntegration,
   BidirectionalConverter,
-} from "../utils/blocklyPythonIntegration";
+}
+  from '@/blockly_editor/utils/blocklyPythonConvertor'
 import CodeEditor from "@/python_code_editor/components/CodeEditor";
 
 type EditorMode = "block" | "text";
@@ -547,70 +548,74 @@ export default function UnifiedEditor({
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* Mode Selector Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-300 bg-gray-50">
-        <span className="text-sm font-medium text-gray-700">Editor Mode:</span>
-
-        {/* Slider Toggle */}
-        <div className="flex items-center space-x-3">
-          <span
-            className={`text-sm ${
-              editorMode === "text"
-                ? "font-semibold text-blue-600"
-                : "text-gray-500"
-            }`}
-          >
-            Text
-          </span>
-          <button
-            onClick={() =>
-              handleModeChange(editorMode === "text" ? "block" : "text")
-            }
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-              editorMode === "block" ? "bg-blue-600" : "bg-gray-300"
-            }`}
-            role="switch"
-            aria-checked={editorMode === "block"}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
-                editorMode === "block" ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-          <span
-            className={`text-sm ${
-              editorMode === "block"
-                ? "font-semibold text-blue-600"
-                : "text-gray-500"
-            }`}
-          >
-            Block
-          </span>
+      {!activeControllerId ? (
+        <div className="flex flex-1 items-center justify-center h-full w-full shadow-lg text-gray-500 text-lg font-semibold bg-white bg-opacity-20 backdrop-blur-md">
+          Please select a controller.
         </div>
-      </div>
+      ) : (
+        <>
+          {/* Mode Selector Header */}
+          <div className="flex items-center justify-between p-3 border-b border-gray-300 bg-gray-50">
+            <span className="text-sm font-medium text-gray-700">Editor Mode:</span>
+            {/* Slider Toggle */}
+            <div className="flex items-center space-x-3">
+              <span
+                className={`text-sm ${editorMode === "text"
+                  ? "font-semibold text-blue-600"
+                  : "text-gray-500"
+                  }`}
+              >
+                Text
+              </span>
+              <button
+                onClick={() =>
+                  handleModeChange(editorMode === "text" ? "block" : "text")
+                }
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${editorMode === "block" ? "bg-blue-600" : "bg-gray-300"
+                  }`}
+                role="switch"
+                aria-checked={editorMode === "block"}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${editorMode === "block" ? "translate-x-6" : "translate-x-1"
+                    }`}
+                />
+              </button>
+              <span
+                className={`text-sm ${editorMode === "block"
+                  ? "font-semibold text-blue-600"
+                  : "text-gray-500"
+                  }`}
+              >
+                Block
+              </span>
+            </div>
+          </div>
 
-      {/* Editor Content */}
-      <div className="flex-1 overflow-hidden">
-        {editorMode === "text" ? (
-          <CodeEditor code={localCode} onChange={handleCodeChange} />
-        ) : (
-          <div
-            ref={blocklyRef}
-            className="w-full h-full"
-            style={{
-              minHeight: "400px",
-              minWidth: "300px",
-              width: "100%",
-              height: "100%",
-              position: "relative",
-              backgroundColor: "#f9f9f9", // Add background to see container
-            }}
-          />
-        )}
-      </div>
+          {/* Editor Content */}
+          <div className="flex-1 overflow-hidden">
+            {editorMode === "text" ? (
+              <CodeEditor code={localCode} onChange={handleCodeChange} />
+            ) : (
+              <div
+                ref={blocklyRef}
+                className="w-full h-full"
+                style={{
+                  minHeight: "400px",
+                  minWidth: "300px",
+                  width: "100%",
+                  height: "100%",
+                  position: "relative",
+                  backgroundColor: "#f9f9f9",
+                }}
+              />
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
+
 }
 
 /**
