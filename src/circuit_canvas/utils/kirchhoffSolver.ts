@@ -195,10 +195,8 @@ function getConnectedSubcircuits(
     const groupSet = new Set(group);
     const subElements = elements.filter((el) => {
       if (el.type === "microbit") {
-        // Include microbit if either 3.3V or GND is in the group
-        const pos = el.nodes.find((n) => n.placeholder === "3.3V")?.id;
-        const neg = el.nodes.find((n) => n.placeholder === "GND")?.id;
-        return (pos && groupSet.has(pos)) || (neg && groupSet.has(neg));
+        // Include microbit if ANY of its nodes are in the group (including P0, P1, P2, etc.)
+        return el.nodes.some((n) => groupSet.has(n.id));
       } else {
         // For other elements, include if any node is in the group
         return el.nodes.some((n) => groupSet.has(n.id));
@@ -226,24 +224,23 @@ function findEquivalenceClasses(elements: CircuitElement[], wires: Wire[]) {
   // Add only connected nodes from elements, or all nodes for non-microbit elements
   elements.forEach((e) => {
     if (e.type === "microbit") {
-      // For microbit, only add nodes that are actually connected via wires
-      // or add 3.3V and GND if any of them are connected
+      // For microbit, add all nodes that are actually connected via wires
+      // AND also add 3.3V and GND if any pin is connected (since they're needed for voltage sources)
       const pos = e.nodes.find((n) => n.placeholder === "3.3V")?.id;
       const neg = e.nodes.find((n) => n.placeholder === "GND")?.id;
 
+      // Check if any microbit pin is connected
+      const anyPinConnected = e.nodes.some((n) => allNodeIds.has(n.id));
+
       e.nodes.forEach((n) => {
-        // Only add node if it's connected via wire, or if it's 3.3V/GND and the other is connected
         const isConnected = allNodeIds.has(n.id);
         const is33V = n.id === pos;
         const isGND = n.id === neg;
-        const other33VConnected = pos && allNodeIds.has(pos);
-        const otherGNDConnected = neg && allNodeIds.has(neg);
 
-        if (
-          isConnected ||
-          (is33V && otherGNDConnected) ||
-          (isGND && other33VConnected)
-        ) {
+        // Add node if:
+        // 1. It's directly connected via wire, OR
+        // 2. It's 3.3V or GND and any pin is connected (needed for voltage sources)
+        if (isConnected || ((is33V || isGND) && anyPinConnected)) {
           parent.set(n.id, n.id);
           allNodeIds.add(n.id);
         }
@@ -296,8 +293,11 @@ function zeroOutComputed(elements: CircuitElement[]) {
 
 function getNodeMappings(effectiveNodeIds: Set<string>) {
   const list = Array.from(effectiveNodeIds);
-  const groundId = list[0];
-  const nonGroundIds = list.slice(1);
+  
+  // Try to find GND node as ground reference first
+  let groundId = list.find(id => id.includes('GND')) || list[0];
+  const nonGroundIds = list.filter(id => id !== groundId);
+  
   const nodeIndex = new Map<string, number>();
   nonGroundIds.forEach((id, i) => nodeIndex.set(id, i));
   return { groundId, nonGroundIds, nodeIndex };
@@ -484,14 +484,16 @@ function buildMNAMatrices(
       E[idx] = el.properties?.voltage ?? 3.3;
 
       // Handle programmable pins (P0, P1, P2, etc.)
-      console.log(el.controller ?? "No controller found");
+      console.log("Controller data:", el.controller);
       const pins =
         (el.controller?.pins as Record<string, { digital?: number }>) ?? {};
+      console.log("Pins data:", pins);
       for (const node of el.nodes) {
         const pinName = node.placeholder;
         console.log(`      Processing pin: ${pinName}`);
         if (pinName && pinName.startsWith("P") && nodeMap.has(node.id)) {
           const pinState = pins[pinName];
+          console.log(`      Pin ${pinName} state:`, pinState);
           // test P0
           // if (pinName == "P0") {
           //   pinState.digital = 1; // Simulate pin P0 being active
@@ -501,20 +503,31 @@ function buildMNAMatrices(
             const pinIdx = nodeIndex.get(nodeMap.get(node.id)!);
             const pinCurrentIdx = currentMap.get(el.id + `-${pinName}`);
 
+            console.log(`      Pin ${pinName} voltage source setup:`);
+            console.log(`        - Pin node ID: ${node.id}`);
+            console.log(`        - Pin node mapped to: ${nodeMap.get(node.id)}`);
+            console.log(`        - Pin index: ${pinIdx}`);
+            console.log(`        - Pin current ID: ${el.id + `-${pinName}`}`);
+            console.log(`        - Pin current index: ${pinCurrentIdx}`);
+            console.log(`        - GND index: ${nIdx}`);
+
             if (
               pinIdx !== undefined &&
-              pinCurrentIdx !== undefined &&
-              nIdx !== undefined
+              pinCurrentIdx !== undefined
             ) {
               console.log(
                 `      Active pin ${pinName}: creating 3.3V source (pin index: ${pinIdx}, current index: ${pinCurrentIdx})`
               );
               B[pinIdx][pinCurrentIdx] -= 1;
-              B[nIdx][pinCurrentIdx] += 1;
+              // Only add GND term if GND has an index (not ground reference)
+              if (nIdx !== undefined) B[nIdx][pinCurrentIdx] += 1;
               C[pinCurrentIdx][pinIdx] += 1;
-              C[pinCurrentIdx][nIdx] -= 1;
+              // Only add GND term if GND has an index (not ground reference)
+              if (nIdx !== undefined) C[pinCurrentIdx][nIdx] -= 1;
               D[pinCurrentIdx][pinCurrentIdx] += el.properties?.resistance ?? 0;
               E[pinCurrentIdx] = 3.3;
+            } else {
+              console.log(`      ❌ Pin ${pinName}: voltage source creation failed - missing indices`);
             }
           } else {
             console.log(
