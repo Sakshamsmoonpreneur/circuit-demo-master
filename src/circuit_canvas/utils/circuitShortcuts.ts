@@ -22,6 +22,7 @@ type ShortcutArgs = {
   undo: () => void;
   toggleSimulation: () => void;
   updateWiresDirect?: () => void; // Add wire update function
+  setActiveControllerId: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
 /**
@@ -86,6 +87,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
     getNodeParent,
     undo,
     toggleSimulation,
+    setActiveControllerId,
   } = args;
 
   return getShortcutMetadata().map((meta) => {
@@ -97,6 +99,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
             setCreatingWireStartNode(null);
             setEditingWire(null);
             setSelectedElement(null);
+            setActiveControllerId(null);
           },
         };
       case "ctrl+l":
@@ -105,7 +108,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
           handler: () => {
             setSelectedElement(null);
             resetState();
-          }
+          },
         };
       case "ctrl+z":
         return {
@@ -166,9 +169,9 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
               prev.map((el) =>
                 el.id === selectedElement.id
                   ? {
-                    ...el,
-                    rotation: ((el.rotation || 0) + 30) % 360,
-                  }
+                      ...el,
+                      rotation: ((el.rotation || 0) + 30) % 360,
+                    }
                   : el
               )
             );
@@ -185,7 +188,7 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
       default:
         return {
           ...meta,
-          handler: () => { },
+          handler: () => {},
         };
     }
   });

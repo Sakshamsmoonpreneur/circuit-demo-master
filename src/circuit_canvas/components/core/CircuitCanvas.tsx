@@ -363,6 +363,7 @@ export default function CircuitCanvasOptimized() {
         resetState,
         getNodeParent,
         updateWiresDirect,
+        setActiveControllerId,
         toggleSimulation: () => {
           if (simulationRunning) {
             stopSimulation();

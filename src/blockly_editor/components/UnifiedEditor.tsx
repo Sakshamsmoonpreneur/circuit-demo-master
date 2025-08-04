@@ -14,8 +14,7 @@ import { pythonGenerator } from "blockly/python";
 import {
   BlocklyPythonIntegration,
   BidirectionalConverter,
-}
-  from '@/blockly_editor/utils/blocklyPythonConvertor'
+} from "@/blockly_editor/utils/blocklyPythonConvertor";
 import CodeEditor from "@/python_code_editor/components/CodeEditor";
 
 type EditorMode = "block" | "text";
@@ -552,23 +551,27 @@ export default function UnifiedEditor({
   }, [editorMode, workspaceReady]);
 
   return (
-    <div className="flex flex-col h-full w-full">
+    <div className="flex flex-col h-full w-full bg-white rounded-xl shadow-sm overflow-hidden">
       {!activeControllerId ? (
-        <div className="flex flex-1 items-center justify-center h-full w-full shadow-lg text-gray-500 text-lg font-semibold bg-white bg-opacity-20 backdrop-blur-md">
+        <div className="flex flex-1 items-center justify-center text-gray-500 text-lg font-medium bg-gray-50">
           Please select a controller.
         </div>
       ) : (
         <>
           {/* Mode Selector Header */}
-          <div className="flex items-center justify-between p-3 border-b border-gray-300 bg-gray-50">
-            <span className="text-sm font-medium text-gray-700">Editor Mode:</span>
-            {/* Slider Toggle */}
-            <div className="flex items-center space-x-3">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-100">
+            <span className="text-sm text-gray-700 font-medium">
+              Editor Mode
+            </span>
+
+            {/* Toggle */}
+            <div className="flex items-center gap-3">
               <span
-                className={`text-sm ${editorMode === "text"
-                  ? "font-semibold text-blue-600"
-                  : "text-gray-500"
-                  }`}
+                className={`text-sm transition-colors ${
+                  editorMode === "text"
+                    ? "font-semibold text-blue-600"
+                    : "text-gray-500"
+                }`}
               >
                 Text
               </span>
@@ -576,21 +579,24 @@ export default function UnifiedEditor({
                 onClick={() =>
                   handleModeChange(editorMode === "text" ? "block" : "text")
                 }
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${editorMode === "block" ? "bg-blue-600" : "bg-gray-300"
-                  }`}
+                className={`relative w-10 h-5 flex items-center bg-gray-300 rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                  editorMode === "block" ? "bg-blue-600" : "bg-gray-300"
+                }`}
                 role="switch"
                 aria-checked={editorMode === "block"}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${editorMode === "block" ? "translate-x-6" : "translate-x-1"
-                    }`}
+                  className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
+                    editorMode === "block" ? "translate-x-5" : "translate-x-0"
+                  }`}
                 />
               </button>
               <span
-                className={`text-sm ${editorMode === "block"
-                  ? "font-semibold text-blue-600"
-                  : "text-gray-500"
-                  }`}
+                className={`text-sm transition-colors ${
+                  editorMode === "block"
+                    ? "font-semibold text-blue-600"
+                    : "text-gray-500"
+                }`}
               >
                 Block
               </span>
@@ -598,7 +604,7 @@ export default function UnifiedEditor({
           </div>
 
           {/* Editor Content */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-hidden bg-white">
             {editorMode === "text" ? (
               <CodeEditor code={localCode} onChange={handleCodeChange} />
             ) : (
@@ -606,12 +612,10 @@ export default function UnifiedEditor({
                 ref={blocklyRef}
                 className="w-full h-full"
                 style={{
-                  minHeight: "400px",
+                  minHeight: "200px",
                   minWidth: "300px",
-                  width: "100%",
                   height: "100%",
-                  position: "relative",
-                  backgroundColor: "#f9f9f9",
+                  backgroundColor: "#f0f4f8",
                 }}
               />
             )}
@@ -620,7 +624,6 @@ export default function UnifiedEditor({
       )}
     </div>
   );
-
 }
 
 /**
