@@ -72,6 +72,10 @@ export default function CircuitCanvasOptimized() {
 
   const [elements, setElements] = useState<CircuitElement[]>([]);
   const [wires, setWires] = useState<Wire[]>([]);
+  const wiresRef = useRef<Wire[]>(wires);
+  useEffect(() => {
+    wiresRef.current = wires;
+  }, [wires]);
   const [wireCounter, setWireCounter] = useState(0);
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(false);
@@ -662,7 +666,8 @@ export default function CircuitCanvasOptimized() {
               console.log(pins);
 
               if (simulationRunningRef.current) {
-                computeCircuit(wires);
+                console.log("Simulation running, computing circuit...");
+                computeCircuit(wiresRef.current);
               } else {
                 console.log(
                   "Simulation not running, skipping circuit computation."
