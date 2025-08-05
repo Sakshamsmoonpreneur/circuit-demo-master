@@ -16,6 +16,7 @@ import {
   BidirectionalConverter,
 } from "@/blockly_editor/utils/blocklyPythonConvertor";
 import CodeEditor from "@/python_code_editor/components/CodeEditor";
+import { createToolboxXmlFromBlocks } from "../utils/sharedBlockDefinitions";
 
 type EditorMode = "block" | "text";
 
@@ -630,6 +631,7 @@ export default function UnifiedEditor({
  * Create a simple toolbox for initial testing
  */
 function createSimpleToolbox(): string {
+  return createToolboxXmlFromBlocks();
   return `
 <xml xmlns="https://developers.google.com/blockly/xml">
   <category name="Display" colour="#4C97FF">
