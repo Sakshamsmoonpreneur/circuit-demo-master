@@ -1,4 +1,5 @@
 import * as Blockly from "blockly";
+import { Order } from "blockly/python";
 
 /**
  * Shared interface for block definitions that enables bidirectional conversion
@@ -39,16 +40,16 @@ export interface SharedBlockDefinition {
 // categories with name and color
 export interface BlockCategory {
   name: string;
-  color: string;
+  color: string | number; // color can be a string (hex) or number (hue)
 }
 
 type CategoryName = (typeof BLOCK_CATEGORIES)[number]["name"];
 
 export const BLOCK_CATEGORIES: BlockCategory[] = [
-  { name: "Input", color: "#FFB74D" },
-  { name: "Output", color: "#64B5F6" },
-  { name: "Control", color: "#81C784" },
-  { name: "Logic", color: "#E57373" },
+  { name: "Basic", color: 220 },
+  { name: "Input", color: 290 },
+  { name: "Led", color: 300 },
+  { name: "Logic", color: 180.72 },
   { name: "Math", color: "#F06292" },
   { name: "Variables", color: "#BA68C8" },
 ];
@@ -90,8 +91,9 @@ function createAndInitializeBlock(
  */
 export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
   {
+    // basic blocks
     type: "show_string",
-    category: "Output",
+    category: "Basic",
     blockDefinition: {
       type: "show_string",
       message0: "show string %1",
@@ -104,7 +106,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       ],
       previousStatement: null,
       nextStatement: null,
-      colour: 230,
       tooltip: "Show a string on the display",
     },
     pythonPattern: /basic\.show_string\((['"])(.+?)\1\)/g,
@@ -135,7 +136,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       ],
       previousStatement: null,
       nextStatement: null,
-      colour: 60,
       tooltip: "Pause execution",
     },
     pythonPattern: /time\.sleep\((\d+(?:\.\d+)?)(?:\s*\/\s*1000)?\)/g,
@@ -154,56 +154,206 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       });
     },
   },
+
+  // led blocks
   {
-    type: "set_led",
+    type: "plot_led",
+    category: "Led",
     blockDefinition: {
-      type: "set_led",
-      message0: "set led x: %1 y: %2 %3 %4",
+      type: "plot_led",
+      message0: "plot x: %1 y: %2",
       args0: [
         { type: "field_number", name: "X", value: 0, min: 0, max: 4 },
         { type: "field_number", name: "Y", value: 0, min: 0, max: 4 },
-        { type: "input_dummy" },
-        {
-          type: "field_dropdown",
-          name: "STATE",
-          options: [
-            ["on", "on"],
-            ["off", "off"],
-          ],
-        },
       ],
       previousStatement: null,
       nextStatement: null,
-      colour: 230,
-      tooltip: "Set LED on or off at (x, y)",
+      tooltip: "Turn on LED at (x, y)",
     },
-    pythonPattern: /led\.(plot|unplot)\((\d+),\s*(\d+)\)/g,
+    pythonPattern: /led\.plot\((\d+),\s*(\d+)\)/g,
     pythonGenerator: (block) => {
       const x = block.getFieldValue("X");
       const y = block.getFieldValue("Y");
-      const state = block.getFieldValue("STATE");
-
-      if (state === "on") {
-        return `led.plot(${x}, ${y})\n`;
-      } else {
-        return `led.unplot(${x}, ${y})\n`;
-      }
+      return `led.plot(${x}, ${y})\n`;
     },
     pythonExtractor: (match) => ({
-      X: parseInt(match[2]),
-      Y: parseInt(match[3]),
-      STATE: match[1] === "plot" ? "on" : "off",
+      X: parseInt(match[1]),
+      Y: parseInt(match[2]),
     }),
     blockCreator: (workspace, values) => {
-      const block = workspace.newBlock("set_led");
+      const block = workspace.newBlock("plot_led");
       block.setFieldValue(values.X, "X");
       block.setFieldValue(values.Y, "Y");
-      block.setFieldValue(values.STATE, "STATE");
       return block;
     },
   },
   {
+    type: "unplot_led",
+    category: "Led",
+    blockDefinition: {
+      type: "unplot_led",
+      message0: "unplot x: %1 y: %2",
+      args0: [
+        { type: "field_number", name: "X", value: 0, min: 0, max: 4 },
+        { type: "field_number", name: "Y", value: 0, min: 0, max: 4 },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      tooltip: "Turn off LED at (x, y)",
+    },
+    pythonPattern: /led\.unplot\((\d+),\s*(\d+)\)/g,
+    pythonGenerator: (block) => {
+      const x = block.getFieldValue("X");
+      const y = block.getFieldValue("Y");
+      return `led.unplot(${x}, ${y})\n`;
+    },
+    pythonExtractor: (match) => ({
+      X: parseInt(match[1]),
+      Y: parseInt(match[2]),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("unplot_led");
+      block.setFieldValue(values.X, "X");
+      block.setFieldValue(values.Y, "Y");
+      return block;
+    },
+  },
+  {
+    type: "show_leds",
+    blockDefinition: {
+      type: "show_leds",
+      message0: "show leds %1",
+      args0: [
+        {
+          type: "field_multilinetext",
+          name: "PATTERN",
+          text: "00000\n00000\n00000\n00000\n00000",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      tooltip: "Display pattern on LEDs",
+    },
+    pythonPattern: /display\.show\(Image\((['"'])((?:[01]{5}\n?){5})\1\)\)/g,
+    pythonGenerator: (block) => {
+      const pattern = block.getFieldValue("PATTERN");
+      return `display.show(Image("${pattern}"))\n`;
+    },
+    pythonExtractor: (match) => ({
+      PATTERN: match[2],
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("show_leds");
+      block.setFieldValue(values.PATTERN, "PATTERN");
+      return block;
+    },
+  },
+  {
+    type: "toggle_led",
+    category: "Led",
+    blockDefinition: {
+      type: "toggle_led",
+      message0: "toggle x: %1 y: %2",
+      args0: [
+        { type: "field_number", name: "X", value: 0, min: 0, max: 4 },
+        { type: "field_number", name: "Y", value: 0, min: 0, max: 4 },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      tooltip: "Toggle LED at (x, y)",
+    },
+    pythonPattern: /led\.toggle\((\d+),\s*(\d+)\)/g,
+    pythonGenerator: (block) => {
+      const x = block.getFieldValue("X");
+      const y = block.getFieldValue("Y");
+      return `led.toggle(${x}, ${y})\n`;
+    },
+    pythonExtractor: (match) => ({
+      X: parseInt(match[1]),
+      Y: parseInt(match[2]),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("toggle_led");
+      block.setFieldValue(values.X, "X");
+      block.setFieldValue(values.Y, "Y");
+      return block;
+    },
+  },
+  {
+    type: "point_led",
+    category: "Led",
+    blockDefinition: {
+      type: "point_led",
+      message0: "point x: %1 y: %2",
+      args0: [
+        { type: "field_number", name: "X", value: 0, min: 0, max: 4 },
+        { type: "field_number", name: "Y", value: 0, min: 0, max: 4 },
+      ],
+      output: "Boolean",
+      tooltip: "Check if LED at (x, y) is on",
+    },
+    pythonPattern: /led\.point\((\d+),\s*(\d+)\)/g,
+    pythonGenerator: (block) => {
+      const x = block.getFieldValue("X");
+      const y = block.getFieldValue("Y");
+      return [`led.point(${x}, ${y})`, 0];
+    },
+    pythonExtractor: (match) => ({
+      X: parseInt(match[1]),
+      Y: parseInt(match[2]),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("point_led");
+      block.setFieldValue(values.X, "X");
+      block.setFieldValue(values.Y, "Y");
+      return block;
+    },
+  },
+
+  // logic blocks
+  // if statement
+  {
+    type: "if_statement",
+    category: "Logic",
+    blockDefinition: {
+      type: "if_statement",
+      message0: "if %1 %2",
+      args0: [
+        {
+          type: "input_value",
+          name: "CONDITION",
+          check: "Boolean",
+        },
+        {
+          type: "input_statement",
+          name: "DO",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      tooltip: "If statement",
+    },
+    pythonPattern: /if\s+(.*?)\s*:\s*([\s\S]*?)(?=\n(?:\S|$))/g,
+    pythonGenerator: (block, generator) => {
+      const condition = generator.valueToCode(block, "CONDITION", Order.NONE);
+      const statements = generator.statementToCode(block, "DO");
+      return `if ${condition}:\n${statements.replace(/^/gm, "    ")}`;
+    },
+    pythonExtractor: (match) => ({
+      CONDITION: match[1].trim(),
+      STATEMENTS: match[2].trim(),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("if_statement");
+      block.setFieldValue(values.CONDITION, "CONDITION");
+      return block;
+    },
+  },
+
+  // input blocks
+  {
     type: "button_is_pressed",
+    category: "Input",
     blockDefinition: {
       type: "button_is_pressed",
       message0: "button %1 is pressed",
@@ -218,7 +368,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
         },
       ],
       output: "Boolean",
-      colour: 120,
       tooltip: "Check if button is pressed",
     },
     pythonPattern: /button_([ab])\.is_pressed\(\)/gi,
@@ -239,37 +388,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
     },
   },
   {
-    type: "show_leds",
-    blockDefinition: {
-      type: "show_leds",
-      message0: "show leds %1",
-      args0: [
-        {
-          type: "field_multilinetext",
-          name: "PATTERN",
-          text: "00000\n00000\n00000\n00000\n00000",
-        },
-      ],
-      previousStatement: null,
-      nextStatement: null,
-      colour: 230,
-      tooltip: "Display pattern on LEDs",
-    },
-    pythonPattern: /display\.show\(Image\((['"'])((?:[01]{5}\n?){5})\1\)\)/g,
-    pythonGenerator: (block) => {
-      const pattern = block.getFieldValue("PATTERN");
-      return `display.show(Image("${pattern}"))\n`;
-    },
-    pythonExtractor: (match) => ({
-      PATTERN: match[2],
-    }),
-    blockCreator: (workspace, values) => {
-      const block = workspace.newBlock("show_leds");
-      block.setFieldValue(values.PATTERN, "PATTERN");
-      return block;
-    },
-  },
-  {
     type: "forever",
     blockDefinition: {
       type: "forever",
@@ -277,7 +395,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       args0: [{ type: "input_dummy" }, { type: "input_statement", name: "DO" }],
       previousStatement: null,
       nextStatement: null,
-      colour: 30,
       tooltip: "Runs code forever",
     },
     pythonPattern: /while\s+True\s*:([\s\S]*?)(?=\n(?:\S|$))/g,
@@ -300,7 +417,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       type: "on_start",
       message0: "on start %1 %2",
       args0: [{ type: "input_dummy" }, { type: "input_statement", name: "DO" }],
-      colour: 30,
       tooltip: "Runs once at the start",
       nextStatement: null,
     },
@@ -338,7 +454,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
         },
       ],
       output: "Number",
-      colour: 160,
       tooltip: "Get accelerometer reading",
     },
     pythonPattern: /accelerometer\.get_([xyz])\(\)/g,
@@ -375,7 +490,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
         },
       ],
       output: "Number",
-      colour: 280,
       tooltip: "Read analog value from pin",
     },
     pythonPattern: /pin(\d+)\.read_analog\(\)/g,
@@ -417,7 +531,6 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       ],
       previousStatement: null,
       nextStatement: null,
-      colour: 280,
       tooltip: "Write analog value to pin",
     },
     pythonPattern: /pin(\d+)\.write_analog\((\d+)\)/g,
@@ -454,6 +567,17 @@ export class SharedBlockRegistry {
    * This makes the blocks available in the Blockly editor toolbox and workspace
    */
   static registerBlocks(): void {
+    // Set block color to match category color before registering
+
+    Blockly.utils.colour.setHsvSaturation(1);
+    Blockly.utils.colour.setHsvValue(0.8314);
+    SHARED_MICROBIT_BLOCKS.forEach((block) => {
+      const category = block.category ?? "Uncategorized";
+      const categoryObj = BLOCK_CATEGORIES.find((c) => c.name === category);
+      if (categoryObj) {
+        block.blockDefinition.colour = categoryObj.color;
+      }
+    });
     const blockDefinitions = SHARED_MICROBIT_BLOCKS.map(
       (block) => block.blockDefinition
     );
@@ -676,7 +800,7 @@ export function createToolboxXmlFromBlocks(): string {
   // Helper: map category name -> color
   const categoryColorMap: Record<string, string> = {};
   BLOCK_CATEGORIES.forEach(({ name, color }) => {
-    categoryColorMap[name] = color;
+    categoryColorMap[name] = color.toString(); // Convert to string if number
   });
 
   // Group blocks by category name
@@ -747,5 +871,6 @@ export function createToolboxXmlFromBlocks(): string {
   }
 
   xml += `</xml>`;
+  console.log(xml);
   return xml;
 }
