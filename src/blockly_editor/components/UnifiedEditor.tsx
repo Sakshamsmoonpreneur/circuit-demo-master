@@ -43,6 +43,11 @@ export default function UnifiedEditor({
   const [isUpdatingFromCode, setIsUpdatingFromCode] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
   const [localCode, setLocalCode] = useState<string>(""); // Local state for code editing
+  const [validationError, setValidationError] = useState<string | null>(null); // Validation error state
+  const [isConverting, setIsConverting] = useState(false); // Loading state for conversions
+  const [conversionType, setConversionType] = useState<
+    "toBlocks" | "toText" | null
+  >(null); // Type of conversion happening
 
   // Refs
   const blocklyRef = useRef<HTMLDivElement>(null);
@@ -228,6 +233,12 @@ export default function UnifiedEditor({
             console.warn("⚠️ Could not add test block:", error);
           }
         }
+
+        // Clear loading state after workspace is fully initialized
+        setTimeout(() => {
+          setIsConverting(false);
+          setConversionType(null);
+        }, 200);
       }, 500);
     } catch (error) {
       console.error("❌ Failed to initialize workspace:", error);
@@ -237,6 +248,10 @@ export default function UnifiedEditor({
       );
       // Try to set ready anyway in case of non-critical errors
       setWorkspaceReady(true);
+
+      // Clear loading state on error
+      setIsConverting(false);
+      setConversionType(null);
     }
   }, [currentCode, isUpdatingFromCode]);
 
@@ -296,6 +311,21 @@ export default function UnifiedEditor({
       }
     };
   }, [initializeWorkspace]);
+
+  /**
+   * Safety timeout to prevent loading state from getting stuck
+   */
+  useEffect(() => {
+    if (isConverting) {
+      const timeout = setTimeout(() => {
+        console.warn("⚠️ Conversion taking too long, clearing loading state");
+        setIsConverting(false);
+        setConversionType(null);
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [isConverting]);
 
   /**
    * Handle blocks to code conversion
@@ -361,7 +391,10 @@ export default function UnifiedEditor({
     if (!bidirectionalConverter || !workspaceReady || isUpdatingFromBlocks)
       return;
 
+    setIsConverting(true);
+    setConversionType("toBlocks");
     setIsUpdatingFromCode(true);
+
     try {
       // Clear workspace
       workspaceRef.current?.clear();
@@ -369,13 +402,43 @@ export default function UnifiedEditor({
       // Use the most current code (localCode if it exists and differs, otherwise currentCode)
       const codeToConvert = localCode !== currentCode ? localCode : currentCode;
 
+      // Validate code before conversion (additional safety check)
+      const validation =
+        bidirectionalConverter.validatePythonCode(codeToConvert);
+      if (!validation.isValid) {
+        console.error(
+          "❌ Code validation failed during conversion:",
+          validation.errorMessage
+        );
+        setValidationError(
+          validation.errorMessage || "Code cannot be converted to blocks"
+        );
+        // Switch back to text mode if conversion fails
+        setEditorMode("text");
+        return;
+      }
+
       // Convert code to blocks
       bidirectionalConverter.pythonToBlocks(codeToConvert);
       lastCodeRef.current = codeToConvert;
+
+      // Clear any validation errors on successful conversion
+      setValidationError(null);
     } catch (error) {
       console.error("Error converting Python to blocks:", error);
+      // Set error message and switch back to text mode
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Unknown error during conversion";
+      setValidationError(errorMessage);
+      setEditorMode("text");
     } finally {
-      setTimeout(() => setIsUpdatingFromCode(false), 100);
+      setTimeout(() => {
+        setIsUpdatingFromCode(false);
+        setIsConverting(false);
+        setConversionType(null);
+      }, 300); // Add a small delay to ensure smooth transition
     }
   }, [
     bidirectionalConverter,
@@ -394,6 +457,12 @@ export default function UnifiedEditor({
 
       // Update local state immediately for responsive UI
       setLocalCode(newCode);
+
+      // Clear validation errors when user starts editing
+      if (validationError) {
+        setValidationError(null);
+      }
+
       // Clear existing timeout
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
@@ -417,6 +486,7 @@ export default function UnifiedEditor({
       stopSimulation,
       isUpdatingFromBlocks,
       currentCode,
+      validationError,
     ]
   );
 
@@ -446,11 +516,35 @@ export default function UnifiedEditor({
   const handleModeChange = (newMode: EditorMode) => {
     if (newMode === editorMode) return;
 
+    // Clear any existing validation errors
+    setValidationError(null);
+
     // First, flush any pending changes to avoid losing work
     const latestCode = flushPendingChanges();
 
     if (newMode === "block") {
-      // Converting to block mode
+      // Converting to block mode - validate the code first
+      console.log("🔄 Validating code before switching to block mode...");
+
+      // Validate that all code can be converted to blocks
+      const validation =
+        BlocklyPythonIntegration.validateFullConversion(latestCode);
+
+      if (!validation.isValid) {
+        // Code cannot be fully converted - show error and prevent mode switch
+        console.warn("❌ Code validation failed:", validation.errorMessage);
+        setValidationError(
+          validation.errorMessage || "Some lines cannot be converted to blocks"
+        );
+        return; // Don't switch modes
+      }
+
+      console.log("✅ Code validation passed - proceeding with mode switch");
+
+      // Set loading state for conversion to blocks
+      setIsConverting(true);
+      setConversionType("toBlocks");
+
       setEditorMode(newMode);
 
       // Always reinitialize workspace when switching to block mode
@@ -478,6 +572,10 @@ export default function UnifiedEditor({
     } else {
       // Converting to text mode - convert blocks to Python code first
       console.log("🔄 Switching to text mode - converting blocks to code...");
+
+      // Set loading state for conversion to text
+      setIsConverting(true);
+      setConversionType("toText");
 
       // Convert blocks to code before switching modes
       if (bidirectionalConverter && activeControllerId && workspaceReady) {
@@ -508,6 +606,12 @@ export default function UnifiedEditor({
 
       // Switch to text mode
       setEditorMode(newMode);
+
+      // Clear loading state after a brief delay
+      setTimeout(() => {
+        setIsConverting(false);
+        setConversionType(null);
+      }, 300);
     }
   };
 
@@ -571,6 +675,8 @@ export default function UnifiedEditor({
                 className={`text-sm transition-colors ${
                   editorMode === "text"
                     ? "font-semibold text-blue-600"
+                    : isConverting
+                    ? "text-gray-400"
                     : "text-gray-500"
                 }`}
               >
@@ -580,11 +686,17 @@ export default function UnifiedEditor({
                 onClick={() =>
                   handleModeChange(editorMode === "text" ? "block" : "text")
                 }
-                className={`relative w-10 h-5 flex items-center bg-gray-300 rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                  editorMode === "block" ? "bg-blue-600" : "bg-gray-300"
+                disabled={isConverting}
+                className={`relative w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                  isConverting
+                    ? "bg-gray-300 cursor-not-allowed opacity-60"
+                    : editorMode === "block"
+                    ? "bg-blue-600"
+                    : "bg-gray-300"
                 }`}
                 role="switch"
                 aria-checked={editorMode === "block"}
+                aria-disabled={isConverting}
               >
                 <span
                   className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
@@ -596,6 +708,8 @@ export default function UnifiedEditor({
                 className={`text-sm transition-colors ${
                   editorMode === "block"
                     ? "font-semibold text-blue-600"
+                    : isConverting
+                    ? "text-gray-400"
                     : "text-gray-500"
                 }`}
               >
@@ -604,8 +718,79 @@ export default function UnifiedEditor({
             </div>
           </div>
 
+          {/* Validation Error Display */}
+          {validationError && (
+            <div className="mx-4 mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <svg
+                  className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-red-800">
+                    Cannot switch to Block mode
+                  </h4>
+                  <p className="text-sm text-red-700 mt-1">{validationError}</p>
+                  <p className="text-xs text-red-600 mt-2">
+                    Only supported micro:bit Python commands can be converted to
+                    blocks. Please use only the available block commands or
+                    switch to text mode for advanced coding.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setValidationError(null)}
+                  className="text-red-400 hover:text-red-600 p-1"
+                  aria-label="Dismiss error"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Editor Content */}
-          <div className="flex-1 overflow-hidden bg-white">
+          <div className="flex-1 overflow-hidden bg-white relative">
+            {/* Loading Overlay */}
+            {isConverting && (
+              <div className="absolute inset-0 bg-white bg-opacity-80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-lg shadow-lg border">
+                  {/* Spinner */}
+                  <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+
+                  {/* Loading Text */}
+                  <div className="text-center">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+                      {conversionType === "toBlocks"
+                        ? "Converting to Blocks..."
+                        : "Converting to Text..."}
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {conversionType === "toBlocks"
+                        ? "Transforming your Python code into visual blocks"
+                        : "Generating Python code from your blocks"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {editorMode === "text" ? (
               <CodeEditor code={localCode} onChange={handleCodeChange} />
             ) : (
@@ -632,34 +817,4 @@ export default function UnifiedEditor({
  */
 function createSimpleToolbox(): string {
   return createToolboxXmlFromBlocks();
-  return `
-<xml xmlns="https://developers.google.com/blockly/xml">
-  <category name="Display" colour="#4C97FF">
-    <block type="show_string">
-      <field name="TEXT">Hello World!</field>
-    </block>
-    <block type="microbit_display_scroll">
-      <field name="TEXT">Hello!</field>
-    </block>
-  </category>
-  <category name="Control" colour="#FFAB19">
-    <block type="pause">
-      <field name="TIME">1000</field>
-    </block>
-  </category>
-  <category name="Input" colour="#FF6680">
-    <block type="button_is_pressed">
-      <field name="BUTTON">button_a</field>
-    </block>
-  </category>
-  <category name="Logic" colour="#5C81A6">
-    <block type="logic_boolean"></block>
-    <block type="controls_if"></block>
-  </category>
-  <category name="Math" colour="#5CB3CC">
-    <block type="math_number">
-      <field name="NUM">0</field>
-    </block>
-  </category>
-</xml>`;
 }
