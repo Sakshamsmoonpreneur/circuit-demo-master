@@ -58,12 +58,12 @@ export function getShortcutMetadata(): ShortcutMetadata[] {
     {
       name: "Start/stop simulation",
       description: "Start or stop the circuit simulation",
-      keys: ["ctrl", "space"],
+      keys: ["space"],
     },
     {
       name: "Rotate element",
       description: "Rotate selected element by 30 degrees clockwise",
-      keys: ["shift", "r"],
+      keys: ["r"],
     },
   ];
 }
@@ -152,14 +152,14 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
             stopSimulation();
           },
         };
-      case "ctrl+space":
+      case "space":
         return {
           ...meta,
           handler: () => {
             toggleSimulation();
           },
         };
-      case "shift+r":
+      case "r":
         return {
           ...meta,
           handler: () => {

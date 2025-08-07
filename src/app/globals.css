@@ -61,3 +61,8 @@ body {
   color: #ecf2fd !important;
   text-shadow: 0 0 4px rgba(30, 60, 230, 0.12);
 }
+
+/* blockly fix */
+svg[display="none"] {
+  display: none;
+}

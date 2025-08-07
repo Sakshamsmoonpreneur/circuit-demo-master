@@ -392,6 +392,7 @@ export default function CircuitCanvasOptimized() {
           });
         },
       }),
+    disableShortcut: openCodeEditor,
   });
 
   function handleStageMouseMove(e: KonvaEventObject<PointerEvent>) {
@@ -807,6 +808,29 @@ export default function CircuitCanvasOptimized() {
   const handlePropertiesPannelClose = () => {
     // setSelectedElement(null);
     setShowPropertiesPannel(false);
+  };
+
+  const handleControllerPropertyChange = (
+    controllerId: string,
+    property: string,
+    value: any
+  ) => {
+    setElements((prev) =>
+      prev.map((el) =>
+        el.id === controllerId
+          ? { ...el, controller: { ...el.controller, [property]: value } }
+          : el
+      )
+    );
+
+    // if selected controller is equal to active controller, reset selected element to the updated version
+    if (selectedElement?.id === controllerId) {
+      // setSelectedElement to the updated element
+      const updatedElement = elements.find((el) => el.id === controllerId);
+      if (updatedElement) {
+        setSelectedElement(updatedElement);
+      }
+    }
   };
 
   return (
@@ -1308,6 +1332,55 @@ export default function CircuitCanvasOptimized() {
                   </span>
                 </div>
               </div>
+
+              {/* Temperature Slider */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Temperature (°C)
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="50"
+                  value={Number(selectedElement.controller?.temperature ?? 25)}
+                  onChange={(e) =>
+                    handleControllerPropertyChange(
+                      selectedElement.id,
+                      "temperature",
+                      Number(e.target.value)
+                    )
+                  }
+                  className="w-full"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {`${selectedElement.controller?.temperature ?? 25}°C`}
+                </div>
+              </div>
+
+              {/* Brightness Slider */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Brightness (0–255)
+                </label>
+                <input
+                  type="range"
+                  min="0"
+                  max="255"
+                  value={Number(selectedElement.controller?.brightness ?? 128)}
+                  onChange={(e) =>
+                    handleControllerPropertyChange(
+                      selectedElement.id,
+                      "brightness",
+                      Number(e.target.value)
+                    )
+                  }
+                  className="w-full"
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {(selectedElement.controller?.brightness ?? 128).toString()}
+                </div>
+              </div>
+
               {/* Future simulation controls will be added here */}
             </div>
           </Window>

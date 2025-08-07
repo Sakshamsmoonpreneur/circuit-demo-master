@@ -68,6 +68,7 @@ export class MicrobitSimulator {
     plot: this.plot.bind(this),
     unplot: this.unplot.bind(this),
     point: this.point.bind(this),
+    toggle: this.toggle.bind(this),
   };
   public readonly input = {
     on_button_pressed: this.onButtonPressed.bind(this),
