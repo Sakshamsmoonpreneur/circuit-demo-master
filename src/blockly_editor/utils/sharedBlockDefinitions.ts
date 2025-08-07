@@ -124,6 +124,7 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
   },
   {
     type: "pause",
+    category: "Basic",
     blockDefinition: {
       type: "pause",
       message0: "pause %1 ms",
@@ -138,15 +139,13 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       nextStatement: null,
       tooltip: "Pause execution",
     },
-    pythonPattern: /time\.sleep\((\d+(?:\.\d+)?)(?:\s*\/\s*1000)?\)/g,
+    pythonPattern: /basic\.pause\((\d+)\)/g,
     pythonGenerator: (block) => {
       const time = block.getFieldValue("TIME");
-      return `import time\ntime.sleep(${time / 1000})\n`;
+      return `basic.pause(${time})\n`;
     },
     pythonExtractor: (match) => ({
-      TIME: match[1].includes("/")
-        ? parseFloat(match[1])
-        : parseFloat(match[1]) * 1000,
+      TIME: parseInt(match[1]),
     }),
     blockCreator: (workspace, values) => {
       return createAndInitializeBlock(workspace, "pause", {
