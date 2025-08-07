@@ -392,6 +392,7 @@ export default function CircuitCanvasOptimized() {
           });
         },
       }),
+    disableShortcut: openCodeEditor,
   });
 
   function handleStageMouseMove(e: KonvaEventObject<PointerEvent>) {
