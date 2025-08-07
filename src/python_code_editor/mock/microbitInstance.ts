@@ -266,6 +266,16 @@ export class MicrobitSimulator {
     this.eventEmitter.emit({ type: "led-change", x, y, value: 0 });
   }
 
+  private toggle(x: number, y: number) {
+    this.ledMatrix[x][y] = !this.ledMatrix[x][y];
+    this.eventEmitter.emit({
+      type: "led-change",
+      x,
+      y,
+      value: this.ledMatrix[x][y] ? 1 : 0,
+    });
+  }
+
   private point(x: number, y: number) {
     return this.ledMatrix[x][y];
   }

@@ -174,6 +174,60 @@ export class BlocklyPythonIntegration {
   }
 
   /**
+   * Validate if ALL lines of Python code can be converted to blocks
+   * This ensures complete conversion compatibility before allowing mode switch
+   * @param pythonCode The Python code to validate
+   * @returns Object with validation result and details about unconvertible lines
+   */
+  static validateFullConversion(pythonCode: string): {
+    isValid: boolean;
+    unconvertibleLines: string[];
+    lineNumbers: number[];
+    errorMessage?: string;
+  } {
+    const lines = pythonCode.split("\n");
+    const unconvertibleLines: string[] = [];
+    const lineNumbers: number[] = [];
+
+    // Process each line to check convertibility
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines and comments - these are allowed
+      if (!line || line.startsWith("#")) {
+        continue;
+      }
+
+      // Check if this line matches any known block pattern
+      const matchingBlocks = SharedBlockRegistry.matchesPythonPattern(line);
+
+      if (matchingBlocks.length === 0) {
+        // This line cannot be converted to any block
+        unconvertibleLines.push(line);
+        lineNumbers.push(i + 1); // 1-based line numbers for user display
+      }
+    }
+
+    const isValid = unconvertibleLines.length === 0;
+
+    let errorMessage: string | undefined;
+    if (!isValid) {
+      if (unconvertibleLines.length === 1) {
+        errorMessage = `Line ${lineNumbers[0]} cannot be converted to blocks: "${unconvertibleLines[0]}"`;
+      } else {
+        errorMessage = `${unconvertibleLines.length} lines cannot be converted to blocks. First unsupported line ${lineNumbers[0]}: "${unconvertibleLines[0]}"`;
+      }
+    }
+
+    return {
+      isValid,
+      unconvertibleLines,
+      lineNumbers,
+      errorMessage,
+    };
+  }
+
+  /**
    * Preview what block types would be created from Python code without actually creating them
    * Useful for showing users what will happen before conversion
    * @param pythonCode The Python code to analyze
@@ -227,9 +281,34 @@ export class BidirectionalConverter {
    * Convert Python code to Blockly blocks
    * Clears existing blocks and replaces them with blocks generated from the Python code
    * @param pythonCode The Python code to convert
+   * @throws Error if the Python code cannot be fully converted to blocks
    */
   pythonToBlocks(pythonCode: string): void {
+    // Validate that all code can be converted before proceeding
+    const validation =
+      BlocklyPythonIntegration.validateFullConversion(pythonCode);
+
+    if (!validation.isValid) {
+      throw new Error(
+        validation.errorMessage || "Code cannot be fully converted to blocks"
+      );
+    }
+
     this.integration.importPythonCode(pythonCode);
+  }
+
+  /**
+   * Validate if Python code can be fully converted to blocks
+   * @param pythonCode The Python code to validate
+   * @returns Validation result with details about any issues
+   */
+  validatePythonCode(pythonCode: string): {
+    isValid: boolean;
+    unconvertibleLines: string[];
+    lineNumbers: number[];
+    errorMessage?: string;
+  } {
+    return BlocklyPythonIntegration.validateFullConversion(pythonCode);
   }
 
   /**

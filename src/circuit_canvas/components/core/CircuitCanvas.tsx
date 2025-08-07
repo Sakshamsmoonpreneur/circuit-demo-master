@@ -35,6 +35,7 @@ import {
 import UnifiedEditor from "@/blockly_editor/components/UnifiedEditor";
 import { useViewport } from "@/circuit_canvas/hooks/useViewport";
 import HighPerformanceGrid from "./HighPerformanceGrid";
+import { Window } from "@/common/components/ui/Window";
 
 export default function CircuitCanvasOptimized() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -79,6 +80,7 @@ export default function CircuitCanvasOptimized() {
   const [wireCounter, setWireCounter] = useState(0);
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(false);
+  const [showSimulationPanel, setShowSimulationPanel] = useState(false);
   const elementsRef = useRef<CircuitElement[]>(elements);
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
@@ -178,6 +180,7 @@ export default function CircuitCanvasOptimized() {
     if (!simulationRunning) return;
 
     setSimulationRunning(false);
+    setShowSimulationPanel(false); // Hide simulation panel when simulation stops
     setElements((prev) =>
       prev.map((el) => ({
         ...el,
@@ -199,6 +202,13 @@ export default function CircuitCanvasOptimized() {
   function startSimulation() {
     setSimulationRunning(true);
     computeCircuit(wires);
+
+    // if microbit is selected, show the simulation panel
+    if (elements.some((el) => el.type === "microbit")) {
+      setShowSimulationPanel(true);
+    } else {
+      setShowSimulationPanel(false);
+    }
 
     // Run user code for all controllers
     elements.forEach((el) => {
@@ -363,6 +373,7 @@ export default function CircuitCanvasOptimized() {
         resetState,
         getNodeParent,
         updateWiresDirect,
+        setActiveControllerId,
         toggleSimulation: () => {
           if (simulationRunning) {
             stopSimulation();
@@ -1177,8 +1188,13 @@ export default function CircuitCanvasOptimized() {
                       setShowPropertiesPannel(true);
                       setActiveControllerId(null);
                       setOpenCodeEditor(false);
+                      setShowSimulationPanel(false);
                       if (element?.type === "microbit") {
                         setActiveControllerId(element.id);
+                        // Show simulation panel if simulation is running and microbit is selected
+                        if (simulationRunning) {
+                          setShowSimulationPanel(true);
+                        }
                       }
                     }}
                     selectedElementId={selectedElement?.id || null}
@@ -1264,6 +1280,38 @@ export default function CircuitCanvasOptimized() {
           </div>
         </div>
       )}
+
+      {/* Simulation Panel - appears when microbit is selected during simulation */}
+      {showSimulationPanel &&
+        selectedElement &&
+        selectedElement.type === "microbit" && (
+          <Window
+            title="Simulation Control"
+            initialPosition={{
+              x: openCodeEditor
+                ? window.innerWidth - 824
+                : window.innerWidth - 404,
+              y: window.innerHeight / 2 - 200,
+            }}
+            initialSize={{ width: 320, height: 400 }}
+            onClose={() => setShowSimulationPanel(false)}
+            backgroundColor="#ffffff"
+          >
+            <div className="p-4">
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-gray-700 mb-2">
+                  Selected Device
+                </h3>
+                <div className="bg-gray-50 p-3 rounded border">
+                  <span className="font-mono text-sm">
+                    {selectedElement.id}
+                  </span>
+                </div>
+              </div>
+              {/* Future simulation controls will be added here */}
+            </div>
+          </Window>
+        )}
     </div>
   );
 }
