@@ -60,11 +60,6 @@ export function getShortcutMetadata(): ShortcutMetadata[] {
       description: "Start or stop the circuit simulation",
       keys: ["space"],
     },
-    {
-      name: "Rotate element",
-      description: "Rotate selected element by 30 degrees clockwise",
-      keys: ["r"],
-    },
   ];
 }
 
@@ -159,36 +154,10 @@ export function getCircuitShortcuts(args: ShortcutArgs): ShortcutDefinition[] {
             toggleSimulation();
           },
         };
-      case "r":
-        return {
-          ...meta,
-          handler: () => {
-            if (!selectedElement || selectedElement.type === "wire") return;
-            pushToHistory();
-            setElements((prev) =>
-              prev.map((el) =>
-                el.id === selectedElement.id
-                  ? {
-                      ...el,
-                      rotation: ((el.rotation || 0) + 30) % 360,
-                    }
-                  : el
-              )
-            );
-            // Update wires immediately after rotation to prevent lag
-            if (args.updateWiresDirect) {
-              // Use setTimeout to ensure the element state update is processed first
-              setTimeout(() => {
-                args.updateWiresDirect!();
-              }, 0);
-            }
-            stopSimulation();
-          },
-        };
       default:
         return {
           ...meta,
-          handler: () => {},
+          handler: () => { },
         };
     }
   });
