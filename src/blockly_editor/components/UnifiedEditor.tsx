@@ -672,13 +672,12 @@ export default function UnifiedEditor({
             {/* Toggle */}
             <div className="flex items-center gap-3">
               <span
-                className={`text-sm transition-colors ${
-                  editorMode === "text"
+                className={`text-sm transition-colors ${editorMode === "text"
                     ? "font-semibold text-blue-600"
                     : isConverting
-                    ? "text-gray-400"
-                    : "text-gray-500"
-                }`}
+                      ? "text-gray-400"
+                      : "text-gray-500"
+                  }`}
               >
                 Text
               </span>
@@ -687,31 +686,28 @@ export default function UnifiedEditor({
                   handleModeChange(editorMode === "text" ? "block" : "text")
                 }
                 disabled={isConverting}
-                className={`relative w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                  isConverting
+                className={`relative w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isConverting
                     ? "bg-gray-300 cursor-not-allowed opacity-60"
                     : editorMode === "block"
-                    ? "bg-blue-600"
-                    : "bg-gray-300"
-                }`}
+                      ? "bg-blue-600"
+                      : "bg-gray-300"
+                  }`}
                 role="switch"
                 aria-checked={editorMode === "block"}
                 aria-disabled={isConverting}
               >
                 <span
-                  className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
-                    editorMode === "block" ? "translate-x-5" : "translate-x-0"
-                  }`}
+                  className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${editorMode === "block" ? "translate-x-5" : "translate-x-0"
+                    }`}
                 />
               </button>
               <span
-                className={`text-sm transition-colors ${
-                  editorMode === "block"
+                className={`text-sm transition-colors ${editorMode === "block"
                     ? "font-semibold text-blue-600"
                     : isConverting
-                    ? "text-gray-400"
-                    : "text-gray-500"
-                }`}
+                      ? "text-gray-400"
+                      : "text-gray-500"
+                  }`}
               >
                 Block
               </span>

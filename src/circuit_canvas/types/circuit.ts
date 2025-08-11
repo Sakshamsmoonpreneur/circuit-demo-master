@@ -80,7 +80,8 @@ export type PaletteElementType =
   | "multimeter"
   | "potentiometer"
   | "led"
-  | "microbit";
+  | "microbit"
+  | "ultrasonicsensor4p";
 
 export type PropertiesPanelProps = {
   selectedElement: CircuitElement | null;

@@ -3,11 +3,11 @@ import { CHARACTER_PATTERNS } from "./characterPatterns";
 
 export type MicrobitEvent =
   | {
-      type: "pin-change";
-      pin: string;
-      value: number;
-      pinType: "digital" | "analog";
-    }
+    type: "pin-change";
+    pin: string;
+    value: number;
+    pinType: "digital" | "analog";
+  }
   | { type: "led-change"; x: number; y: number; value: number }
   | { type: "button-press"; button: "A" | "B" }
   | { type: "reset" };
@@ -15,7 +15,7 @@ export type MicrobitEvent =
 type MicrobitEventCallback = (event: MicrobitEvent) => void;
 
 class ButtonInstance {
-  constructor(private name: "A" | "B") {}
+  constructor(private name: "A" | "B") { }
 
   getName(): "A" | "B" {
     return this.name;

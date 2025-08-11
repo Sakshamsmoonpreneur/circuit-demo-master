@@ -10,6 +10,7 @@ import Resistor from "@/circuit_canvas/components/elements/Resistor";
 import Multimeter from "@/circuit_canvas/components/elements/Multimeter";
 import Potentiometer from "@/circuit_canvas/components/elements/Potentiometer";
 import Microbit from "@/circuit_canvas/components/elements/Microbit";
+import UltraSonicSensor4P from "../elements/UltraSonicSensor4P";
 
 export default function RenderElement({
   element,
@@ -123,6 +124,14 @@ export default function RenderElement({
               { digital?: number }
             >) ?? {}
           }
+        />
+      )}
+      {element.type === "ultrasonicsensor4p" && (
+        <UltraSonicSensor4P
+          id={element.id}
+          x={0}
+          y={0}
+          selected={props.selectedElementId === element.id}
         />
       )}
 

@@ -281,6 +281,53 @@ export default function createElement(
     },
   };
 
+  const ultraSonicSensor4P = {
+    id,
+    type: props.type,
+    x: props.pos.x,
+    y: props.pos.y,
+    rotation: props.rotation ?? 0,
+    nodes: [
+      {
+        id: id + "-node-0",
+        x: 76.7,
+        y: 117,
+        parentId: id,
+        placeholder: "P0",
+        fillColor: "red",
+      },
+      {
+        id: id + "-node-1",
+        x: 100.3,
+        y: 117,
+        parentId: id,
+        placeholder: "P1",
+        fillColor: "red",
+      },
+      {
+        id: id + "-node-2",
+        x: 124.3,
+        y: 117,
+        parentId: id,
+        placeholder: "P2",
+        fillColor: "red",
+      },
+      {
+        id: id + "-node-3V",
+        x: 148.3,
+        y: 117,
+        parentId: id,
+        placeholder: "3.3V",
+        fillColor: "red",
+      }
+    ],
+    properties: {
+      voltage: props.properties?.voltage ?? 3.3,
+      resistance: props.properties?.resistance ?? 0,
+      ...props.properties,
+    },
+  };
+
   // switch based on type
   let element;
   switch (props.type) {
@@ -304,6 +351,9 @@ export default function createElement(
       break;
     case "microbit":
       element = microbitElement;
+      break;
+    case "ultrasonicsensor4p":
+      element = ultraSonicSensor4P;
       break;
     default:
       element = null;
