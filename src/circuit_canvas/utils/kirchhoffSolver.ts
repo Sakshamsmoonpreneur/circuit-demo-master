@@ -350,10 +350,7 @@ function buildMNAMatrices(
   nodeIndex: Map<string, number>,
   currentMap: Map<string, number>
 ) {
-  console.log("  🏗️ Building MNA matrices");
-  console.log("    Node count (n):", nodeIndex.size);
-  console.log("    Current source count (m):", currentMap.size);
-
+  
   const n = nodeIndex.size;
   const m = currentMap.size;
   const G = Array.from({ length: n }, () => Array(n).fill(0));

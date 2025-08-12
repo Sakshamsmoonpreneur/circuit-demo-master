@@ -1,153 +1,3 @@
-// import React, { useEffect, useState } from "react";
-// import { Image, Group, Arc, Circle, Line, Text } from "react-konva";
-// import {
-//   BaseElement,
-//   BaseElementProps,
-// } from "@/circuit_canvas/components/core/BaseElement";
-
-// const SENSOR_IMG_WIDTH = 230;
-// const SENSOR_IMG_HEIGHT = 130;
-// const SENSOR_X = SENSOR_IMG_WIDTH / 2.1; // horizontally centered
-// const SENSOR_Y = -25; // sensor face 'y'; adjust based on image
-// const EYE_OFFSET_X = 37; // distance left/right from center
-// const EYE_RADIUS = 18;
-// const RANGE_RADIUS = 153.1; // same as your snip: 153.1cm
-// const RANGE_ANGLE = 45; // 45° either side (90° spread)
-// const BALL_RADIUS = 8;
-
-// // Define interface for ball coordinates state
-// interface BallPosition {
-//   x: number;
-//   y: number;
-// }
-
-// // Extend existing BaseElementProps to add isSimulation
-// interface UltraSonicSensor4PProps extends BaseElementProps {
-//   isSimulation?: boolean;
-//   selected?: boolean;
-// }
-
-// export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
-//   const [img, setImg] = useState<HTMLImageElement | null>(null);
-//   const [ball, setBall] = useState<BallPosition>({
-//     x: SENSOR_X,
-//     y: SENSOR_Y - 30, // ball starts above sensor
-//   });
-
-//   useEffect(() => {
-//     const image = new window.Image();
-//     image.src = "assets/circuit_canvas/elements/UltraSonicSensor4P.svg";
-//     image.onload = () => setImg(image);
-//     image.alt = "UltraSonicSensor4P";
-//   }, []);
-
-//   const leftEye = { x: SENSOR_X - EYE_OFFSET_X - 10, y: SENSOR_Y + 40 };
-//   const rightEye = { x: SENSOR_X + EYE_OFFSET_X + 10, y: SENSOR_Y + 40 };
-
-//   const dx = ball.x - SENSOR_X;
-//   const dy = SENSOR_Y - ball.y; // y axis reversed in konva: up is negative
-//   const distance = Math.sqrt(dx * dx + dy * dy);
-
-//   // Angle: 0 = up, positive = right
-//   const angleRad = Math.atan2(dx, dy);
-//   const angleDeg = angleRad * (180 / Math.PI);
-
-//   const ballInRange =
-//     distance >= 18 &&
-//     distance <= RANGE_RADIUS &&
-//     Math.abs(angleDeg) <= RANGE_ANGLE;
-
-//   const distInch = (distance / 2.54).toFixed(1); // px treated as cm -> in
-//   const distCm = distance.toFixed(1);
-
-//   return (
-//     <BaseElement {...props}>
-//       {img && (
-//         <Group>
-//           {/* Always show sensor image */}
-//           <Image
-//             image={img}
-//             width={SENSOR_IMG_WIDTH}
-//             height={SENSOR_IMG_HEIGHT}
-//             shadowColor={props.selected ? "#000000" : undefined}
-//             shadowBlur={props.selected ? 6 : 0}
-//             shadowOffset={{ x: 15, y: -15 }}
-//             shadowOpacity={props.selected ? 2 : 0}
-//           />
-
-//           {/* Conditionally render region, ball, lines, and distance only if simulation mode and selected */}
-//           {props.isSimulation && props.selected && (
-//             <>
-//               <Arc
-//                 x={SENSOR_X}
-//                 y={SENSOR_Y}
-//                 innerRadius={25}
-//                 outerRadius={RANGE_RADIUS}
-//                 angle={RANGE_ANGLE * 2}
-//                 rotation={225}
-//                 fill={ballInRange ? "rgba(0,255,0,0.3)" : "rgba(255,0,0,0.3)"}
-//                 stroke={ballInRange ? "green" : "red"}
-//                 strokeWidth={2}
-//                 shadowColor={props.selected ? "#000000" : undefined}
-//                 shadowBlur={props.selected ? 6 : 0}
-//                 shadowOffset={{ x: 15, y: -15 }}
-//                 shadowOpacity={props.selected ? 2 : 0}
-//               />
-//               <Line
-//                 points={[leftEye.x, leftEye.y, ball.x, ball.y]}
-//                 stroke="#888"
-//                 strokeWidth={2}
-//                 dash={[8, 8]}
-//                 shadowColor={props.selected ? "#000000" : undefined}
-//                 shadowBlur={props.selected ? 6 : 0}
-//                 shadowOffset={{ x: 15, y: -15 }}
-//                 shadowOpacity={props.selected ? 2 : 0}
-//               />
-//               <Line
-//                 points={[rightEye.x, rightEye.y, ball.x, ball.y]}
-//                 stroke="#888"
-//                 strokeWidth={2}
-//                 dash={[8, 8]}
-//                 shadowColor={props.selected ? "#000000" : undefined}
-//                 shadowBlur={props.selected ? 6 : 0}
-//                 shadowOffset={{ x: 15, y: -15 }}
-//                 shadowOpacity={props.selected ? 2 : 0}
-//               />
-//               <Text
-//                 x={ball.x - 55}
-//                 y={ball.y - BALL_RADIUS - 28}
-//                 text={`${distInch}in / ${distCm}cm`}
-//                 fontSize={18}
-//                 fill="#0684aa"
-//                 shadowColor={props.selected ? "#000000" : undefined}
-//                 shadowBlur={props.selected ? 6 : 0}
-//                 shadowOffset={{ x: 15, y: -15 }}
-//                 shadowOpacity={props.selected ? 2 : 0}
-//               />
-//               <Circle
-//                 x={ball.x}
-//                 y={ball.y}
-//                 radius={BALL_RADIUS}
-//                 fill="blue"
-//                 draggable
-//                 onDragMove={(e) =>
-//                   setBall({ x: e.target.x(), y: e.target.y() })
-//                 }
-//                 shadowColor={props.selected ? "#000000" : undefined}
-//                 shadowBlur={props.selected ? 6 : 0}
-//                 shadowOffset={{ x: 15, y: -15 }}
-//                 shadowOpacity={props.selected ? 2 : 0}
-//               />
-//             </>
-//           )}
-//         </Group>
-//       )}
-//     </BaseElement>
-//   );
-// }
-
-// V2
-
 import React, { useEffect, useState, useMemo } from "react";
 import { Image, Group, Arc, Circle, Line, Text } from "react-konva";
 import {
@@ -337,6 +187,10 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
             image={img}
             width={SENSOR_IMG_WIDTH}
             height={SENSOR_IMG_HEIGHT}
+            shadowColor={props.selected ? "#000000" : undefined}
+            shadowBlur={props.selected ? 6 : 0}
+            shadowOffset={{ x: 15, y: -15 }}
+            shadowOpacity={props.selected ? 2 : 0}
           />
 
           {/* Show interactive elements only in simulation mode and when selected */}
@@ -353,6 +207,9 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                 fill={ballInRange ? "rgba(0,255,0,0.3)" : "rgba(255,0,0,0.3)"}
                 stroke={ballInRange ? "green" : "red"}
                 strokeWidth={2}
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
 
               {/* Dashed lines from sensor eyes to ball */}
@@ -361,12 +218,18 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                 stroke="#888"
                 strokeWidth={2}
                 dash={[8, 8]}
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
               <Line
                 points={[rightEye.x, rightEye.y, ball.x, ball.y]}
                 stroke="#888"
                 strokeWidth={2}
                 dash={[8, 8]}
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
 
               {/* Distance annotation */}
@@ -376,6 +239,9 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                 text={`${displayedDistance} ${displayedUnit}`}
                 fontSize={18}
                 fill="#0684aa"
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
 
               {/* Draggable ball */}
@@ -396,6 +262,9 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                   radius={pulseRadius}
                   stroke="rgba(0,0,255,0.5)"
                   strokeWidth={3}
+                  shadowBlur={props.selected ? 6 : 0}
+                  shadowOffset={{ x: 15, y: -15 }}
+                  shadowOpacity={props.selected ? 2 : 0}
                 />
               )}
 
@@ -408,6 +277,9 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                 text={`Echo time: ${
                   echoTime ? echoTime.toFixed(0) + " μs" : "N/A"
                 }`}
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
               <Text
                 x={10}
@@ -415,6 +287,9 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                 fontSize={14}
                 fill="#555"
                 text={`Distance: ${distance.toFixed(1)} cm`}
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
 
               {/* Unit toggle button */}
@@ -426,16 +301,22 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                 text={`Switch to ${unit === "cm" ? "inches" : "cm"}`}
                 onClick={() => setUnit(unit === "cm" ? "in" : "cm")}
                 style={{ cursor: "pointer" }}
+                shadowBlur={props.selected ? 6 : 0}
+                shadowOffset={{ x: 15, y: -15 }}
+                shadowOpacity={props.selected ? 2 : 0}
               />
 
               {/* Out of range warning */}
               {!ballInRange && (
                 <Text
-                  x={SENSOR_X - 60}
-                  y={SENSOR_Y + SENSOR_IMG_HEIGHT + 50}
+                  x={SENSOR_X - 50}
+                  y={SENSOR_Y + SENSOR_IMG_HEIGHT + -320}
                   fontSize={16}
                   fill="red"
                   text="Out of range"
+                  shadowBlur={props.selected ? 6 : 0}
+                  shadowOffset={{ x: 15, y: -15 }}
+                  shadowOpacity={props.selected ? 2 : 0}
                 />
               )}
             </>
