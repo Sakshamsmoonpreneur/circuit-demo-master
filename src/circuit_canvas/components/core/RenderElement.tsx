@@ -131,6 +131,7 @@ export default function RenderElement({
           id={element.id}
           x={0}
           y={0}
+          isSimulation={props.isSimulationOn}
           selected={props.selectedElementId === element.id}
         />
       )}
