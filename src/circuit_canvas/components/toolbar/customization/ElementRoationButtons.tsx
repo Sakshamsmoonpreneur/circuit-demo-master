@@ -29,15 +29,7 @@ const ElementRotationButtons: React.FC<Props> = ({
 }) => {
   const { showMessage } = useMessage();
   const rotateElement = (direction: "left" | "right") => {
-    // Prevent rotation if there is any wire in the circuit
-    if (containsWire) {
-      showMessage(
-        "Cannot rotate elements while wires are present in the circuit.",
-        "error"
-      );
-      return;
-    }
-
+    // 1) Block when simulation is running
     if (isSimulationRunning) {
       showMessage(
         "Cannot rotate elements while simulation is running.",
@@ -46,14 +38,24 @@ const ElementRotationButtons: React.FC<Props> = ({
       return;
     }
 
-    // Also prevent rotation if no selected element or selected element is a wire
+    // 2) No element selected
     if (!selectedElement) {
       showMessage("No element selected for rotation.", "info");
       return;
     }
 
+    // 3) Selected element specifically is a wire
     if (selectedElement.type === "wire") {
       showMessage("Cannot rotate a wire element.", "warning");
+      return;
+    }
+
+    // 4) General guard: any wires present in the circuit
+    if (containsWire) {
+      showMessage(
+        "Cannot rotate elements while wires are present in the circuit.",
+        "error"
+      );
       return;
     }
     pushToHistory();
@@ -80,7 +82,6 @@ const ElementRotationButtons: React.FC<Props> = ({
       <button
         className="px-2 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-lg text-black text-sm cursor-pointer flex items-center justify-center hover:shadow-blue-400 hover:scale-105"
         onClick={() => rotateElement("left")}
-        disabled={!selectedElement || selectedElement.type === "wire"}
         title="Rotate Left"
         aria-label="Rotate Left"
       >
@@ -89,7 +90,6 @@ const ElementRotationButtons: React.FC<Props> = ({
       <button
         className="px-2 py-1 bg-[#F4F5F6] rounded-sm border-2 border-gray-300 shadow-lg text-black text-sm cursor-pointer flex items-center justify-center hover:shadow-blue-400 hover:scale-105"
         onClick={() => rotateElement("right")}
-        disabled={!selectedElement || selectedElement.type === "wire"}
         title="Rotate Right"
         aria-label="Rotate Right"
       >
