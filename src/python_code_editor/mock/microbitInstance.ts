@@ -232,7 +232,7 @@ export class MicrobitSimulator {
     this.buttonStates = { A: false, B: false };
     this.clearInputs();
     this.eventEmitter.emit({ type: "reset" });
-    console.log("Microbit state reset");
+    ("Microbit state reset");
   }
 
   private digitalWritePin(pin: string, value: number) {

@@ -1,10 +1,17 @@
 import { CircuitElement, Wire } from "../types/circuit";
 
+/**
+ * Main function to solve the entire circuit by dividing it into connected subcircuits.
+ * @param elements All circuit elements.
+ * @param wires All connecting wires.
+ * @returns Elements with computed electrical results.
+ */
 export default function solveCircuit(
   elements: CircuitElement[],
   wires: Wire[]
 ): CircuitElement[] {
   console.log("🔧 CIRCUIT SOLVER START");
+
   console.log(
     "Elements:",
     elements.map((e) => ({
@@ -19,11 +26,13 @@ export default function solveCircuit(
     wires.map((w) => ({ from: w.fromNodeId, to: w.toNodeId }))
   );
 
+  // Break circuit into isolated connected subcircuits
   const subcircuits = getConnectedSubcircuits(elements, wires);
   console.log(`Found ${subcircuits.length} subcircuits`);
 
   const allResults: CircuitElement[] = [];
 
+  // Solve each subcircuit and collect results
   for (let i = 0; i < subcircuits.length; i++) {
     const { elements: subEls, wires: subWires } = subcircuits[i];
     console.log(`\n--- Solving subcircuit ${i + 1} ---`);
@@ -41,12 +50,19 @@ export default function solveCircuit(
   return allResults;
 }
 
+/**
+ * Solve one electrically connected subcircuit using Modified Nodal Analysis.
+ * @param elements Elements of this subcircuit.
+ * @param wires Wires of this subcircuit.
+ * @returns Elements with computed voltages, currents, and power.
+ */
 function solveSingleSubcircuit(
   elements: CircuitElement[],
   wires: Wire[]
 ): CircuitElement[] {
   console.log("  📊 Solving single subcircuit");
 
+  // Create node equivalence classes to merge nodes connected by wires
   const nodeEquivalenceMap = findEquivalenceClasses(elements, wires);
   console.log(
     "  Node equivalence map:",
@@ -61,6 +77,7 @@ function solveSingleSubcircuit(
     return zeroOutComputed(elements);
   }
 
+  // Map nodes to indices for matrix construction and find ground node (reference)
   const { groundId, nonGroundIds, nodeIndex } =
     getNodeMappings(effectiveNodeIds);
   console.log("  Ground node:", groundId);
@@ -69,6 +86,7 @@ function solveSingleSubcircuit(
 
   const n = nonGroundIds.length;
 
+  // Identify elements that introduce current sources for MNA extension
   const elementsWithCurrent = getElementsWithCurrent(
     elements,
     nodeEquivalenceMap
@@ -78,12 +96,14 @@ function solveSingleSubcircuit(
     elementsWithCurrent.map((e) => ({ type: e.type, id: e.id }))
   );
 
+  // Map these current source elements to indices
   const currentSourceIndexMap = mapCurrentSourceIndices(elementsWithCurrent);
   console.log(
     "  Current source index map:",
     Object.fromEntries(currentSourceIndexMap)
   );
 
+  // Build the MNA matrices G, B, C, D and vectors I, E
   const { G, B, C, D, I, E } = buildMNAMatrices(
     elements,
     nodeEquivalenceMap,
@@ -99,10 +119,12 @@ function solveSingleSubcircuit(
   console.log("  I (current sources):", I);
   console.log("  E (voltage sources):", E);
 
+  // Assemble full system matrix and vector for Ax=z
   const { A, z } = buildFullSystem(G, B, C, D, I, E);
   console.log("  📐 Full system matrix A:", A);
   console.log("  📐 Full system vector z:", z);
 
+  // Solve the system of linear equations
   const x = solveLinearSystem(A, z);
   if (!x) {
     console.log("  ❌ Linear system solution failed");
@@ -111,9 +133,11 @@ function solveSingleSubcircuit(
 
   console.log("  ✅ Solution vector x:", x);
 
+  // Extract node voltages from solution vector
   const nodeVoltages = getNodeVoltages(x, nonGroundIds, groundId);
   console.log("  🔋 Node voltages:", nodeVoltages);
 
+  // Compute per-element results from voltages and currents
   const results = computeElementResults(
     elements,
     nodeVoltages,
@@ -131,11 +155,14 @@ function solveSingleSubcircuit(
   return results;
 }
 
+/**
+ * Build graph of nodes and find connected subcircuits using BFS.
+ * Handles special microbit connection rules.
+ */
 function getConnectedSubcircuits(
   elements: CircuitElement[],
   wires: Wire[]
 ): { elements: CircuitElement[]; wires: Wire[] }[] {
-  // Build graph: each node is a circuit node ID, edges are wires and element connections
   const graph = new Map<string, Set<string>>();
 
   const addEdge = (a: string, b: string) => {
@@ -145,21 +172,17 @@ function getConnectedSubcircuits(
     graph.get(b)!.add(a);
   };
 
-  // Add wires as edges
+  // Add wire-based edges between nodes
   for (const wire of wires) {
     addEdge(wire.fromNodeId, wire.toNodeId);
   }
 
-  // For microbit, don't add internal edges between 3.3V and GND
-  // They should remain separate nodes for the voltage source to work
-  // For other elements, add edges between all nodes
+  // Add edges for element internal nodes, except for microbit where internal connections are ignored
   for (const el of elements) {
     if (el.type === "microbit") {
-      // Don't add any internal edges for microbit - let wires connect the nodes
-      // The microbit acts as a voltage source between 3.3V and GND
+      // Skip internal node connections for microbit to allow proper voltage source behavior
       continue;
     } else if (el.nodes.length >= 2) {
-      // For all other elements, connect all nodes
       for (let i = 0; i < el.nodes.length; i++) {
         for (let j = i + 1; j < el.nodes.length; j++) {
           addEdge(el.nodes[i].id, el.nodes[j].id);
@@ -168,7 +191,7 @@ function getConnectedSubcircuits(
     }
   }
 
-  // Find connected node groups using BFS
+  // Find connected groups of nodes using BFS
   const visited = new Set<string>();
   const nodeGroups: string[][] = [];
 
@@ -176,8 +199,8 @@ function getConnectedSubcircuits(
     if (visited.has(nodeId)) continue;
 
     const queue = [nodeId];
-    const group: string[] = [];
     visited.add(nodeId);
+    const group: string[] = [];
 
     while (queue.length > 0) {
       const current = queue.shift()!;
@@ -193,18 +216,12 @@ function getConnectedSubcircuits(
     nodeGroups.push(group);
   }
 
-  // Map node groups to element/wire subcircuits
+  // Map node groups back to subcircuit elements and wires
   return nodeGroups.map((group) => {
     const groupSet = new Set(group);
-    const subElements = elements.filter((el) => {
-      if (el.type === "microbit") {
-        // Include microbit if ANY of its nodes are in the group (including P0, P1, P2, etc.)
-        return el.nodes.some((n) => groupSet.has(n.id));
-      } else {
-        // For other elements, include if any node is in the group
-        return el.nodes.some((n) => groupSet.has(n.id));
-      }
-    });
+    const subElements = elements.filter((el) =>
+      el.nodes.some((n) => groupSet.has(n.id))
+    );
     const subWires = wires.filter(
       (w) => groupSet.has(w.fromNodeId) && groupSet.has(w.toNodeId)
     );
@@ -212,11 +229,15 @@ function getConnectedSubcircuits(
   });
 }
 
+/**
+ * Find equivalence classes of node IDs using union-find,
+ * merging nodes connected by wires. Keeps microbit 3.3V and GND separate.
+ */
 function findEquivalenceClasses(elements: CircuitElement[], wires: Wire[]) {
   const parent = new Map<string, string>();
   const allNodeIds = new Set<string>();
 
-  // Add all wire nodes
+  // Initialize union-find parent for nodes connected by wires
   wires.forEach((w) => {
     parent.set(w.fromNodeId, w.fromNodeId);
     parent.set(w.toNodeId, w.toNodeId);
@@ -224,32 +245,26 @@ function findEquivalenceClasses(elements: CircuitElement[], wires: Wire[]) {
     allNodeIds.add(w.toNodeId);
   });
 
-  // Add only connected nodes from elements, or all nodes for non-microbit elements
+  // Add nodes from elements; special handling for microbit keeps 3.3V and GND separated
   elements.forEach((e) => {
     if (e.type === "microbit") {
-      // For microbit, add all nodes that are actually connected via wires
-      // AND also add 3.3V and GND if any pin is connected (since they're needed for voltage sources)
       const pos = e.nodes.find((n) => n.placeholder === "3.3V")?.id;
       const neg = e.nodes.find((n) => n.placeholder === "GND")?.id;
 
-      // Check if any microbit pin is connected
       const anyPinConnected = e.nodes.some((n) => allNodeIds.has(n.id));
 
       e.nodes.forEach((n) => {
         const isConnected = allNodeIds.has(n.id);
         const is33V = n.id === pos;
         const isGND = n.id === neg;
-
-        // Add node if:
-        // 1. It's directly connected via wire, OR
-        // 2. It's 3.3V or GND and any pin is connected (needed for voltage sources)
+        // Add nodes that are connected, or 3.3V/GND if any pin is connected
         if (isConnected || ((is33V || isGND) && anyPinConnected)) {
           parent.set(n.id, n.id);
           allNodeIds.add(n.id);
         }
       });
     } else {
-      // For all other elements, add all nodes
+      // Add all nodes for other elements
       e.nodes.forEach((n) => {
         parent.set(n.id, n.id);
         allNodeIds.add(n.id);
@@ -257,6 +272,7 @@ function findEquivalenceClasses(elements: CircuitElement[], wires: Wire[]) {
     }
   });
 
+  // Find root parent function for union-find
   function find(i: string): string {
     if (!parent.has(i)) return i;
     if (parent.get(i) === i) return i;
@@ -265,28 +281,28 @@ function findEquivalenceClasses(elements: CircuitElement[], wires: Wire[]) {
     return root;
   }
 
+  // Union function merges sets
   function union(i: string, j: string) {
     const rootI = find(i);
     const rootJ = find(j);
     if (rootI !== rootJ) parent.set(rootI, rootJ);
   }
 
-  // Union wire connections
+  // Union all wire-connected pairs
   for (const wire of wires) union(wire.fromNodeId, wire.toNodeId);
 
-  // For microbit, DON'T union 3.3V and GND - let them be separate nodes
-  // The microbit acts as a voltage source between these two nodes
-  // Unioning them would short-circuit the voltage source
-
+  // Return map of each node ID to its equivalence class root
   const equivalenceMap = new Map<string, string>();
   for (const id of allNodeIds) equivalenceMap.set(id, find(id));
   return equivalenceMap;
 }
 
+/** Return unique effective node IDs from equivalence classes */
 function getEffectiveNodeIds(map: Map<string, string>) {
   return new Set(map.values());
 }
 
+/** Zero out computed results for all elements (used on solver failure) */
 function zeroOutComputed(elements: CircuitElement[]) {
   return elements.map((el) => ({
     ...el,
@@ -294,18 +310,27 @@ function zeroOutComputed(elements: CircuitElement[]) {
   }));
 }
 
+/**
+ * Pick ground node from effective nodes and create node index mapping.
+ * Ground is chosen preferentially if node ID includes "GND".
+ */
 function getNodeMappings(effectiveNodeIds: Set<string>) {
   const list = Array.from(effectiveNodeIds);
 
-  // Try to find GND node as ground reference first
+  // Prefer node including "GND" as ground, else pick first
   let groundId = list.find((id) => id.includes("GND")) || list[0];
   const nonGroundIds = list.filter((id) => id !== groundId);
 
+  // Map non-ground nodes to matrix indices
   const nodeIndex = new Map<string, number>();
   nonGroundIds.forEach((id, i) => nodeIndex.set(id, i));
   return { groundId, nonGroundIds, nodeIndex };
 }
 
+/**
+ * Obtain elements that function as current sources:
+ * batteries, microbits with active pins, multimeters in current mode.
+ */
 function getElementsWithCurrent(
   elements: CircuitElement[],
   nodeMap?: Map<string, string>
@@ -317,7 +342,7 @@ function getElementsWithCurrent(
       (e.type === "multimeter" && e.properties?.mode === "current")
   );
 
-  // Add extra entries for microbit pins that are powered on (digital: 1) AND connected
+  // Add active microbit pins appearing as current sources
   for (const e of elements) {
     if (e.type === "microbit") {
       const pins =
@@ -326,8 +351,8 @@ function getElementsWithCurrent(
         const pinName = node.placeholder;
         if (pinName && pinName.startsWith("P")) {
           const pinState = pins[pinName];
-          // Only add if the pin is powered on (digital: 1) AND the pin is connected to the circuit
           if (pinState?.digital === 1 && nodeMap && nodeMap.has(node.id)) {
+            // Append pin-specific ID for current source element
             result.push({ ...e, id: e.id + `-${pinName}` });
           }
         }
@@ -338,21 +363,26 @@ function getElementsWithCurrent(
   return result;
 }
 
+/** Assign sequential indices to current source elements */
 function mapCurrentSourceIndices(elements: CircuitElement[]) {
   const map = new Map<string, number>();
   elements.forEach((el, i) => map.set(el.id, i));
   return map;
 }
 
+/**
+ * Construct MNA matrices G, B, C, D and RHS vectors I, E from elements and mappings.
+ */
 function buildMNAMatrices(
   elements: CircuitElement[],
   nodeMap: Map<string, string>,
   nodeIndex: Map<string, number>,
   currentMap: Map<string, number>
 ) {
-  
-  const n = nodeIndex.size;
-  const m = currentMap.size;
+  const n = nodeIndex.size; // number of non-ground nodes
+  const m = currentMap.size; // number of current sources / voltage sources
+
+  // Initialize matrices with zeros
   const G = Array.from({ length: n }, () => Array(n).fill(0));
   const B = Array.from({ length: n }, () => Array(m).fill(0));
   const C = Array.from({ length: m }, () => Array(n).fill(0));
@@ -363,17 +393,20 @@ function buildMNAMatrices(
   for (const el of elements) {
     console.log(`    Processing element: ${el.type} (${el.id})`);
     if (el.nodes.length < 2) {
-      console.log(`      ⚠️ Skipping element with < 2 nodes`);
+      console.log(`      ⚠️ Skipping element with less than 2 nodes`);
       continue;
     }
+    // Map element nodes through node equivalence and indexing
     const a = nodeMap.get(el.nodes[0].id);
     const b = nodeMap.get(el.nodes[1].id);
     const ai = nodeIndex.get(a!);
     const bi = nodeIndex.get(b!);
+
     console.log(
       `      Node mapping: ${el.nodes[0].id} -> ${a} (index ${ai}), ${el.nodes[1].id} -> ${b} (index ${bi})`
     );
 
+    // Handle passive resistive elements: resistor, led, lightbulb
     if (
       el.type === "resistor" ||
       el.type === "lightbulb" ||
@@ -381,7 +414,7 @@ function buildMNAMatrices(
     ) {
       console.log(`    ⚡ Processing resistive element ${el.type}`);
       const R = el.properties?.resistance ?? 1;
-      const g = 1 / R;
+      const g = 1 / R; // Conductance
       console.log(`      Resistance: ${R}Ω, Conductance: ${g}S`);
 
       if (ai !== undefined) G[ai][ai] += g;
@@ -390,13 +423,15 @@ function buildMNAMatrices(
         G[ai][bi] -= g;
         G[bi][ai] -= g;
       }
-    } else if (el.type === "potentiometer") {
+    } 
+    // Potentiometer (3-terminal element) handled separately
+    else if (el.type === "potentiometer") {
       const [nodeA, nodeW, nodeB] = el.nodes;
       const R = el.properties?.resistance ?? 1;
-      const t = el.properties?.ratio ?? 0.5; // how far the wiper is between A and B
+      const t = el.properties?.ratio ?? 0.5; // wiper position ratio
 
-      const Ra = R * (1 - t); // A–W
-      const Rb = R * t; // W–B
+      const Ra = R * (1 - t); // Resistance A-W
+      const Rb = R * t;       // Resistance W-B
 
       const a = nodeMap.get(nodeA.id);
       const w = nodeMap.get(nodeW.id);
@@ -422,23 +457,25 @@ function buildMNAMatrices(
         G[bi][wi] -= gb;
         G[wi][bi] -= gb;
       }
-    } else if (el.type === "battery") {
+    } 
+    // Battery modeled as voltage source with small internal resistance
+    else if (el.type === "battery") {
       console.log(`    🔋 Processing battery ${el.id}`);
       const pos =
         el.nodes.find((n) => n.polarity === "positive")?.id ?? el.nodes[1].id;
       const neg =
         el.nodes.find((n) => n.polarity === "negative")?.id ?? el.nodes[0].id;
+
       console.log(`      Positive node: ${pos}, Negative node: ${neg}`);
       console.log(`      Battery voltage: ${el.properties?.voltage ?? 0}V`);
-      console.log(
-        `      Battery resistance: ${el.properties?.resistance ?? 0}Ω`
-      );
+      console.log(`      Battery resistance: ${el.properties?.resistance ?? 0}Ω`);
 
       const pIdx = nodeIndex.get(nodeMap.get(pos)!);
       const nIdx = nodeIndex.get(nodeMap.get(neg)!);
       const idx = currentMap.get(el.id)!;
+
       console.log(
-        `      Positive index: ${pIdx}, Negative index: ${nIdx}, Current index: ${idx}`
+        `      Positive index: ${pIdx}, Negative index: ${nIdx}, Current source index: ${idx}`
       );
 
       if (pIdx !== undefined) B[pIdx][idx] -= 1;
@@ -447,37 +484,27 @@ function buildMNAMatrices(
       if (nIdx !== undefined) C[idx][nIdx] -= 1;
       D[idx][idx] += el.properties?.resistance ?? 0;
       E[idx] = el.properties?.voltage ?? 0;
-    } else if (el.type === "microbit") {
+    } 
+    // Microbit handled similarly to voltage source with added pin-level sources
+    else if (el.type === "microbit") {
       console.log(`    📱 Processing microbit ${el.id}`);
-      console.log(
-        `      All nodes:`,
-        el.nodes.map((n) => ({ id: n.id, placeholder: n.placeholder }))
-      );
 
-      // get ground and 3.3v pins (nodes)
       const pos = el.nodes.find((n) => n.placeholder === "3.3V")?.id;
       const neg = el.nodes.find((n) => n.placeholder === "GND")?.id;
       console.log(`      3.3V node: ${pos}, GND node: ${neg}`);
       console.log(`      Microbit voltage: ${el.properties?.voltage ?? 0}V`);
-      console.log(
-        `      Microbit resistance: ${el.properties?.resistance ?? 0}Ω`
-      );
+      console.log(`      Microbit resistance: ${el.properties?.resistance ?? 0}Ω`);
 
       if (!pos || !neg) {
         console.log(`      ❌ ERROR: Missing 3.3V or GND node on microbit!`);
-        console.log(
-          `      Available nodes:`,
-          el.nodes.map((n) => `${n.id} (${n.placeholder})`)
-        );
-        continue; // Skip this element instead of returning early
+        continue; // Skip this element
       }
 
-      const pIdx = nodeIndex.get(nodeMap.get(pos!)!);
-      const nIdx = nodeIndex.get(nodeMap.get(neg!)!);
+      const pIdx = nodeIndex.get(nodeMap.get(pos)!);
+      const nIdx = nodeIndex.get(nodeMap.get(neg)!);
       const idx = currentMap.get(el.id)!;
-      console.log(
-        `      Positive index: ${pIdx}, Negative index: ${nIdx}, Current index: ${idx}`
-      );
+
+      console.log(`      Positive index: ${pIdx}, Negative index: ${nIdx}, Current source index: ${idx}`);
 
       if (pIdx !== undefined) B[pIdx][idx] -= 1;
       if (nIdx !== undefined) B[nIdx][idx] += 1;
@@ -486,66 +513,37 @@ function buildMNAMatrices(
       D[idx][idx] += el.properties?.resistance ?? 0;
       E[idx] = el.properties?.voltage ?? 3.3;
 
-      // Handle programmable pins (P0, P1, P2, etc.)
-      console.log("Controller data:", el.controller);
+      // Handle active pins connected to 3.3V as 0V voltage sources (short circuits for simulation)
       const pins =
         (el.controller?.pins as Record<string, { digital?: number }>) ?? {};
-      console.log("Pins data:", pins);
       for (const node of el.nodes) {
         const pinName = node.placeholder;
-        console.log(`      Processing pin: ${pinName}`);
         if (pinName && pinName.startsWith("P") && nodeMap.has(node.id)) {
           const pinState = pins[pinName];
-          console.log(`      Pin ${pinName} state:`, pinState);
-          // test P0
-          // if (pinName == "P0") {
-          //   pinState.digital = 1; // Simulate pin P0 being active
-          // }
           if (pinState?.digital === 1) {
-            // When pin is active, connect it directly to the 3.3V rail
-            // This creates a 0V voltage source (short circuit) between pin and 3.3V
             const pinIdx = nodeIndex.get(nodeMap.get(node.id)!);
-            const pin33VIdx = nodeIndex.get(nodeMap.get(pos!)!);
+            const pin33VIdx = nodeIndex.get(nodeMap.get(pos)!);
             const pinCurrentIdx = currentMap.get(el.id + `-${pinName}`);
-
-            console.log(`      Pin ${pinName} voltage source setup:`);
-            console.log(`        - Pin node ID: ${node.id}`);
-            console.log(
-              `        - Pin node mapped to: ${nodeMap.get(node.id)}`
-            );
-            console.log(`        - Pin index: ${pinIdx}`);
-            console.log(`        - 3.3V index: ${pin33VIdx}`);
-            console.log(`        - Pin current ID: ${el.id + `-${pinName}`}`);
-            console.log(`        - Pin current index: ${pinCurrentIdx}`);
 
             if (
               pinIdx !== undefined &&
               pin33VIdx !== undefined &&
               pinCurrentIdx !== undefined
             ) {
-              console.log(
-                `      Active pin ${pinName}: connecting to 3.3V rail (pin index: ${pinIdx}, 3.3V index: ${pin33VIdx}, current index: ${pinCurrentIdx})`
-              );
-              // Create 0V voltage source between pin and 3.3V (short circuit)
+              // Voltage source enforcing 0V difference between pin and 3.3V
               B[pinIdx][pinCurrentIdx] -= 1;
               B[pin33VIdx][pinCurrentIdx] += 1;
               C[pinCurrentIdx][pinIdx] += 1;
               C[pinCurrentIdx][pin33VIdx] -= 1;
               D[pinCurrentIdx][pinCurrentIdx] += el.properties?.resistance ?? 0;
-              E[pinCurrentIdx] = 0; // 0V difference between pin and 3.3V
-            } else {
-              console.log(
-                `      ❌ Pin ${pinName}: voltage source creation failed - missing indices`
-              );
+              E[pinCurrentIdx] = 0;
             }
-          } else {
-            console.log(
-              `      Pin ${pinName}: inactive (digital: ${pinState?.digital})`
-            );
           }
         }
       }
-    } else if (el.type === "multimeter" && el.properties?.mode === "current") {
+    } 
+    // Multimeter in current mode is modeled as current source connection
+    else if (el.type === "multimeter" && el.properties?.mode === "current") {
       const idx = currentMap.get(el.id)!;
       if (ai !== undefined) B[ai][idx] -= 1;
       if (bi !== undefined) B[bi][idx] += 1;
@@ -559,6 +557,7 @@ function buildMNAMatrices(
   return { G, B, C, D, I, E };
 }
 
+/** Combine matrices into full MNA system matrix for Ax = z */
 function buildFullSystem(
   G: number[][],
   B: number[][],
@@ -569,27 +568,35 @@ function buildFullSystem(
 ) {
   const n = G.length;
   const m = D.length;
+
   const A = Array.from({ length: n + m }, () => Array(n + m).fill(0));
   const z = Array(n + m).fill(0);
+
+  // Fill top-left block with G matrix
   for (let i = 0; i < n; i++) {
     for (let j = 0; j < n; j++) A[i][j] = G[i][j];
     for (let j = 0; j < m; j++) A[i][n + j] = B[i][j];
     z[i] = I[i];
   }
+
+  // Fill bottom rows with C, D matrices and voltage sources E
   for (let i = 0; i < m; i++) {
     for (let j = 0; j < n; j++) A[n + i][j] = C[i][j];
     for (let j = 0; j < m; j++) A[n + i][n + j] = D[i][j];
     z[n + i] = E[i];
   }
+
   return { A, z };
 }
 
+/** Map solution vector x back onto node voltages, grounding one node at 0V */
 function getNodeVoltages(x: number[], ids: string[], groundId: string) {
   const result: Record<string, number> = { [groundId]: 0 };
   ids.forEach((id, i) => (result[id] = x[i]));
   return result;
 }
 
+/** Compute voltage, current, power and measurement for each element from solutions */
 function computeElementResults(
   elements: CircuitElement[],
   nodeVoltages: Record<string, number>,
@@ -621,24 +628,17 @@ function computeElementResults(
       const R = el.properties?.resistance ?? 1;
       const t = el.properties?.ratio ?? 0.5;
       const Ra = R * (1 - t); // A–W
-      //const Rb = R * t; // W–B
 
       const Ia = (Va - Vw) / Ra;
-      //const Ib = (Vw - Vb) / Rb;
 
-      // voltage across entire potentiometer
       const totalVoltage = Va - Vb;
-      const totalCurrent = Ia; // = Ib if everything is correct
+      const totalCurrent = Ia; // Approximation
       const totalPower = totalVoltage * totalCurrent;
 
       current = totalCurrent;
       voltage = totalVoltage;
       power = totalPower;
-    } else if (el.type === "battery") {
-      const idx = currentMap.get(el.id);
-      if (idx !== undefined) current = x[n + idx];
-      power = voltage * current;
-    } else if (el.type === "microbit") {
+    } else if (el.type === "battery" || el.type === "microbit") {
       const idx = currentMap.get(el.id);
       if (idx !== undefined) current = x[n + idx];
       power = voltage * current;
@@ -660,25 +660,40 @@ function computeElementResults(
   });
 }
 
+/**
+ * Solve linear system using Gaussian elimination.
+ * Returns solution vector x or null if no unique solution.
+ */
 function solveLinearSystem(A: number[][], z: number[]): number[] | null {
   const n = A.length;
+
+  // Augmented matrix [A|z]
   const M = A.map((row, i) => [...row, z[i]]);
+
+  // Forward elimination with partial pivoting
   for (let i = 0; i < n; i++) {
     let maxRow = i;
     for (let k = i + 1; k < n; k++) {
       if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
     }
     [M[i], M[maxRow]] = [M[maxRow], M[i]];
-    if (Math.abs(M[i][i]) < 1e-12) return null;
+
+    if (Math.abs(M[i][i]) < 1e-12) return null; // Singular matrix
+
     for (let k = i + 1; k < n; k++) {
       const f = M[k][i] / M[i][i];
       for (let j = i; j <= n; j++) M[k][j] -= f * M[i][j];
     }
   }
+
+  // Back substitution
   const x = Array(n).fill(0);
   for (let i = n - 1; i >= 0; i--) {
     x[i] = M[i][n] / M[i][i];
-    for (let k = i - 1; k >= 0; k--) M[k][n] -= M[k][i] * x[i];
+    for (let k = i - 1; k >= 0; k--) {
+      M[k][n] -= M[k][i] * x[i];
+    }
   }
+
   return x;
 }

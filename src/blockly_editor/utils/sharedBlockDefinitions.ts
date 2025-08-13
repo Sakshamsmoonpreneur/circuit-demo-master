@@ -870,6 +870,6 @@ export function createToolboxXmlFromBlocks(): string {
   }
 
   xml += `</xml>`;
-  console.log(xml);
+  (xml);
   return xml;
 }

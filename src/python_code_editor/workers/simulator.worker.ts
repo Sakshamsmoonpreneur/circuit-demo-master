@@ -94,7 +94,7 @@ class Simulator {
     if (!this.microbit) {
       throw new Error("Microbit controller not initialized.");
     }
-    console.log("Resetting microbit state");
+    ("Resetting microbit state");
     this.microbit.reset();
   }
 
