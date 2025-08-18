@@ -114,15 +114,6 @@ export default function createElement(
     rotation: props.rotation ?? 0,
     nodes: [
       {
-        id: id + "-node-1",
-        x: 10.3,
-        y: 14,
-        parentId: id,
-        polarity: "negative" as const,
-        placeholder: "Negative",
-        fillColor: "red",
-      },
-      {
         id: id + "-node-2",
         x: 30.6,
         y: 14,
@@ -130,6 +121,15 @@ export default function createElement(
         polarity: "positive" as const,
         placeholder: "Positive",
         fillColor: "green",
+      },
+      {
+        id: id + "-node-1",
+        x: 10.3,
+        y: 14,
+        parentId: id,
+        polarity: "negative" as const,
+        placeholder: "Negative",
+        fillColor: "red",
       },
     ],
     properties: {
