@@ -13,6 +13,7 @@ export type CircuitElement = {
     resistance?: number; // all components can have resistance
     ratio?: number; // for potentiometers, the ratio of resistance
     mode?: "voltage" | "current"; // for multimeters, can be voltage or current mode
+    distance?: number; // cm
   };
   computed?: {
     current?: number; // computed current through the element

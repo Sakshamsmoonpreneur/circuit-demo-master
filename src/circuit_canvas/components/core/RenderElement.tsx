@@ -1,6 +1,8 @@
+// RenderElement.tsx
+
 import { useState } from "react";
 import { CircuitElement } from "@/circuit_canvas/types/circuit";
-import { Rect, Group, Text, Label, Tag } from "react-konva"; // <-- Add Text
+import { Rect, Group, Text, Label, Tag } from "react-konva";
 import { KonvaEventObject } from "konva/lib/Node";
 import { getElementCenter } from "@/circuit_canvas/utils/rotationUtils";
 import Lightbulb from "@/circuit_canvas/components/elements/Lightbulb";
@@ -12,11 +14,14 @@ import Potentiometer from "@/circuit_canvas/components/elements/Potentiometer";
 import Microbit from "@/circuit_canvas/components/elements/Microbit";
 import UltraSonicSensor4P from "../elements/UltraSonicSensor4P";
 
+// ✅ add simulator to props type
 export default function RenderElement({
   element,
+  simulator, // ← Make sure this is here
   ...props
 }: {
   element: CircuitElement;
+  simulator?: any; // ← Make sure this is in the interface
   onDragMove: (e: KonvaEventObject<DragEvent>) => void;
   handleNodeClick: (nodeId: string) => void;
   handleRatioChange?: (elementId: string, ratio: number) => void;
@@ -131,8 +136,13 @@ export default function RenderElement({
           id={element.id}
           x={0}
           y={0}
-          isSimulation={props.isSimulationOn}
           selected={props.selectedElementId === element.id}
+          pins={{
+            trig: element.nodes.find((n) => n.placeholder === "TRIG")?.id,
+            echo: element.nodes.find((n) => n.placeholder === "ECHO")?.id,
+          }}
+          isSimulation={props.isSimulationOn}
+          simulator={simulator} // ← Pass the simulator prop
         />
       )}
 
