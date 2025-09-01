@@ -45,7 +45,7 @@ import HighPerformanceGrid from "./HighPerformanceGrid";
 import { Window } from "@/common/components/ui/Window";
 import ElementRotationButtons from "../toolbar/customization/ElementRoationButtons";
 
-export default function CircuitCanvasOptimized() {
+export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
@@ -617,6 +617,9 @@ export default function CircuitCanvasOptimized() {
 
   async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    if (simulationRunning) {
+      stopSimulation();
+    }
     pushToHistory();
 
     const elementData = e.dataTransfer.getData("application/element-type");
@@ -911,6 +914,7 @@ export default function CircuitCanvasOptimized() {
               stopSimulation={stopSimulation}
               containsWire={wires?.length > 0}
               isSimulationRunning={simulationRunning}
+              wires={wires}
             />
 
             {/* Tooltip Group */}
