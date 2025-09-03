@@ -6,9 +6,10 @@ import {
 } from "@/circuit_canvas/components/core/BaseElement";
 import Konva from "konva";
 
-// Sensor and UI constants
-const SENSOR_IMG_WIDTH = 230;
-const SENSOR_IMG_HEIGHT = 130;
+// Sensor and UI constants - Updated dimensions to match real sensor proportions
+const SENSOR_IMG_WIDTH = 225;  // Represents 45mm
+const SENSOR_IMG_HEIGHT = 100; // Represents 20mm (45mm/20mm = 2.25:1 ratio)
+
 // Real-world sensor limits
 const SENSOR_MIN_CM = 2;
 const SENSOR_MAX_CM = 400;
@@ -16,12 +17,12 @@ const SENSOR_MAX_CM = 400;
 // Scale factor (cm → px mapping)
 const CM_TO_PX = 0.38; // adjust so that 400 cm ≈ your RANGE_RADIUS in canvas
 
-const SENSOR_X = SENSOR_IMG_WIDTH / 2.1; // Horizontal center
+const SENSOR_X = SENSOR_IMG_WIDTH / 2; // Horizontal center
 const SENSOR_Y = -25; // Sensor face Y (adjust for your image asset)
-const EYE_OFFSET_X = 37; // Offset from center for sensor eyes
-const EYE_RADIUS = 18;
+const EYE_OFFSET_X = 30; // Reduced offset for smaller sensor
+const EYE_RADIUS = 15;   // Slightly smaller eyes
 const RANGE_RADIUS = SENSOR_MAX_CM * CM_TO_PX;
-const RANGE_ANGLE = 45; // 45° either side (90° spread)
+const RANGE_ANGLE = 15; // HC-SR04 typical detection angle: 15° either side (30° total spread)
 const BALL_RADIUS = 9;
 
 interface BallPosition {
@@ -62,7 +63,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
     y: SENSOR_Y - 30, // Start ball above sensor
   });
   const [triggered, setTriggered] = useState(false);
-  const [echoTime, setEchoTime] = useState<number | null>(null); // microseconds
+  //const [echoTime, setEchoTime] = useState<number | null>(null); // microseconds
   const [unit, setUnit] = useState<"cm" | "in">("cm");
 
   // Load sensor image
@@ -73,9 +74,9 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
     image.alt = "UltraSonicSensor4P";
   }, []);
 
-  // Calculate sensor eye positions (bottom of eyes)
-  const leftEye = { x: SENSOR_X - EYE_OFFSET_X - 10, y: SENSOR_Y + 40 };
-  const rightEye = { x: SENSOR_X + EYE_OFFSET_X + 10, y: SENSOR_Y + 40 };
+  // Calculate sensor eye positions (adjusted for new dimensions)
+  const leftEye = { x: SENSOR_X - EYE_OFFSET_X, y: SENSOR_Y + 35 };
+  const rightEye = { x: SENSOR_X + EYE_OFFSET_X, y: SENSOR_Y + 35 };
 
   // Calculate dx, dy to ball, distance
   const dx = ball.x - SENSOR_X;
@@ -90,7 +91,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
   const ballInRange =
     distance >= SENSOR_MIN_CM * CM_TO_PX &&
     distance <= RANGE_RADIUS &&
-    Math.abs(angleDeg) <= RANGE_ANGLE;
+    Math.abs(angleDeg) <= RANGE_ANGLE; // Now uses 15° instead of 45° (30° total spread)
 
   // Check if properly connected to microbit
   const isProperlyConnected =
@@ -130,28 +131,38 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
   const displayedUnit = canMeasure ? unit : "";
 
   // Simulate ultrasonic sensor trigger and echo pulses
+  const echoTime = useMemo(() => {
+  // If we can't measure or the ball is out of range, echo time is null (N/A)
+  if (!canMeasure || !ballInRange) {
+    return null;
+  }
+  // Calculate the time for the echo round trip in microseconds
+  return (distanceCm / 34300) * 2 * 1e6;
+}, [canMeasure, ballInRange, distanceCm]);
+
   const startMeasurement = () => {
-    if (!canMeasure || triggered) return; // Don't measure if not properly connected
-    setTriggered(true);
-    setEchoTime(null);
+  // Don't measure if not properly connected or already in a measurement cycle
+  if (!canMeasure || triggered) return;
 
-    const timeForEcho = (distanceCm / 34300) * 2 * 1e6; // microseconds
-    // Echo time update with delay simulation (10ms)
-    setTimeout(() => {
-      setEchoTime(timeForEcho);
-      setTriggered(false);
-    }, 10);
-  };
+  // Visual Feedback: Start the pulse animation
+  setTriggered(true);
 
-  // Auto-start measurement on simulation + selected mode
-  useEffect(() => {
-    if (props.isSimulation && props.selected && canMeasure) {
-      const interval = setInterval(() => {
-        startMeasurement();
-      }, 1000); // Simulate measurement every second
-      return () => clearInterval(interval);
-    }
-  }, [props.isSimulation, props.selected, distance, canMeasure]);
+  // Simulate the measurement delay (e.g., sensor processing time)
+  setTimeout(() => {
+    // Visual Feedback: Stop the pulse animation
+    setTriggered(false);
+  }, 10); // This 10ms is just for the visual effect, not the calculation
+};
+
+  // Auto-start measurement ANIMATION on simulation + selected mode
+useEffect(() => {
+  if (props.isSimulation && props.selected && canMeasure) {
+    const interval = setInterval(() => {
+      startMeasurement(); // This now only triggers the visual pulse
+    }, 1000); // This interval controls how often the sensor "pings" visually
+    return () => clearInterval(interval);
+  }
+}, [props.isSimulation, props.selected, canMeasure, startMeasurement]); // Add startMeasurement to dependencies
 
   // Constrain ball movement within sensor range circle
   const onDragMove = (e: Konva.KonvaEventObject<DragEvent>) => {
@@ -214,21 +225,6 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [props.selected]);
-
-  // Enhanced debug logging
-  useEffect(() => {
-    if (props.connectedMicrobit && props.isSimulation) {
-      console.log("🔗 UltraSonic Sensor Debug:");
-      console.log("  Microbit ID:", props.connectedMicrobit.microbitId);
-      console.log("  All Connected:", props.connectedMicrobit.connections.allConnected);
-      console.log("  TRIG Pin:", props.connectedMicrobit.connections.trigPin);
-      console.log("  ECHO Pin:", props.connectedMicrobit.connections.echoPin);
-      console.log("  TRIG Pin State:", microbitPinsState[trigPin || ""]?.digital);
-      console.log("  Is Trigger High:", isTriggerHigh);
-      console.log("  Can Measure:", canMeasure);
-      console.log("  Pin States:", microbitPinsState);
-    }
-  }, [props.connectedMicrobit, trigPin, isTriggerHigh, canMeasure, microbitPinsState, props.isSimulation]);
 
   // Animate echo pulse radius visualization
   const [pulseRadius, setPulseRadius] = useState(0);
@@ -293,14 +289,14 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
 
           {props.isSimulation && props.selected && (
             <>
-              {/* Range arc */}
+              {/* Range arc - Now realistic HC-SR04 angle (30° total instead of 90°) */}
               <Arc
                 x={SENSOR_X}
                 y={SENSOR_Y}
                 innerRadius={0}
                 outerRadius={RANGE_RADIUS}
-                angle={RANGE_ANGLE * 2}
-                rotation={225}
+                angle={RANGE_ANGLE * 2} // 30° total spread (typical HC-SR04)
+                rotation={270 - RANGE_ANGLE} // Center the arc pointing upward
                 fill={
                   ballInRange && canMeasure
                     ? "rgba(0,255,0,0.3)"
@@ -374,11 +370,11 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
               {/* Sensor output data */}
               <Text
                 x={-100}
-                y={SENSOR_IMG_HEIGHT - 160}
+                y={SENSOR_IMG_HEIGHT - 130} // Adjusted for new height
                 fontSize={14}
                 fill="green"
                 text={`Echo time: ${
-                  canMeasure && ballInRange && echoTime
+                  canMeasure && ballInRange && echoTime !== null
                     ? echoTime.toFixed(0) + " μs"
                     : "N/A"
                 }`}
@@ -390,7 +386,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                   {/* Toggle button background */}
                   <Rect
                     x={-50}
-                    y={SENSOR_IMG_HEIGHT - 70}
+                    y={SENSOR_IMG_HEIGHT - 40} // Adjusted for new height
                     width={60}
                     height={30}
                     cornerRadius={15}
@@ -404,7 +400,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                   {/* Toggle slider */}
                   <Circle
                     x={unit === "cm" ? -34.5 : -5.5}
-                    y={SENSOR_IMG_HEIGHT - 55}
+                    y={SENSOR_IMG_HEIGHT - 25} // Adjusted for new height
                     radius={15}
                     fill="white"
                     stroke="#333"
@@ -416,7 +412,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                   {/* Toggle labels */}
                   <Text
                     x={-44}
-                    y={SENSOR_IMG_HEIGHT - 60}
+                    y={SENSOR_IMG_HEIGHT - 30} // Adjusted for new height
                     fontSize={13}
                     fill="white"
                     text="cm"
@@ -427,7 +423,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
                   
                   <Text
                     x={-10}
-                    y={SENSOR_IMG_HEIGHT - 60}
+                    y={SENSOR_IMG_HEIGHT - 30} // Adjusted for new height
                     fontSize={13}
                     fill="white"
                     text="in"
@@ -442,7 +438,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
               {!ballInRange && canMeasure && (
                 <Text
                   x={SENSOR_X - 50}
-                  y={SENSOR_Y + SENSOR_IMG_HEIGHT + -320}
+                  y={SENSOR_Y + SENSOR_IMG_HEIGHT + -290} // Adjusted for new height
                   fontSize={16}
                   fill="red"
                   text="Out of range"
@@ -453,7 +449,7 @@ export default function UltraSonicSensor4P(props: UltraSonicSensor4PProps) {
               {/* {!canMeasure && props.connectedMicrobit && (
                 <Text
                   x={SENSOR_X - 80}
-                  y={SENSOR_Y + SENSOR_IMG_HEIGHT + -300}
+                  y={SENSOR_Y + SENSOR_IMG_HEIGHT + -270}  // Adjusted for new height
                   fontSize={14}
                   fill="orange"
                   text={

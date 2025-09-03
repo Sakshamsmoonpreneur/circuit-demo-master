@@ -22,7 +22,6 @@ import {
   getCircuitShortcuts,
   getShortcutMetadata,
 } from "@/circuit_canvas/utils/circuitShortcuts";
-// import { Simulator } from "@/lib/code/Simulator";
 import { SimulatorProxy as Simulator } from "@/python_code_editor/lib/SimulatorProxy";
 import CircuitSelector from "@/circuit_canvas/components/toolbar/panels/Palette";
 import {
@@ -44,6 +43,7 @@ import { useViewport } from "@/circuit_canvas/hooks/useViewport";
 import HighPerformanceGrid from "./HighPerformanceGrid";
 import { Window } from "@/common/components/ui/Window";
 import ElementRotationButtons from "../toolbar/customization/ElementRoationButtons";
+import { useMessage } from "@/common/components/ui/GenericMessagePopup";
 
 export default function CircuitCanvas() {
   const [mousePos, setMousePos] = useState<{ x: number; y: number }>({
@@ -88,7 +88,6 @@ export default function CircuitCanvas() {
   const [wireCounter, setWireCounter] = useState(0);
   const [showPalette, setShowPalette] = useState(true);
   const [showDebugBox, setShowDebugBox] = useState(false);
-  const [showSimulationPanel, setShowSimulationPanel] = useState(false);
   const elementsRef = useRef<CircuitElement[]>(elements);
   const [creatingWireJoints, setCreatingWireJoints] = useState<
     { x: number; y: number }[]
@@ -99,6 +98,7 @@ export default function CircuitCanvas() {
   >([]);
   const [simulationRunning, setSimulationRunning] = useState(false);
   const simulationRunningRef = useRef(simulationRunning);
+  const { showMessage } = useMessage();
 
   useEffect(() => {
     simulationRunningRef.current = simulationRunning;
@@ -150,6 +150,44 @@ export default function CircuitCanvas() {
     }
   }
 
+  // Utility: derive the highest numeric suffix used in existing wire IDs
+  function getMaxWireIndex(currentWires: Wire[]): number {
+    let max = -1;
+    for (const w of currentWires) {
+      const match = /^wire-(\d+)$/.exec(w.id);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!Number.isNaN(n) && n > max) max = n;
+      }
+    }
+    return max;
+  }
+
+  // Ensure all wire IDs are unique and return the sanitized list plus the highest numeric suffix encountered
+  function sanitizeWireIds(currentWires: Wire[]): {
+    sanitized: Wire[];
+    maxIndex: number;
+  } {
+    const maxBefore = getMaxWireIndex(currentWires);
+    const seen = new Set<string>();
+    let nextIndex = maxBefore + 1; // start allocating new IDs after current max
+    const sanitized: Wire[] = currentWires.map((w) => {
+      if (!seen.has(w.id)) {
+        seen.add(w.id);
+        return w; // keep as-is
+      }
+      // duplicate id detected – allocate a fresh one
+      while (seen.has(`wire-${nextIndex}`)) nextIndex++;
+      const newWire = { ...w, id: `wire-${nextIndex}` };
+      seen.add(newWire.id);
+      nextIndex++;
+      return newWire;
+    });
+    // Compute final max index used (nextIndex was incremented after assignment)
+    const finalMax = Math.max(maxBefore, nextIndex - 1);
+    return { sanitized, maxIndex: finalMax };
+  }
+
   //changing the element state on element position change
   useEffect(() => {
     elementsRef.current = elements;
@@ -185,10 +223,10 @@ export default function CircuitCanvas() {
   }, [creatingWireStartNode]);
 
   function stopSimulation() {
+    debugger;
     if (!simulationRunning) return;
 
     setSimulationRunning(false);
-    setShowSimulationPanel(false); // Hide simulation panel when simulation stops
     setElements((prev) =>
       prev.map((el) => ({
         ...el,
@@ -208,15 +246,9 @@ export default function CircuitCanvas() {
   }
 
   function startSimulation() {
+    debugger;
     setSimulationRunning(true);
     computeCircuit(wires);
-
-    // if microbit is selected, show the simulation panel
-    if (elements.some((el) => el.type === "microbit")) {
-      setShowSimulationPanel(true);
-    } else {
-      setShowSimulationPanel(false);
-    }
 
     // Run user code for all controllers
     elements.forEach((el) => {
@@ -543,7 +575,20 @@ export default function CircuitCanvas() {
     pushToHistory();
 
     const newWire: Wire = {
-      id: `wire-${wireCounter}`,
+      // Ensure unique incremental ID even if wires were loaded from storage
+      // or counter was reset. We probe for the next free numeric suffix.
+      id: (function generateWireId() {
+        const existing = new Set(wires.map((w) => w.id));
+        let candidate = wireCounter;
+        while (existing.has(`wire-${candidate}`)) candidate++;
+        // Update counter so subsequent wires continue after this one
+        if (candidate !== wireCounter) {
+          setWireCounter(candidate + 1);
+        } else {
+          setWireCounter((c) => c + 1);
+        }
+        return `wire-${candidate}`;
+      })(),
       fromNodeId: creatingWireStartNode,
       toNodeId: nodeId,
       joints: creatingWireJoints,
@@ -551,7 +596,6 @@ export default function CircuitCanvas() {
     };
 
     setWires([...wires, newWire]);
-    setWireCounter((c) => c + 1);
     stopSimulation();
 
     setCreatingWireStartNode(null);
@@ -668,7 +712,6 @@ export default function CircuitCanvas() {
           controller: "microbit",
           onOutput: (line) => console.log(`[${newElement.id}]`, line),
           onEvent: async (event) => {
-            console.log(`[${newElement.id}] Event:`, event);
             if (event.type === "reset") {
               setElements((prev) =>
                 prev.map((el) =>
@@ -709,11 +752,12 @@ export default function CircuitCanvas() {
               );
 
               if (simulationRunningRef.current) {
-                console.log("Simulation running, computing circuit...");
+                showMessage("Simulation running, computing circuit...", "info");
                 computeCircuit(wiresRef.current);
               } else {
-                console.log(
-                  "Simulation not running, skipping circuit computation."
+                showMessage(
+                  "Simulation not running, skipping circuit computation.",
+                  "info"
                 );
               }
             }
@@ -722,8 +766,6 @@ export default function CircuitCanvas() {
 
         await simulator.initialize();
         const states = await simulator.getStates();
-
-        console.log(states);
 
         // Update map and controller LED state
         setControllerMap((prev) => ({ ...prev, [newElement.id]: simulator }));
@@ -839,29 +881,6 @@ export default function CircuitCanvas() {
   const handlePropertiesPannelClose = () => {
     // setSelectedElement(null);
     setShowPropertiesPannel(false);
-  };
-
-  const handleControllerPropertyChange = (
-    controllerId: string,
-    property: string,
-    value: any
-  ) => {
-    setElements((prev) =>
-      prev.map((el) =>
-        el.id === controllerId
-          ? { ...el, controller: { ...el.controller, [property]: value } }
-          : el
-      )
-    );
-
-    // if selected controller is equal to active controller, reset selected element to the updated version
-    if (selectedElement?.id === controllerId) {
-      // setSelectedElement to the updated element
-      const updatedElement = elements.find((el) => el.id === controllerId);
-      if (updatedElement) {
-        setSelectedElement(updatedElement);
-      }
-    }
   };
 
   return (
@@ -1010,7 +1029,10 @@ export default function CircuitCanvas() {
                 resetState();
                 setLoadingSavedCircuit(true);
                 setElements(data.elements);
-                setWires(data.wires);
+                // Sanitize wire IDs (handle duplicates) and advance counter accordingly
+                const { sanitized, maxIndex } = sanitizeWireIds(data.wires);
+                setWires(sanitized);
+                setWireCounter(maxIndex + 1);
                 setTimeout(() => {
                   const pos = stageRef.current?.getPointerPosition();
                   if (pos) setMousePos(pos);
@@ -1275,13 +1297,8 @@ export default function CircuitCanvas() {
                       setShowPropertiesPannel(true);
                       setActiveControllerId(null);
                       setOpenCodeEditor(false);
-                      setShowSimulationPanel(false);
                       if (element?.type === "microbit") {
                         setActiveControllerId(element.id);
-                        // Show simulation panel if simulation is running and microbit is selected
-                        if (simulationRunning) {
-                          setShowSimulationPanel(true);
-                        }
                       }
                     }}
                     selectedElementId={selectedElement?.id || null}
@@ -1367,87 +1384,6 @@ export default function CircuitCanvas() {
           </div>
         </div>
       )}
-
-      {/* Simulation Panel - appears when microbit is selected during simulation */}
-      {showSimulationPanel &&
-        selectedElement &&
-        selectedElement.type === "microbit" && (
-          <Window
-            title="Simulation Control"
-            initialPosition={{
-              x: openCodeEditor
-                ? window.innerWidth - 824
-                : window.innerWidth - 404,
-              y: window.innerHeight / 2 - 200,
-            }}
-            initialSize={{ width: 320, height: 400 }}
-            onClose={() => setShowSimulationPanel(false)}
-            backgroundColor="#ffffff"
-          >
-            <div className="p-4">
-              <div className="mb-4">
-                <h3 className="text-sm font-medium text-gray-700 mb-2">
-                  Selected Device
-                </h3>
-                <div className="bg-gray-50 p-3 rounded border">
-                  <span className="font-mono text-sm">
-                    {selectedElement.id}
-                  </span>
-                </div>
-              </div>
-
-              {/* Temperature Slider */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Temperature (°C)
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="50"
-                  value={Number(selectedElement.controller?.temperature ?? 25)}
-                  onChange={(e) =>
-                    handleControllerPropertyChange(
-                      selectedElement.id,
-                      "temperature",
-                      Number(e.target.value)
-                    )
-                  }
-                  className="w-full"
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  {`${selectedElement.controller?.temperature ?? 25}°C`}
-                </div>
-              </div>
-
-              {/* Brightness Slider */}
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Brightness (0–255)
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="255"
-                  value={Number(selectedElement.controller?.brightness ?? 128)}
-                  onChange={(e) =>
-                    handleControllerPropertyChange(
-                      selectedElement.id,
-                      "brightness",
-                      Number(e.target.value)
-                    )
-                  }
-                  className="w-full"
-                />
-                <div className="text-xs text-gray-500 mt-1">
-                  {(selectedElement.controller?.brightness ?? 128).toString()}
-                </div>
-              </div>
-
-              {/* Future simulation controls will be added here */}
-            </div>
-          </Window>
-        )}
     </div>
   );
 }
