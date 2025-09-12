@@ -1,5 +1,7 @@
-// Character patterns for 5x5 LED matrix display
-// Each character is represented as a 5x5 boolean matrix
+// characterPatterns.ts
+// 5x5 numeric patterns. Values are 0/1 (number[][] with 5 rows × 5 cols).
+// Only 5×5 matrices - ensure no extra rows/columns.
+
 export const CHARACTER_PATTERNS: Record<string, number[][]> = {
   A: [
     [0, 1, 1, 1, 0],
@@ -323,7 +325,8 @@ export const CHARACTER_PATTERNS: Record<string, number[][]> = {
     [0, 1, 1, 1, 0],
     [0, 0, 0, 0, 0],
   ],
-  // Lowercase letters
+
+  // Lowercase letters (representative subset)
   a: [
     [0, 0, 0, 0, 0],
     [0, 1, 1, 1, 0],
@@ -372,7 +375,6 @@ export const CHARACTER_PATTERNS: Record<string, number[][]> = {
     [1, 0, 0, 0, 1],
     [0, 1, 1, 1, 1],
     [0, 0, 0, 0, 1],
-    [0, 1, 1, 1, 0],
   ],
   h: [
     [1, 0, 0, 0, 0],
@@ -394,7 +396,6 @@ export const CHARACTER_PATTERNS: Record<string, number[][]> = {
     [0, 0, 0, 1, 0],
     [0, 0, 0, 1, 0],
     [1, 0, 0, 1, 0],
-    [0, 1, 1, 0, 0],
   ],
   k: [
     [1, 0, 0, 0, 0],
@@ -500,7 +501,6 @@ export const CHARACTER_PATTERNS: Record<string, number[][]> = {
     [1, 0, 0, 0, 1],
     [0, 1, 1, 1, 1],
     [0, 0, 0, 0, 1],
-    [0, 1, 1, 1, 0],
   ],
   z: [
     [0, 0, 0, 0, 0],

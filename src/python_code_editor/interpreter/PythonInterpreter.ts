@@ -129,25 +129,28 @@ export class PythonInterpreter {
     return transformedLines.join("\n");
   }
 
-  private async injectPrintRedirect() {
-    await this.pyodide!.runPythonAsync(`
-      import builtins, sys
-      class DualOutput:
-          def __init__(self):
-              self._buffer = []
-          def write(self, text):
-              if text.strip():
-                  import js
-                  js.writeToConsole(text)
-              self._buffer.append(text)
-          def flush(self): pass
+  // PythonInterpreter.ts - Update the injectPrintRedirect method
+private async injectPrintRedirect() {
+  await this.pyodide!.runPythonAsync(`
+    import builtins, sys
+    class DualOutput:
+        def __init__(self):
+            self._buffer = []
+        def write(self, text):
+            if text.strip():
+                import js
+                js.writeToConsole(text)
+            self._buffer.append(text)
+        def flush(self): pass
 
-      sys.stdout = DualOutput()
-      sys.stderr = sys.stdout
-      builtins.print = lambda *args, **kwargs: sys.stdout.write(" ".join(map(str, args)) + "\\n")
-      from microbit import *
-    `);
-  }
+    sys.stdout = DualOutput()
+    sys.stderr = sys.stdout
+    builtins.print = lambda *args, **kwargs: sys.stdout.write(" ".join(map(str, args)) + "\\n")
+    
+    # Import microbit library
+    from microbit import *
+  `);
+}
 
   getPyodide(): PyodideInterface | null {
     return this.pyodide;

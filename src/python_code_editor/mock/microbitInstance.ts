@@ -1,7 +1,11 @@
-// microbitInstance.tsx
-
 import type { PyodideInterface } from "pyodide";
-import { CHARACTER_PATTERNS } from "./characterPatterns";
+import { CHARACTER_PATTERNS } from "../data/characterPatterns";
+import { 
+  MicrobitImage, 
+  STANDARD_IMAGES, 
+  createImageFromString, 
+  isValidImage 
+} from "../data/microbitImages";
 
 export type MicrobitEvent =
   | {
@@ -11,7 +15,7 @@ export type MicrobitEvent =
       pinType: "digital" | "analog";
     }
   | { type: "led-change"; x: number; y: number; value: number }
-  | { type: "button-press"; button: "A" | "B" }
+  | { type: "button-press"; button: "A" | "B" | "AB"}
   | { type: "reset" };
 
 type MicrobitEventCallback = (event: MicrobitEvent) => void;
@@ -22,9 +26,9 @@ interface HandlerProxy {
 }
 
 class ButtonInstance {
-  constructor(private name: "A" | "B") {}
+  constructor(private name: "A" | "B" | "AB") {}
 
-  getName(): "A" | "B" {
+  getName(): "A" | "B" | "AB" {
     return this.name;
   }
 
@@ -51,6 +55,7 @@ class MicrobitEventEmitter {
 export class MicrobitSimulator {
   private digitalWriteListeners: Record<string, Set<(value: number) => void>> =
     {};
+  private startTime: number;
 
   public readonly pins = {
     digital_write_pin: this.digitalWritePin.bind(this),
@@ -60,12 +65,19 @@ export class MicrobitSimulator {
 
     // NEW: subscribe to writes on a specific digital pin
     onDigitalWrite: (pin: string, cb: (value: number) => void) => {
-      debugger;
       if (!this.digitalWriteListeners[pin])
         this.digitalWriteListeners[pin] = new Set();
       this.digitalWriteListeners[pin].add(cb);
       return () => this.digitalWriteListeners[pin].delete(cb);
     },
+  };
+
+  public readonly TRIGG = {
+    digital_write_pin: this.digitalWritePin.bind(this),
+  };
+
+  public readonly ECHO = {
+    digital_read_pin: this.readDigitalPin.bind(this),
   };
 
   // NEW: Allow external components to set pin values (for sensor simulation)
@@ -138,17 +150,26 @@ export class MicrobitSimulator {
 
   private pyodide: PyodideInterface;
   private eventEmitter = new MicrobitEventEmitter();
-  private ledMatrix: boolean[][] = Array.from({ length: 5 }, () =>
-    Array(5).fill(false)
+  private ledMatrix: number[][] = Array.from({ length: 5 }, () =>
+    Array(5).fill(0)
   );
   private pinStates: Record<string, { digital: number; analog: number }> = {};
-  private buttonStates: Record<"A" | "B", boolean> = { A: false, B: false };
-private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
+  private buttonStates: Record<"A" | "B" | "AB", boolean> = {
+    A: false,
+    B: false,
+    AB: false,
+  };
+  private inputHandlers: Record<"A" | "B" | "AB", HandlerProxy[]> = {
+    A: [],
+    B: [],
+    AB: [],
+  };
   private foreverCallbacks: Set<any> = new Set();
 
   public readonly Button = {
     A: new ButtonInstance("A"),
     B: new ButtonInstance("B"),
+    AB: new ButtonInstance("AB"),
   };
 
   public readonly DigitalPin: Record<string, string> = {};
@@ -159,6 +180,7 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
     point: this.point.bind(this),
     toggle: this.toggle.bind(this),
   };
+
   public readonly input = {
     on_button_pressed: this.onButtonPressed.bind(this),
     _clear: this.clearInputs.bind(this),
@@ -169,13 +191,62 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
     pause: this.pause.bind(this),
   };
 
+  public readonly microbit = {
+    get_distance: this.showString.bind(this),
+    forever: this.forever.bind(this),
+    pause: this.pause.bind(this),
+  };
+
   constructor(pyodide: PyodideInterface) {
     this.pyodide = pyodide;
+    this.startTime = Date.now();
 
     for (let i = 0; i <= 20; i++) {
       const pin = `P${i}`;
       this.pinStates[pin] = { digital: 0, analog: 0 };
       this.DigitalPin[pin] = pin;
+    }
+  }
+
+  // Add set_pixel method to handle brightness values
+  private set_pixel(x: number, y: number, value: number): void {
+    if (x >= 0 && x < 5 && y >= 0 && y < 5 && value >= 0 && value <= 9) {
+      this.ledMatrix[y][x] = value;
+      this.eventEmitter.emit({ type: "led-change", x, y, value });
+    }
+  }
+
+  // Updated showImage method to use set_pixel
+  private showImage(image: any): void {
+    let pixels: number[][];
+
+    if (typeof image === "string") {
+      // Handle string images directly
+      const rows = image.split(":");
+      pixels = [];
+      for (let y = 0; y < 5; y++) {
+        pixels[y] = [];
+        const row = rows[y] || "";
+        for (let x = 0; x < 5; x++) {
+          const ch = row[x] ?? "0";
+          const v = parseInt(ch, 10);
+          pixels[y][x] = Number.isNaN(v) ? 0 : v;
+        }
+      }
+    } else if (image && typeof image === "object" && image.pixels) {
+      // Handle MicrobitImage object
+      pixels = image.pixels;
+    } else {
+      console.error("Invalid image format");
+      return;
+    }
+
+    // Display the image using set_pixel
+    for (let y = 0; y < 5; y++) {
+      for (let x = 0; x < 5; x++) {
+        const brightness = pixels[y][x] || 0;
+        this.set_pixel(x, y, brightness);
+      }
     }
   }
 
@@ -196,7 +267,7 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
       return;
     }
 
-    const scrollPattern: boolean[][] = [];
+    const scrollPattern: number[][] = [];
 
     validChars.forEach((char, index) => {
       const pattern = CHARACTER_PATTERNS[char];
@@ -204,16 +275,16 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
         if (!scrollPattern[rowIndex]) {
           scrollPattern[rowIndex] = [];
         }
-        scrollPattern[rowIndex].push(...row.map((v) => Boolean(v)));
+        scrollPattern[rowIndex].push(...row.map((v) => v > 0 ? 9 : 0));
         if (index < validChars.length - 1) {
-          scrollPattern[rowIndex].push(false);
+          scrollPattern[rowIndex].push(0);
         }
       });
     });
 
     for (let rowIndex = 0; rowIndex < 5; rowIndex++) {
       for (let i = 0; i < 5; i++) {
-        scrollPattern[rowIndex].push(false);
+        scrollPattern[rowIndex].push(0);
       }
     }
 
@@ -228,9 +299,9 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
           const patternCol = currentOffset + col;
           if (
             patternCol < scrollPattern[row].length &&
-            scrollPattern[row][patternCol]
+            scrollPattern[row][patternCol] > 0
           ) {
-            this.plot(row, col); // This should plot horizontally
+            this.set_pixel(row, col, scrollPattern[row][patternCol]);
           }
         }
       }
@@ -262,12 +333,6 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
     setTimeout(runCallback, 20);
   }
 
-  // private async pause(ms: number) {
-  //   return new Promise<void>((resolve) => {
-  //     setTimeout(resolve, ms);
-  //   });
-  // }
-
   private async pause(ms: number) {
     return new Promise<void>((resolve) => setTimeout(resolve, ms));
   }
@@ -275,7 +340,7 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
   private clearDisplay() {
     for (let y = 0; y < 5; y++) {
       for (let x = 0; x < 5; x++) {
-        this.unplot(x, y);
+        this.set_pixel(x, y, 0);
       }
     }
   }
@@ -293,10 +358,10 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
     }
     for (let y = 0; y < 5; y++) {
       for (let x = 0; x < 5; x++) {
-        this.ledMatrix[y][x] = false;
+        this.ledMatrix[y][x] = 0;
       }
     }
-    this.buttonStates = { A: false, B: false };
+    this.buttonStates = { A: false, B: false, AB: false };
     this.clearInputs();
     this.eventEmitter.emit({ type: "reset" });
   }
@@ -312,84 +377,70 @@ private inputHandlers: Record<"A" | "B", HandlerProxy[]> = { A: [], B: [] };
   }
 
   private plot(x: number, y: number) {
-    this.ledMatrix[y][x] = true;
-    this.eventEmitter.emit({ type: "led-change", x, y, value: 1 });
+    this.set_pixel(x, y, 9);
   }
 
   private unplot(x: number, y: number) {
-    this.ledMatrix[y][x] = false;
-    this.eventEmitter.emit({ type: "led-change", x, y, value: 0 });
+    this.set_pixel(x, y, 0);
   }
 
   private toggle(x: number, y: number) {
-    this.ledMatrix[y][x] = !this.ledMatrix[y][x];
-    this.eventEmitter.emit({
-      type: "led-change",
-      x,
-      y,
-      value: this.ledMatrix[y][x] ? 1 : 0,
-    });
+    const currentValue = this.ledMatrix[y][x];
+    this.set_pixel(x, y, currentValue > 0 ? 0 : 9);
   }
 
   private point(x: number, y: number) {
-    return this.ledMatrix[y][x];
+    return this.ledMatrix[y][x] > 0;
   }
 
   // Fixed onButtonPressed method
-private onButtonPressed(button: ButtonInstance, handler: any) {
-  const buttonName = button.getName();
+  private onButtonPressed(button: ButtonInstance, handler: any) {
+    const buttonName = button.getName();
 
-  const { create_proxy } = this.pyodide.pyimport("pyodide.ffi");
+    const { create_proxy } = this.pyodide.pyimport("pyodide.ffi");
 
-  // Create a persistent proxy for the handler to prevent automatic destruction
-  const persistentHandler = create_proxy(handler);
-  
-  const wrapperProxy = create_proxy(() => {
-    try {
-      return Promise.resolve(persistentHandler()); // Use the persistent proxy
-    } catch (err) {
-      console.error("Error in button handler:", err);
-    }
-  });
+    // Create a persistent proxy for the handler to prevent automatic destruction
+    const persistentHandler = create_proxy(handler);
 
-  // Store both proxies so we can clean them up later
-  this.inputHandlers[buttonName].push({
-    wrapperProxy,
-    persistentHandler
-  });
-}
+    const wrapperProxy = create_proxy(() => {
+      try {
+        return Promise.resolve(persistentHandler()); // Use the persistent proxy
+      } catch (err) {
+        console.error("Error in button handler:", err);
+      }
+    });
 
-  // public pressButton(button: ButtonInstance | "A" | "B") {
-  //   const buttonName = typeof button === "string" ? button : button.getName();
-  //   this.buttonStates[buttonName] = true;
-  //   this.inputHandlers[buttonName].forEach((h) => h());
-  //   this.eventEmitter.emit({ type: "button-press", button: buttonName });
-  // }
-
-  // Updated pressButton method
-public async pressButton(button: ButtonInstance | "A" | "B") {
-  const buttonName = typeof button === "string" ? button : button.getName();
-  this.buttonStates[buttonName] = true;
-
-  for (const handlerProxy of this.inputHandlers[buttonName]) {
-    await handlerProxy.wrapperProxy(); // Use the wrapper proxy
+    // Store both proxies so we can clean them up later
+    this.inputHandlers[buttonName].push({
+      wrapperProxy,
+      persistentHandler,
+    });
   }
 
-  this.eventEmitter.emit({ type: "button-press", button: buttonName });
-}
+  // Updated pressButton method
+  public async pressButton(button: ButtonInstance | "A" | "B" | "AB") {
+    const buttonName = typeof button === "string" ? button : button.getName();
+    this.buttonStates[buttonName] = true;
 
-// Updated clearInputs method
-private clearInputs() {
-  this.inputHandlers.A.forEach((handlerProxy) => {
-    handlerProxy.wrapperProxy.destroy?.();
-    handlerProxy.persistentHandler.destroy?.();
-  });
-  this.inputHandlers.B.forEach((handlerProxy) => {
-    handlerProxy.wrapperProxy.destroy?.();
-    handlerProxy.persistentHandler.destroy?.();
-  });
-  this.inputHandlers = { A: [], B: [] };
-}
+    for (const handlerProxy of this.inputHandlers[buttonName]) {
+      await handlerProxy.wrapperProxy(); // Use the wrapper proxy
+    }
+
+    this.eventEmitter.emit({ type: "button-press", button: buttonName });
+  }
+
+  // Updated clearInputs method
+  private clearInputs() {
+    this.inputHandlers.A.forEach((handlerProxy) => {
+      handlerProxy.wrapperProxy.destroy?.();
+      handlerProxy.persistentHandler.destroy?.();
+    });
+    this.inputHandlers.B.forEach((handlerProxy) => {
+      handlerProxy.wrapperProxy.destroy?.();
+      handlerProxy.persistentHandler.destroy?.();
+    });
+    this.inputHandlers = { A: [], B: [], AB: [] };
+  }
 
   getStateSnapshot() {
     return {
@@ -399,14 +450,100 @@ private clearInputs() {
     };
   }
 
-  getPythonModule() {
+  private createPinInstance(pinNumber: number) {
+    const pin = `P${pinNumber}`;
     return {
-      pins: this.pins,
-      led: this.led,
-      input: this.input,
-      Button: this.Button,
-      DigitalPin: this.DigitalPin,
-      basic: this.basic,
+      read_digital: () => this.readDigitalPin(pin),
+      write_digital: (value: number) => this.digitalWritePin(pin, value),
+      read_analog: () => this.readAnalogPin(pin),
+      write_analog: (value: number) => this.analogWritePin(pin, value),
+      set_pull: () => {}, // Placeholder
+      get_pull: () => 0, // Placeholder
     };
+  }
+
+  getPythonModule() {
+    const module: any = {
+      display: {
+        show: (image: any) => {
+          if (typeof image === "string") {
+            this.showImage(image);
+          } else if (image && typeof image === "object" && image.pixels) {
+            this.showImage(image);
+          } else if (typeof image === "function") {
+            // Handle function-based image creation
+            image({
+              set_pixel: (x: number, y: number, value: number) => this.set_pixel(x, y, value)
+            });
+          }
+        },
+        scroll: (text: string, interval: number = 150) => {
+          this.showString(text, interval);
+        },
+        clear: () => {
+          this.clearDisplay();
+        },
+        set_pixel: (x: number, y: number, value: number) => {
+          this.set_pixel(x, y, value);
+        },
+        get_pixel: (x: number, y: number) => {
+          return this.ledMatrix[y][x];
+        },
+        on: () => {}, // Placeholder
+        off: () => {}, // Placeholder
+        is_on: () => true, // Placeholder
+      },
+      // Add pin instances
+      pin0: this.createPinInstance(0),
+      pin1: this.createPinInstance(1),
+      pin2: this.createPinInstance(2),
+      pin3: this.createPinInstance(3),
+      pin4: this.createPinInstance(4),
+      pin5: this.createPinInstance(5),
+      pin6: this.createPinInstance(6),
+      pin7: this.createPinInstance(7),
+      pin8: this.createPinInstance(8),
+      pin9: this.createPinInstance(9),
+      pin10: this.createPinInstance(10),
+      pin11: this.createPinInstance(11),
+      pin12: this.createPinInstance(12),
+      pin13: this.createPinInstance(13),
+      pin14: this.createPinInstance(14),
+      pin15: this.createPinInstance(15),
+      pin16: this.createPinInstance(16),
+      pin19: this.createPinInstance(19),
+      pin20: this.createPinInstance(20),
+      button_a: {
+        is_pressed: () => this.buttonStates.A,
+        was_pressed: () => false, // Placeholder
+        get_presses: () => 0, // Placeholder
+      },
+      button_b: {
+        is_pressed: () => this.buttonStates.B,
+        was_pressed: () => false, // Placeholder
+        get_presses: () => 0, // Placeholder
+      },
+      // Add more components as needed
+      sleep: this.pause.bind(this),
+      running_time: () => Date.now() - this.startTime,
+      temperature: () => 20,
+    };
+
+    // Add Image constants as simple objects
+    module.Image = {
+      HEART: STANDARD_IMAGES.HEART,
+      HAPPY: STANDARD_IMAGES.HAPPY,
+      SAD: STANDARD_IMAGES.SAD,
+      YES: STANDARD_IMAGES.YES,
+      NO: STANDARD_IMAGES.NO,
+      ANGRY: STANDARD_IMAGES.ANGRY,
+      CONFUSED: STANDARD_IMAGES.CONFUSED,
+      SURPRISED: STANDARD_IMAGES.SURPRISED,
+      ASLEEP: STANDARD_IMAGES.ASLEEP,
+      TRIANGLE: STANDARD_IMAGES.TRIANGLE,
+      CHESSBOARD: STANDARD_IMAGES.CHESSBOARD,
+    };
+
+    return module;
   }
 }

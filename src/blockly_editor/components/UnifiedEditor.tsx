@@ -11,12 +11,15 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import * as Blockly from "blockly";
 import { pythonGenerator } from "blockly/python";
+import { FaArrowRight } from "react-icons/fa";
 import {
   BlocklyPythonIntegration,
   BidirectionalConverter,
 } from "@/blockly_editor/utils/blocklyPythonConvertor";
 import CodeEditor from "@/python_code_editor/components/CodeEditor";
 import { createToolboxXmlFromBlocks } from "../utils/sharedBlockDefinitions";
+import PythonCodePalette from "./PythonCodeBlockSnippetPalette";
+import MicrobitCodeEditor from "@/circuit_canvas/components/core/MicrobitCodeEditor";
 
 type EditorMode = "block" | "text";
 
@@ -48,6 +51,16 @@ export default function UnifiedEditor({
   const [conversionType, setConversionType] = useState<
     "toBlocks" | "toText" | null
   >(null); // Type of conversion happening
+
+  // State for blocks palette
+  const [showCodePalette, setShowCodePalette] = useState(false);
+
+  // Hide code palette when no controller is selected
+  useEffect(() => {
+    if (!activeControllerId) {
+      setShowCodePalette(false);
+    }
+  }, [activeControllerId]);
 
   // Refs
   const blocklyRef = useRef<HTMLDivElement>(null);
@@ -612,9 +625,6 @@ export default function UnifiedEditor({
     }
   };
 
-  // Convert code to blocks when switching to block mode (removed the conflicting effect)
-  // The conversion is now handled directly in handleModeChange for better control
-
   // Handle workspace resize when container becomes visible
   useEffect(() => {
     if (editorMode === "block" && workspaceRef.current && workspaceReady) {
@@ -652,8 +662,137 @@ export default function UnifiedEditor({
     }
   }, [editorMode, workspaceReady]);
 
+  const handleCodeInsert = useCallback(
+    (code: string) => {
+      if (!activeControllerId) return;
+
+      // Get current code
+      const currentCode = localCode;
+      let newCode = currentCode;
+
+      // Determine the category based on code content
+      const isImport =
+        code.trim().startsWith("import ") || code.trim().startsWith("from ");
+      const isFunction =
+        code.trim().startsWith("def ") || code.trim().startsWith("async def ");
+
+      // Handle different insertion strategies based on code type
+      if (isImport) {
+        // Import statements should be at the top
+        const lines = currentCode.split("\n");
+
+        // Find the last import statement or the top of the file
+        let lastImportIndex = -1;
+        for (let i = 0; i < lines.length; i++) {
+          if (
+            lines[i].trim().startsWith("import ") ||
+            lines[i].trim().startsWith("from ")
+          ) {
+            lastImportIndex = i;
+          } else if (
+            lines[i].trim().length > 0 &&
+            !lines[i].trim().startsWith("#")
+          ) {
+            // Found a non-import, non-comment line - stop searching
+            break;
+          }
+        }
+
+        // Insert after the last import or at the beginning
+        if (lastImportIndex >= 0) {
+          lines.splice(lastImportIndex + 1, 0, code);
+        } else {
+          // No imports found, add at the top
+          lines.unshift(code);
+        }
+
+        // Ensure there's a blank line after imports if there are other statements
+        if (
+          lines.length > lastImportIndex + 2 &&
+          lines[lastImportIndex + 2].trim().length > 0
+        ) {
+          lines.splice(lastImportIndex + 2, 0, "");
+        }
+
+        newCode = lines.join("\n");
+      } else if (isFunction) {
+        // Function definitions should be at the top level, after imports
+        const lines = currentCode.split("\n");
+        let insertIndex = lines.length;
+
+        // Find the end of imports and any top-level code
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (
+            line.startsWith("def ") ||
+            line.startsWith("async def ") ||
+            line.startsWith("class ")
+          ) {
+            insertIndex = i;
+            break;
+          }
+        }
+
+        // Add a blank line before the function if needed
+        if (insertIndex > 0 && lines[insertIndex - 1].trim() !== "") {
+          lines.splice(insertIndex, 0, "");
+          insertIndex++;
+        }
+
+        lines.splice(insertIndex, 0, code);
+        newCode = lines.join("\n");
+      } else {
+        // For other code, just append with proper indentation
+        const lines = currentCode.split("\n");
+        const lastLine = lines[lines.length - 1] || "";
+
+        // Calculate current indentation level
+        const indentMatch = lastLine.match(/^(\s*)/);
+        const currentIndent = indentMatch ? indentMatch[1] : "";
+
+        // Add indentation to the new code if it's not a top-level statement
+        const codeLines = code.split("\n");
+        const formattedCode = codeLines
+          .map((line) => {
+            // Don't add extra indentation to empty lines or comments
+            if (line.trim() === "" || line.trim().startsWith("#")) return line;
+
+            // Check if this line should be at the top level
+            const isTopLevel =
+              line.trim().startsWith("import ") ||
+              line.trim().startsWith("from ") ||
+              line.trim().startsWith("def ") ||
+              line.trim().startsWith("async def ") ||
+              line.trim().startsWith("class ") ||
+              line.trim().startsWith("while ") ||
+              line.trim().startsWith("for ") ||
+              line.trim().startsWith("if ") ||
+              line.trim().startsWith("elif ") ||
+              line.trim().startsWith("else:");
+
+            return isTopLevel ? line : currentIndent + line;
+          })
+          .join("\n");
+
+        // Add a blank line if the current code doesn't end with one
+        const separator = currentCode.trim() === "" ? "" : "\n\n";
+        newCode = currentCode + separator + formattedCode;
+      }
+
+      handleCodeChange(newCode);
+    },
+    [activeControllerId, localCode, handleCodeChange]
+  );
+
   return (
-    <div className="flex flex-col h-full w-full bg-white rounded-xl shadow-sm overflow-hidden">
+    <div className="flex flex-col h-full w-full bg-white rounded-xl shadow-sm overflow-hidden relative">
+      {/* Blocks Palette Panel */}
+      <PythonCodePalette
+        showCodePalette={showCodePalette}
+        setShowCodePalette={setShowCodePalette}
+        onCodeInsert={handleCodeInsert}
+      />
+
       {!activeControllerId ? (
         <div className="flex flex-1 items-center justify-center text-gray-500 text-lg font-medium bg-gray-50">
           Please select a controller.
@@ -661,10 +800,40 @@ export default function UnifiedEditor({
       ) : (
         <>
           {/* Mode Selector Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-100">
-            <span className="text-sm text-gray-700 font-medium">
-              Editor Mode
-            </span>
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gray-100"
+            style={{
+              marginLeft: showCodePalette ? "320px" : "0px",
+              transition: "margin-left 300ms",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              {/* Code Palette Toggle Button */}
+              <button
+                onClick={() => setShowCodePalette((prev) => !prev)}
+                className="flex items-center justify-center w-fit px-2 py-1 bg-blue-100 hover:bg-yellow-200 text-blue-800 text-sm rounded-md transition-all duration-200 border border-blue-200 hover:border-yellow-300"
+                title={
+                  showCodePalette ? "Hide Code Palette" : "Show Code Palette"
+                }
+              >
+                <span
+                  style={{
+                    display: "inline-block",
+                    transition: "transform 0.5s ease-in-out",
+                    transform: showCodePalette
+                      ? "rotate(180deg)"
+                      : "rotate(0deg)",
+                  }}
+                  className="flex items-center justify-center"
+                >
+                  <FaArrowRight className="w-3 h-3" />
+                </span>
+              </button>
+
+              <span className="text-sm text-gray-700 font-medium">
+                Editor Mode
+              </span>
+            </div>
 
             {/* Toggle */}
             <div className="flex items-center gap-3">
@@ -717,7 +886,14 @@ export default function UnifiedEditor({
 
           {/* Validation Error Display */}
           {validationError && (
-            <div className="mx-4 mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div
+              className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg"
+              style={{
+                marginLeft: showCodePalette ? "324px" : "4px",
+                marginRight: "16px",
+                transition: "margin-left 300ms",
+              }}
+            >
               <div className="flex items-start gap-2">
                 <svg
                   className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0"
@@ -763,7 +939,13 @@ export default function UnifiedEditor({
           )}
 
           {/* Editor Content */}
-          <div className="flex-1 overflow-hidden bg-white relative">
+          <div
+            className="flex-1 overflow-hidden bg-white relative"
+            style={{
+              marginLeft: showCodePalette ? "320px" : "0px",
+              transition: "margin-left 300ms",
+            }}
+          >
             {/* Loading Overlay */}
             {isConverting && (
               <div className="absolute inset-0 bg-white bg-opacity-80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -789,7 +971,10 @@ export default function UnifiedEditor({
             )}
 
             {editorMode === "text" ? (
-              <CodeEditor code={localCode} onChange={handleCodeChange} />
+              <MicrobitCodeEditor
+                code={localCode}
+                onChange={handleCodeChange}
+              />
             ) : (
               <div
                 ref={blocklyRef}

@@ -31,6 +31,7 @@ export type CircuitElement = {
     brightness?: number;
   };
   wires?: Wire[];
+  displayProperties?: string[];
 };
 
 export type Wire = {
@@ -113,7 +114,7 @@ export interface MicrobitProps {
   x: number;
   y: number;
   selected?: boolean;
-  onControllerInput?: (input: "A" | "B") => void;
+  onControllerInput?: (input: "A" | "B" | "AB") => void;
   leds: boolean[][];
   pins: Record<string, { digital?: number }>;
   isSimulationOn?: boolean;

@@ -3,7 +3,7 @@ import {
   BaseElementProps,
 } from "@/circuit_canvas/components/core/BaseElement";
 import { useEffect, useState } from "react";
-import { Group, Circle, Image, Line } from "react-konva";
+import { Circle, Group, Image, Line } from "react-konva";
 import { ShortCircuitNotification } from "./ShortCircuitNotification";
 
 interface LedProps extends BaseElementProps {
@@ -28,7 +28,7 @@ export default function Led(props: LedProps) {
 
   const power = Math.max(0, props.power ?? 0);
 
-  // You can tune these for your simulation:
+  // Tunable simulation constants
   const maxPower = 300; // visual scaling (full brightness)
   const maxSafePower = 350; // safety threshold for short circuit
   const brightness = Math.min(1, power / maxPower);
@@ -37,7 +37,7 @@ export default function Led(props: LedProps) {
   return (
     <BaseElement {...props}>
       <Group>
-        {/* Always show the LED image, undimmed */}
+        {/* Always show the LED image */}
         {img && (
           <Image
             image={img}
@@ -51,7 +51,7 @@ export default function Led(props: LedProps) {
           />
         )}
 
-        {/* Overload/short circuit effect (overlays LED) */}
+        {/* Overload/short circuit effect */}
         {isOverloaded ? (
           <>
             {/* Explosion effect */}
@@ -78,16 +78,69 @@ export default function Led(props: LedProps) {
             />
           </>
         ) : (
-          // Normal LED glow
           brightness > 0 && (
-            <Circle
-              x={34.3}
-              y={36}
-              radius={20 + 10 * brightness}
-              fill="red"
-              opacity={0.2 + 0.4 * brightness}
-              shadowBlur={10 + 30 * brightness}
-            />
+            <>
+              {/* Outer glow */}
+              <Line
+                x={-3}
+                y={5}
+                points={[
+                  30,
+                  40, // left start
+                  34,
+                  30, // top left
+                  37.5,
+                  40, // center bottom
+                  41,
+                  30, // top right
+                  45,
+                  40, // right end
+                ]}
+                stroke="rgba(255,100,100,0.4)"
+                strokeWidth={3 + 4 * brightness}
+                shadowColor="red"
+                shadowBlur={15 + 40 * brightness}
+                shadowOpacity={0.7}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+                globalCompositeOperation="lighten"
+              />
+              {/* Inner bright core */}
+              <Line
+                x={-3}
+                y={5}
+                points={[
+                  30,
+                  40, // left start
+                  34,
+                  30, // top left
+                  37.5,
+                  40, // center bottom
+                  41,
+                  30, // top right
+                  45,
+                  40, // right end
+                ]}
+                stroke="yellow"
+                strokeWidth={1 + 2 * brightness}
+                shadowColor="white"
+                shadowBlur={10 + 30 * brightness}
+                shadowOpacity={0.9}
+                lineCap="round"
+                lineJoin="round"
+                listening={false}
+                globalCompositeOperation="lighten"
+              />
+              <Circle
+                x={34.3}
+                y={36}
+                radius={20 + 10 * brightness}
+                fill="red"
+                opacity={0.2 + 0.4 * brightness}
+                shadowBlur={10 + 30 * brightness}
+              />
+            </>
           )
         )}
       </Group>
