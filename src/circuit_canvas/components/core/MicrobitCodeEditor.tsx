@@ -1,15 +1,14 @@
-// MicrobitCodeEditor.tsx
+// MicrobitCodeEditor.tsx (updated handleEditorDidMount)
 "use client";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef } from "react";
 import Editor from "@monaco-editor/react";
-import { microbitAutocompleteProvider }from "@/circuit_canvas/api/microbitAutocomplete";
+import { microbitAutocompleteProvider } from "@/circuit_canvas/api/microbitAutocomplete";
 
 interface MicrobitCodeEditorProps {
   code: string;
   onChange: (value: string) => void;
 }
 
-// Micro:bit-specific default code
 const MICROBIT_DEFAULT_CODE = `from microbit import *
 
 # Your code here
@@ -21,22 +20,35 @@ export default function MicrobitCodeEditor({ code, onChange }: MicrobitCodeEdito
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
     editorRef.current = editor;
-    
-    // Register micro:bit autocomplete provider
-    monaco.languages.registerCompletionItemProvider('python', microbitAutocompleteProvider);
-    
-    // Set micro:bit-specific editor options
+
+    // Register micro:bit autocomplete provider only once.
+    // Use a window-global flag to avoid multiple registrations across mounts/hmr.
+    try {
+      if (!(window as any).__microbitProviderRegistered) {
+        const disposable = monaco.languages.registerCompletionItemProvider(
+          "python",
+          microbitAutocompleteProvider
+        );
+        // Save flags so we don't register again
+        (window as any).__microbitProviderRegistered = true;
+        (window as any).__microbitProviderDisposable = disposable;
+      }
+    } catch (err) {
+      // In case `window` is undefined or monaco API changes — fail gracefully.
+      // eslint-disable-next-line no-console
+      console.warn("Could not register microbit provider:", err);
+    }
+
     editor.updateOptions({
       wordBasedSuggestions: true,
       suggestOnTriggerCharacters: true,
-      acceptSuggestionOnEnter: 'on',
-      tabCompletion: 'on',
+      acceptSuggestionOnEnter: "on",
+      tabCompletion: "on",
     });
   };
 
   return (
     <div className="w-full h-full flex flex-col rounded-xl shadow-2xl border border-white/20 bg-gradient-to-br from-slate-900/80 via-blue-950/70 to-slate-700/70 backdrop-blur-2xl m-1 mt-0.5">
-      {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-gradient-to-r from-slate-700/70 via-blue-900/50 to-transparent backdrop-blur-lg select-none">
         <span className="text-sm tracking-wide font-bold font-mono text-white/90 drop-shadow-md">
           Micro:bit Python Editor
@@ -59,8 +71,7 @@ export default function MicrobitCodeEditor({ code, onChange }: MicrobitCodeEdito
           </button>
         </div>
       </div>
-      
-      {/* Monaco Editor */}
+
       <div className="flex-1 min-h-0 w-full">
         <Editor
           language="python"
@@ -69,7 +80,7 @@ export default function MicrobitCodeEditor({ code, onChange }: MicrobitCodeEdito
           onMount={handleEditorDidMount}
           theme="vs-dark"
           options={{
-            minimap: { enabled: false },
+            minimap: { enabled: true },
             fontSize,
             scrollBeyondLastLine: true,
             automaticLayout: true,

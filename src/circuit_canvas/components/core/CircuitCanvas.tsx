@@ -131,8 +131,17 @@ export default function CircuitCanvas() {
   );
 
   // Use the history hook
-  const { history, pushToHistory, initializeHistory, undo, redo, clearHistory, canUndo, canRedo } =
-    useCircuitHistory();
+  const {
+    history,
+    pushToHistory,
+    initializeHistory,
+    undo,
+    redo,
+    clearHistory,
+    canUndo,
+    canRedo,
+    syncProperties,
+  } = useCircuitHistory();
 
   // Initialize wire management hook
   const {
@@ -176,9 +185,10 @@ export default function CircuitCanvas() {
   // fade out and close the Properties Panel gracefully.
   useEffect(() => {
     if (!showPropertiesPannel || !selectedElement) return;
-    const exists = selectedElement.type === "wire"
-      ? wires.some((w) => w.id === selectedElement.id)
-      : elements.some((el) => el.id === selectedElement.id);
+    const exists =
+      selectedElement.type === "wire"
+        ? wires.some((w) => w.id === selectedElement.id)
+        : elements.some((el) => el.id === selectedElement.id);
     if (!exists) {
       setPropertiesPanelClosing(true);
       const t = setTimeout(() => {
@@ -239,11 +249,11 @@ export default function CircuitCanvas() {
   }, []);
 
   function resetState() {
-  // Reset canvas and seed history with an initial empty state
-  setElements([]);
-  resetWireState();
-  clearHistory();
-  initializeHistory([], []);
+    // Reset canvas and seed history with an initial empty state
+    setElements([]);
+    resetWireState();
+    clearHistory();
+    initializeHistory([], []);
   }
 
   //changing the element state on element position change
@@ -357,7 +367,8 @@ export default function CircuitCanvas() {
               setWires(ws); // custom setter keeps wiresRef in sync
               updateWiresDirect();
             },
-            stopSimulation
+            stopSimulation,
+            () => elementsRef.current
           ),
         redo: () =>
           redo(
@@ -370,7 +381,8 @@ export default function CircuitCanvas() {
               setWires(ws);
               updateWiresDirect();
             },
-            stopSimulation
+            stopSimulation,
+            () => elementsRef.current
           ),
         isSimulationOn: simulationRunning,
       }),
@@ -487,7 +499,6 @@ export default function CircuitCanvas() {
     }
 
     const elementData = e.dataTransfer.getData("application/element-type");
-    console.log("Element data on drop:", elementData);
     if (!elementData) return;
 
     const element = JSON.parse(elementData);
@@ -543,7 +554,8 @@ export default function CircuitCanvas() {
         const simulator = new Simulator({
           language: "python",
           controller: "microbit",
-          onOutput: (line) => console.log(`[${newElement.id}]`, line),
+          onOutput: (line) =>
+            showMessage(`[${newElement.id}] ${line}`, "error"),
           onEvent: async (event) => {
             if (event.type === "reset") {
               setElements((prev) =>
@@ -769,7 +781,10 @@ export default function CircuitCanvas() {
                   setElements((prev) => {
                     const next = prev.map((el) =>
                       el.id === selectedElement.id
-                        ? { ...el, rotation: ((el.rotation || 0) - 30 + 360) % 360 }
+                        ? {
+                            ...el,
+                            rotation: ((el.rotation || 0) - 30 + 360) % 360,
+                          }
                         : el
                     );
                     // Update ref immediately so wire math sees new rotation
@@ -938,96 +953,105 @@ export default function CircuitCanvas() {
             />
           </div>
         </div>
-    {selectedElement && showPropertiesPannel ? (
-      <div className={`absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl transition-all duration-200 ${propertiesPanelClosing ? "opacity-0 translate-y-1" : "opacity-100 translate-y-0"}`}>
-              <div className="p-1">
-                <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
-                  <button
-                    onClick={handlePropertiesPannelClose}
-                    className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
-                    title="Close"
-                  />
-                </div>
-                <PropertiesPanel
-                  selectedElement={selectedElement}
-                  wires={wires}
-                  getNodeById={getNodeById}
-                  onElementEdit={(updatedElement, deleteElement) => {
-                    pushToHistory(elements, wiresRef.current);
-                    if (deleteElement) {
-                      const updatedWires = wires.filter(
-                        (w) =>
-                          getNodeParent(w.fromNodeId)?.id !==
-                            updatedElement.id &&
-                          getNodeParent(w.toNodeId)?.id !== updatedElement.id
-                      );
-                      setWires(updatedWires);
-                      setElements((prev) =>
-                        prev.filter((el) => el.id !== updatedElement.id)
-                      );
-                      setSelectedElement(null);
-                      setCreatingWireStartNode(null);
-                      setEditingWire(null);
-                      stopSimulation();
-                    } else {
-                      setElements((prev) => {
-                        const next = prev.map((el) =>
-                          el.id === updatedElement.id
-                            ? { ...el, ...updatedElement, x: el.x, y: el.y }
-                            : el
-                        );
-                        elementsRef.current = next;
-                        updateWiresDirect();
-                        return next;
-                      });
-                      stopSimulation();
-                      setSelectedElement(updatedElement);
-                      setCreatingWireStartNode(null);
-                    }
-                  }}
-                  onWireEdit={(updatedWire, deleteElement) => {
-                    if (deleteElement) {
-                      setWires((prev) => {
-                        const next = prev.filter((w) => w.id !== updatedWire.id);
-                        // Push AFTER delete for single-step undo
-                        pushToHistory(elements, next);
-                        return next;
-                      });
-                      setSelectedElement(null);
-                      setCreatingWireStartNode(null);
-                      setEditingWire(null);
-                      stopSimulation();
-                    } else {
-                      setWires((prev) => {
-                        const next = prev.map((w) =>
-                          w.id === updatedWire.id ? { ...w, ...updatedWire } : w
-                        );
-                        // Push AFTER edit
-                        pushToHistory(elements, next);
-                        return next;
-                      });
-                      stopSimulation();
-                      setSelectedElement(null);
-                      setEditingWire(null);
-                    }
-                  }}
-                  onEditWireSelect={(wire) => {
-                    setSelectedElement({
-                      id: wire.id,
-                      type: "wire",
-                      x: 0,
-                      y: 0,
-                      nodes: [],
-                    });
-                  }}
-                  setOpenCodeEditor={setOpenCodeEditor}
-                  wireColor={
-                    wires.find((w) => w.id === selectedElement.id)?.color
-                  }
+        {selectedElement && showPropertiesPannel ? (
+          <div
+            className={`absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl transition-all duration-200 ${
+              propertiesPanelClosing
+                ? "opacity-0 translate-y-1"
+                : "opacity-100 translate-y-0"
+            }`}
+          >
+            <div className="p-1">
+              <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
+                <button
+                  onClick={handlePropertiesPannelClose}
+                  className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
+                  title="Close"
                 />
               </div>
+              <PropertiesPanel
+                selectedElement={selectedElement}
+                wires={wires}
+                getNodeById={getNodeById}
+                onElementEdit={(updatedElement, deleteElement) => {
+                  if (deleteElement) {
+                    // Record deletion so it can be undone
+                    pushToHistory(elements, wiresRef.current);
+                    const updatedWires = wires.filter(
+                      (w) =>
+                        getNodeParent(w.fromNodeId)?.id !== updatedElement.id &&
+                        getNodeParent(w.toNodeId)?.id !== updatedElement.id
+                    );
+                    setWires(updatedWires);
+                    setElements((prev) =>
+                      prev.filter((el) => el.id !== updatedElement.id)
+                    );
+                    setSelectedElement(null);
+                    setCreatingWireStartNode(null);
+                    setEditingWire(null);
+                    stopSimulation();
+                  } else {
+                    // Property edits should NOT affect history; apply without push
+                    setElements((prev) => {
+                      const next = prev.map((el) =>
+                        el.id === updatedElement.id
+                          ? { ...el, ...updatedElement, x: el.x, y: el.y }
+                          : el
+                      );
+                      // Keep property cache in sync so undo/redo retains these values
+                      syncProperties(next);
+                      elementsRef.current = next;
+                      updateWiresDirect();
+                      return next;
+                    });
+                    stopSimulation();
+                    setSelectedElement(updatedElement);
+                    setCreatingWireStartNode(null);
+                  }
+                }}
+                onWireEdit={(updatedWire, deleteElement) => {
+                  if (deleteElement) {
+                    setWires((prev) => {
+                      const next = prev.filter((w) => w.id !== updatedWire.id);
+                      // Push AFTER delete for single-step undo
+                      pushToHistory(elements, next);
+                      return next;
+                    });
+                    setSelectedElement(null);
+                    setCreatingWireStartNode(null);
+                    setEditingWire(null);
+                    stopSimulation();
+                  } else {
+                    setWires((prev) => {
+                      const next = prev.map((w) =>
+                        w.id === updatedWire.id ? { ...w, ...updatedWire } : w
+                      );
+                      // Push AFTER edit
+                      pushToHistory(elements, next);
+                      return next;
+                    });
+                    stopSimulation();
+                    setSelectedElement(null);
+                    setEditingWire(null);
+                  }
+                }}
+                onEditWireSelect={(wire) => {
+                  setSelectedElement({
+                    id: wire.id,
+                    type: "wire",
+                    x: 0,
+                    y: 0,
+                    nodes: [],
+                  });
+                }}
+                setOpenCodeEditor={setOpenCodeEditor}
+                wireColor={
+                  wires.find((w) => w.id === selectedElement.id)?.color
+                }
+              />
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
         <div className="relative w-full flex-1 h-[460px] p-1 overflow-hidden">
           {/* Stage Canvas */}

@@ -43,9 +43,10 @@ export default function RenderElement({
   const center = getElementCenter(element);
 
   // Get connected microbit data for ultrasonic sensor using utility function
-  const connectedMicrobitData = element.type === "ultrasonicsensor4p" && elements && wires
-    ? findConnectedMicrobit(element, elements, wires)
-    : null;
+  const connectedMicrobitData =
+    element.type === "ultrasonicsensor4p" && elements && wires
+      ? findConnectedMicrobit(element, elements, wires)
+      : null;
 
   return (
     <Group
@@ -124,8 +125,8 @@ export default function RenderElement({
       {element.type === "microbit" && (
         <Microbit
           id={element.id}
-          x={1}
-          y={22}
+          x={0}
+          y={0}
           onControllerInput={(input: "A" | "B" | "AB") => {
             props.onControllerInput(element.id, input);
           }}
@@ -156,22 +157,28 @@ export default function RenderElement({
             gnd: element.nodes.find((n) => n.placeholder === "GND")?.id,
           }}
           // Pass the complete connected microbit data with pin information
-          connectedMicrobit={connectedMicrobitData ? {
-            microbitId: connectedMicrobitData.microbit.id,
-            pins: (connectedMicrobitData.microbit.controller?.pins as Record<
-              string,
-              { digital?: number }
-            >) ?? {},
-            connections: {
-              vcc: connectedMicrobitData.connections.vcc,
-              gnd: connectedMicrobitData.connections.gnd,
-              trig: connectedMicrobitData.connections.trig,
-              echo: connectedMicrobitData.connections.echo,
-              allConnected: connectedMicrobitData.connections.allConnected,
-              trigPin: connectedMicrobitData.connections.trigPin,
-              echoPin: connectedMicrobitData.connections.echoPin,
-            }
-          } : undefined}
+          connectedMicrobit={
+            connectedMicrobitData
+              ? {
+                  microbitId: connectedMicrobitData.microbit.id,
+                  pins:
+                    (connectedMicrobitData.microbit.controller?.pins as Record<
+                      string,
+                      { digital?: number }
+                    >) ?? {},
+                  connections: {
+                    vcc: connectedMicrobitData.connections.vcc,
+                    gnd: connectedMicrobitData.connections.gnd,
+                    trig: connectedMicrobitData.connections.trig,
+                    echo: connectedMicrobitData.connections.echo,
+                    allConnected:
+                      connectedMicrobitData.connections.allConnected,
+                    trigPin: connectedMicrobitData.connections.trigPin,
+                    echoPin: connectedMicrobitData.connections.echoPin,
+                  },
+                }
+              : undefined
+          }
           isSimulation={props.isSimulationOn}
         />
       )}

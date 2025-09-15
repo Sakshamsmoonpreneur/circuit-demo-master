@@ -1,10 +1,10 @@
 import type { PyodideInterface } from "pyodide";
 import { CHARACTER_PATTERNS } from "../data/characterPatterns";
-import { 
-  MicrobitImage, 
-  STANDARD_IMAGES, 
-  createImageFromString, 
-  isValidImage 
+import {
+  MicrobitImage,
+  STANDARD_IMAGES,
+  createImageFromString,
+  isValidImage,
 } from "../data/microbitImages";
 
 export type MicrobitEvent =
@@ -15,7 +15,7 @@ export type MicrobitEvent =
       pinType: "digital" | "analog";
     }
   | { type: "led-change"; x: number; y: number; value: number }
-  | { type: "button-press"; button: "A" | "B" | "AB"}
+  | { type: "button-press"; button: "A" | "B" | "AB" }
   | { type: "reset" };
 
 type MicrobitEventCallback = (event: MicrobitEvent) => void;
@@ -275,7 +275,7 @@ export class MicrobitSimulator {
         if (!scrollPattern[rowIndex]) {
           scrollPattern[rowIndex] = [];
         }
-        scrollPattern[rowIndex].push(...row.map((v) => v > 0 ? 9 : 0));
+        scrollPattern[rowIndex].push(...row.map((v) => (v > 0 ? 9 : 0)));
         if (index < validChars.length - 1) {
           scrollPattern[rowIndex].push(0);
         }
@@ -421,7 +421,7 @@ export class MicrobitSimulator {
   public async pressButton(button: ButtonInstance | "A" | "B" | "AB") {
     const buttonName = typeof button === "string" ? button : button.getName();
     this.buttonStates[buttonName] = true;
-
+    console.log(`Button ${buttonName} pressed`);
     for (const handlerProxy of this.inputHandlers[buttonName]) {
       await handlerProxy.wrapperProxy(); // Use the wrapper proxy
     }
@@ -473,7 +473,8 @@ export class MicrobitSimulator {
           } else if (typeof image === "function") {
             // Handle function-based image creation
             image({
-              set_pixel: (x: number, y: number, value: number) => this.set_pixel(x, y, value)
+              set_pixel: (x: number, y: number, value: number) =>
+                this.set_pixel(x, y, value),
             });
           }
         },

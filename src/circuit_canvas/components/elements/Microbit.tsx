@@ -4,9 +4,7 @@ import {
   BaseElementProps,
   MicrobitProps,
 } from "@/circuit_canvas/types/circuit";
-import {
-  BaseElement,
-} from "@/circuit_canvas/components/core/BaseElement";
+import { BaseElement } from "@/circuit_canvas/components/core/BaseElement";
 import { useEffect, useState } from "react";
 import { Group, Image, Rect, Text } from "react-konva";
 
@@ -106,6 +104,10 @@ export default function Microbit({
             e.cancelBubble = true;
             handleButtonClick("AB");
           }}
+          onTap={(e) => {
+            e.cancelBubble = true;
+            handleButtonClick("AB");
+          }}
           x={164}
           y={96}
         >
@@ -145,6 +147,10 @@ export default function Microbit({
             e.cancelBubble = true;
             handleButtonClick("A");
           }}
+          onTap={(e) => {
+            e.cancelBubble = true;
+            handleButtonClick("A");
+          }}
           x={35}
           y={130}
         >
@@ -181,6 +187,10 @@ export default function Microbit({
         {/* Button B */}
         <Group
           onClick={(e) => {
+            e.cancelBubble = true;
+            handleButtonClick("B");
+          }}
+          onTap={(e) => {
             e.cancelBubble = true;
             handleButtonClick("B");
           }}
