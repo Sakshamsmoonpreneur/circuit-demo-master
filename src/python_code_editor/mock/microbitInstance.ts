@@ -5,11 +5,11 @@ import { CHARACTER_PATTERNS } from "./characterPatterns";
 
 export type MicrobitEvent =
   | {
-      type: "pin-change";
-      pin: string;
-      value: number;
-      pinType: "digital" | "analog";
-    }
+    type: "pin-change";
+    pin: string;
+    value: number;
+    pinType: "digital" | "analog";
+  }
   | { type: "led-change"; x: number; y: number; value: number }
   | { type: "button-press"; button: "A" | "B" | "AB" }
   | { type: "logo-touch"; state: "pressed" | "released" } // <-- NEW
@@ -23,7 +23,7 @@ interface HandlerProxy {
 }
 
 class ButtonInstance {
-  constructor(private name: "A" | "B" | "AB") {}
+  constructor(private name: "A" | "B" | "AB") { }
 
   getName(): "A" | "B" | "AB" {
     return this.name;
@@ -282,7 +282,7 @@ export class MicrobitSimulator {
             patternCol < scrollPattern[row].length &&
             scrollPattern[row][patternCol]
           ) {
-            this.plot(row, col); // This should plot horizontally
+            this.plot(col, row); // This should plot horizontally
           }
         }
       }
