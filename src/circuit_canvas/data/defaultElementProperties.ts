@@ -10,7 +10,7 @@ export interface PaletteElement {
     resistance?: number;
     voltage?: number;
     ratio?: number;
-    mode?: "voltage" | "current"; // For multimeters
+  mode?: "voltage" | "current" | "resistance"; // For multimeters
   };
 }
 
@@ -19,14 +19,20 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "lightbulb",
     label: "Lightbulb",
     iconPath: "assets/circuit_canvas/elements/bulb.svg",
-    defaultProps: { resistance: 81 },
+    defaultProps: { resistance: 48 },
   },
   {
     type: "battery",
     label: "Battery",
     iconPath: "assets/circuit_canvas/elements/battery.svg",
-    defaultProps: { voltage: 9, resistance: 1 },
+    defaultProps: { voltage: 9, resistance: 1.45 },
   },
+  // {
+  //   type: "powersupply",
+  //   label: "Power Supply",
+  //   iconPath: "assets/circuit_canvas/elements/power_supply.svg",
+  //   defaultProps: { voltage: 5, resistance: 0.2 },
+  // },
   {
     type: "resistor",
     label: "Resistor",
@@ -36,7 +42,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
   {
     type: "multimeter",
     label: "Multimeter",
-    iconPath: "assets/circuit_canvas/elements/Multimeter.svg",
+    iconPath: "assets/circuit_canvas/elements/multimeter.svg",
     defaultProps: { mode: "voltage" },
   },
   {
@@ -48,7 +54,7 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
   {
     type: "led",
     label: "Led",
-    iconPath: "assets/circuit_canvas/elements/led.svg",
+    iconPath: "assets/circuit_canvas/elements/red_led.svg",
     defaultProps: { resistance: 1 },
     //max current 20ma, max voltage 2,
   },
@@ -56,6 +62,12 @@ export const ELEMENT_PALETTE: PaletteElement[] = [
     type: "microbit",
     label: "Microbit",
     iconPath: "assets/circuit_canvas/elements/microbit.svg",
+    defaultProps: { voltage: 3.3, resistance: 0 },
+  },
+  {
+    type: "microbitWithBreakout",
+    label: "Microbit with Breakout",
+    iconPath: "assets/circuit_canvas/elements/microbit_with_breakout.svg",
     defaultProps: { voltage: 3.3, resistance: 0 },
   },
   {

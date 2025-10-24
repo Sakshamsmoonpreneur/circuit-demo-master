@@ -16,10 +16,9 @@ import {
   BlocklyPythonIntegration,
   BidirectionalConverter,
 } from "@/blockly_editor/utils/blocklyPythonConvertor";
-import CodeEditor from "@/python_code_editor/components/CodeEditor";
+import CodeEditor from "@/python_code_editor/components/PythonCodeEditor";
 import { createToolboxXmlFromBlocks } from "../utils/sharedBlockDefinitions";
 import PythonCodePalette from "./PythonCodeBlockSnippetPalette";
-import MicrobitCodeEditor from "@/circuit_canvas/components/core/MicrobitCodeEditor";
 
 type EditorMode = "block" | "text";
 
@@ -51,7 +50,7 @@ export default function UnifiedEditor({
   const [conversionType, setConversionType] = useState<
     "toBlocks" | "toText" | null
   >(null); // Type of conversion happening
-
+  
   // State for blocks palette
   const [showCodePalette, setShowCodePalette] = useState(false);
 
@@ -341,13 +340,6 @@ export default function UnifiedEditor({
    * Handle blocks to code conversion
    */
   const handleBlocksToCode = useCallback(() => {
-    console.log("🔄 handleBlocksToCode called", {
-      bidirectionalConverter: !!bidirectionalConverter,
-      activeControllerId,
-      isUpdatingFromBlocks,
-      editorMode,
-    });
-
     if (
       !bidirectionalConverter ||
       !activeControllerId ||
@@ -364,11 +356,6 @@ export default function UnifiedEditor({
 
       // Only update if the code actually changed
       if (generatedCode !== lastCodeRef.current) {
-        console.log(
-          "✅ Blocks converted to code:",
-          generatedCode.length,
-          "characters"
-        );
         lastCodeRef.current = generatedCode;
 
         setControllerCodeMap((prev) => ({
@@ -591,12 +578,6 @@ export default function UnifiedEditor({
       if (bidirectionalConverter && activeControllerId && workspaceReady) {
         try {
           const generatedCode = bidirectionalConverter.blocksToPython();
-          console.log(
-            "✅ Blocks converted to code:",
-            generatedCode.length,
-            "characters"
-          );
-
           // Update both the controller code map and local code
           setControllerCodeMap((prev) => ({
             ...prev,
@@ -662,127 +643,106 @@ export default function UnifiedEditor({
     }
   }, [editorMode, workspaceReady]);
 
-  const handleCodeInsert = useCallback(
-    (code: string) => {
-      if (!activeControllerId) return;
-
-      // Get current code
-      const currentCode = localCode;
-      let newCode = currentCode;
-
-      // Determine the category based on code content
-      const isImport =
-        code.trim().startsWith("import ") || code.trim().startsWith("from ");
-      const isFunction =
-        code.trim().startsWith("def ") || code.trim().startsWith("async def ");
-
-      // Handle different insertion strategies based on code type
-      if (isImport) {
-        // Import statements should be at the top
-        const lines = currentCode.split("\n");
-
-        // Find the last import statement or the top of the file
-        let lastImportIndex = -1;
-        for (let i = 0; i < lines.length; i++) {
-          if (
-            lines[i].trim().startsWith("import ") ||
-            lines[i].trim().startsWith("from ")
-          ) {
-            lastImportIndex = i;
-          } else if (
-            lines[i].trim().length > 0 &&
-            !lines[i].trim().startsWith("#")
-          ) {
-            // Found a non-import, non-comment line - stop searching
-            break;
-          }
-        }
-
-        // Insert after the last import or at the beginning
-        if (lastImportIndex >= 0) {
-          lines.splice(lastImportIndex + 1, 0, code);
-        } else {
-          // No imports found, add at the top
-          lines.unshift(code);
-        }
-
-        // Ensure there's a blank line after imports if there are other statements
-        if (
-          lines.length > lastImportIndex + 2 &&
-          lines[lastImportIndex + 2].trim().length > 0
-        ) {
-          lines.splice(lastImportIndex + 2, 0, "");
-        }
-
-        newCode = lines.join("\n");
-      } else if (isFunction) {
-        // Function definitions should be at the top level, after imports
-        const lines = currentCode.split("\n");
-        let insertIndex = lines.length;
-
-        // Find the end of imports and any top-level code
-        for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (
-            line.startsWith("def ") ||
-            line.startsWith("async def ") ||
-            line.startsWith("class ")
-          ) {
-            insertIndex = i;
-            break;
-          }
-        }
-
-        // Add a blank line before the function if needed
-        if (insertIndex > 0 && lines[insertIndex - 1].trim() !== "") {
-          lines.splice(insertIndex, 0, "");
-          insertIndex++;
-        }
-
-        lines.splice(insertIndex, 0, code);
-        newCode = lines.join("\n");
-      } else {
-        // For other code, just append with proper indentation
-        const lines = currentCode.split("\n");
-        const lastLine = lines[lines.length - 1] || "";
-
-        // Calculate current indentation level
-        const indentMatch = lastLine.match(/^(\s*)/);
-        const currentIndent = indentMatch ? indentMatch[1] : "";
-
-        // Add indentation to the new code if it's not a top-level statement
-        const codeLines = code.split("\n");
-        const formattedCode = codeLines
-          .map((line) => {
-            // Don't add extra indentation to empty lines or comments
-            if (line.trim() === "" || line.trim().startsWith("#")) return line;
-
-            // Check if this line should be at the top level
-            const isTopLevel =
-              line.trim().startsWith("import ") ||
-              line.trim().startsWith("from ") ||
-              line.trim().startsWith("def ") ||
-              line.trim().startsWith("async def ") ||
-              line.trim().startsWith("class ") ||
-              line.trim().startsWith("while ") ||
-              line.trim().startsWith("for ") ||
-              line.trim().startsWith("if ") ||
-              line.trim().startsWith("elif ") ||
-              line.trim().startsWith("else:");
-
-            return isTopLevel ? line : currentIndent + line;
-          })
-          .join("\n");
-
-        // Add a blank line if the current code doesn't end with one
-        const separator = currentCode.trim() === "" ? "" : "\n\n";
-        newCode = currentCode + separator + formattedCode;
+  const handleCodeInsert = useCallback((code: string) => {
+  if (!activeControllerId) return;
+  
+  // Get current code
+  const currentCode = localCode;
+  let newCode = currentCode;
+  
+  // Determine the category based on code content
+  const isImport = code.trim().startsWith('import ') || code.trim().startsWith('from ');
+  const isFunction = code.trim().startsWith('def ') || code.trim().startsWith('async def ');
+  
+  // Handle different insertion strategies based on code type
+  if (isImport) {
+    // Import statements should be at the top
+    const lines = currentCode.split('\n');
+    
+    // Find the last import statement or the top of the file
+    let lastImportIndex = -1;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].trim().startsWith('import ') || lines[i].trim().startsWith('from ')) {
+        lastImportIndex = i;
+      } else if (lines[i].trim().length > 0 && !lines[i].trim().startsWith('#')) {
+        // Found a non-import, non-comment line - stop searching
+        break;
       }
-
-      handleCodeChange(newCode);
-    },
-    [activeControllerId, localCode, handleCodeChange]
-  );
+    }
+    
+    // Insert after the last import or at the beginning
+    if (lastImportIndex >= 0) {
+      lines.splice(lastImportIndex + 1, 0, code);
+    } else {
+      // No imports found, add at the top
+      lines.unshift(code);
+    }
+    
+    // Ensure there's a blank line after imports if there are other statements
+    if (lines.length > lastImportIndex + 2 && lines[lastImportIndex + 2].trim().length > 0) {
+      lines.splice(lastImportIndex + 2, 0, '');
+    }
+    
+    newCode = lines.join('\n');
+  } else if (isFunction) {
+    // Function definitions should be at the top level, after imports
+    const lines = currentCode.split('\n');
+    let insertIndex = lines.length;
+    
+    // Find the end of imports and any top-level code
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.startsWith('def ') || line.startsWith('async def ') || line.startsWith('class ')) {
+        insertIndex = i;
+        break;
+      }
+    }
+    
+    // Add a blank line before the function if needed
+    if (insertIndex > 0 && lines[insertIndex - 1].trim() !== '') {
+      lines.splice(insertIndex, 0, '');
+      insertIndex++;
+    }
+    
+    lines.splice(insertIndex, 0, code);
+    newCode = lines.join('\n');
+  } else {
+    // For other code, just append with proper indentation
+    const lines = currentCode.split('\n');
+    const lastLine = lines[lines.length - 1] || '';
+    
+    // Calculate current indentation level
+    const indentMatch = lastLine.match(/^(\s*)/);
+    const currentIndent = indentMatch ? indentMatch[1] : '';
+    
+    // Add indentation to the new code if it's not a top-level statement
+    const codeLines = code.split('\n');
+    const formattedCode = codeLines.map(line => {
+      // Don't add extra indentation to empty lines or comments
+      if (line.trim() === '' || line.trim().startsWith('#')) return line;
+      
+      // Check if this line should be at the top level
+      const isTopLevel = line.trim().startsWith('import ') || 
+                        line.trim().startsWith('from ') || 
+                        line.trim().startsWith('def ') || 
+                        line.trim().startsWith('async def ') || 
+                        line.trim().startsWith('class ') || 
+                        line.trim().startsWith('while ') || 
+                        line.trim().startsWith('for ') || 
+                        line.trim().startsWith('if ') || 
+                        line.trim().startsWith('elif ') || 
+                        line.trim().startsWith('else:');
+      
+      return isTopLevel ? line : currentIndent + line;
+    }).join('\n');
+    
+    // Add a blank line if the current code doesn't end with one
+    const separator = currentCode.trim() === '' ? '' : '\n\n';
+    newCode = currentCode + separator + formattedCode;
+  }
+  
+  handleCodeChange(newCode);
+}, [activeControllerId, localCode, handleCodeChange]);
 
   return (
     <div className="flex flex-col h-full w-full bg-white rounded-xl shadow-sm overflow-hidden relative">
@@ -958,8 +918,8 @@ export default function UnifiedEditor({
                     <h3 className="text-lg font-semibold text-gray-800 mb-1">
                       {conversionType === "toBlocks"
                         ? "Converting to Blocks..."
-                        : "Converting to Text..."}
-                    </h3>
+                        : "Converting to Text..."
+                    }</h3>
                     <p className="text-sm text-gray-600">
                       {conversionType === "toBlocks"
                         ? "Transforming your Python code into visual blocks"
@@ -971,10 +931,7 @@ export default function UnifiedEditor({
             )}
 
             {editorMode === "text" ? (
-              <MicrobitCodeEditor
-                code={localCode}
-                onChange={handleCodeChange}
-              />
+              <CodeEditor code={localCode} onChange={handleCodeChange} />
             ) : (
               <div
                 ref={blocklyRef}

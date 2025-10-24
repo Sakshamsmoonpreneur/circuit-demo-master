@@ -1,8 +1,9 @@
+// src/python_code_editor/lib/Simulator.ts
 import { PythonInterpreter } from "../interpreter/PythonInterpreter";
 import { MicrobitSimulator, MicrobitEvent } from "../mock/microbitInstance";
 
 type SupportedLanguage = "python";
-type SupportedController = "microbit";
+type SupportedController = "microbit" | "microbitWithBreakout";
 
 interface SimulatorOptions {
   language: SupportedLanguage;
@@ -10,6 +11,9 @@ interface SimulatorOptions {
   onOutput?: (line: string) => void;
   onEvent?: (event: MicrobitEvent) => void;
 }
+
+type ButtonEvent = "A" | "B" | "AB";
+type LogoEvent = { type: "logo"; state: "pressed" | "released" };
 
 export class Simulator {
   private interpreter: PythonInterpreter;
@@ -32,11 +36,11 @@ export class Simulator {
 
     if (
       this.options.language === "python" &&
-      this.options.controller === "microbit"
+      (this.options.controller === "microbit" || this.options.controller === "microbitWithBreakout")
     ) {
       this.microbit = new MicrobitSimulator(this.interpreter.getPyodide()!);
       this.interpreter.registerHardwareModule(
-        "microbit",
+        "microbit", // <-- always use "microbit"
         this.microbit.getPythonModule()
       );
 
@@ -59,7 +63,7 @@ export class Simulator {
   }
 
   getStates() {
-    if (!this.microbit) throw new Error("Microbit controller not initialized.");
+    if (!this.microbit) throw new Error(this.options.controller +" controller not initialized at get state.");
     return this.microbit.getStateSnapshot();
   }
 
@@ -70,9 +74,36 @@ export class Simulator {
   reset() {
     if (this.microbit) {
       this.microbit.reset();
-      // stop any ongoing simulation
     } else {
-      throw new Error("Microbit controller not initialized.");
+      throw new Error(this.options.controller + " controller not initialized at reset state.");
     }
+  }
+
+  // --- INPUT API ---
+
+  async simulateInput(event: ButtonEvent | LogoEvent) {
+    if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at simulator input.");
+
+    if (typeof event === "string") {
+      // buttons
+      return this.microbit.pressButton(event);
+    }
+
+    if (event.type === "logo") {
+      if (event.state === "pressed") return this.microbit.pressLogo();
+      if (event.state === "released") return this.microbit.releaseLogo();
+    }
+
+    throw new Error("Unsupported input event");
+  }
+
+  async pressLogo() {
+    if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at press logo.");
+    return this.microbit.pressLogo();
+  }
+
+  async releaseLogo() {
+    if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at release logo.");
+    return this.microbit.releaseLogo();
   }
 }

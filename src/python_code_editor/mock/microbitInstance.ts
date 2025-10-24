@@ -1,11 +1,7 @@
+// microbitInstance.tsx
+
 import type { PyodideInterface } from "pyodide";
-import { CHARACTER_PATTERNS } from "../data/characterPatterns";
-import {
-  MicrobitImage,
-  STANDARD_IMAGES,
-  createImageFromString,
-  isValidImage,
-} from "../data/microbitImages";
+import { CHARACTER_PATTERNS } from "./characterPatterns";
 
 export type MicrobitEvent =
   | {
@@ -16,6 +12,7 @@ export type MicrobitEvent =
     }
   | { type: "led-change"; x: number; y: number; value: number }
   | { type: "button-press"; button: "A" | "B" | "AB" }
+  | { type: "logo-touch"; state: "pressed" | "released" } // <-- NEW
   | { type: "reset" };
 
 type MicrobitEventCallback = (event: MicrobitEvent) => void;
@@ -55,11 +52,27 @@ class MicrobitEventEmitter {
 export class MicrobitSimulator {
   private digitalWriteListeners: Record<string, Set<(value: number) => void>> =
     {};
-  private startTime: number;
+
+  // --- NEW: Logo touch state + handlers
+  private logoTouched = false;
+  private logoPressedHandlers: HandlerProxy[] = [];
+  private logoReleasedHandlers: HandlerProxy[] = [];
+  // ---
 
   public readonly pins = {
-    digital_write_pin: this.digitalWritePin.bind(this),
-    digital_read_pin: this.readDigitalPin.bind(this),
+    digital_write_pin: (pin: string, value: number) => {
+      // Only care about TRIG_PIN being set HIGH
+      if (value === 1) {
+        // Simulate trigger event (for demo, you can emit an event or log)
+        this.triggerPinHigh(pin);
+      }
+      // Store pin state correctly
+      this.pinStates[pin].digital = value;
+    },
+    digital_read_pin: (pin: string) => {
+      // Always return dummy value (simulate echo)
+      return 1; // or 0, as needed for demo
+    },
     analog_write_pin: this.analogWritePin.bind(this),
     read_analog_pin: this.readAnalogPin.bind(this),
 
@@ -179,10 +192,21 @@ export class MicrobitSimulator {
     unplot: this.unplot.bind(this),
     point: this.point.bind(this),
     toggle: this.toggle.bind(this),
+    // Compatibility shim for MakeCode-style brightness API used in our Blockly block.
+    // For now, we treat any brightness > 0 as ON. Future: store per-pixel brightness 0..255.
+    plot_brightness: (x: number, y: number, brightness: number) => {
+      const b = Math.max(0, Math.min(255, Math.floor(brightness || 0)));
+      this.ledMatrix[y][x] = b;
+      this.eventEmitter.emit({ type: "led-change", x, y, value: b });
+    },
   };
 
   public readonly input = {
     on_button_pressed: this.onButtonPressed.bind(this),
+    // --- NEW: logo touch registration (Python API)
+    on_logo_pressed: this.onLogoPressed.bind(this),
+    on_logo_released: this.onLogoReleased.bind(this),
+    logo_is_touched: this.logoIsTouched.bind(this),
     _clear: this.clearInputs.bind(this),
   };
   public readonly basic = {
@@ -199,54 +223,11 @@ export class MicrobitSimulator {
 
   constructor(pyodide: PyodideInterface) {
     this.pyodide = pyodide;
-    this.startTime = Date.now();
 
     for (let i = 0; i <= 20; i++) {
       const pin = `P${i}`;
       this.pinStates[pin] = { digital: 0, analog: 0 };
       this.DigitalPin[pin] = pin;
-    }
-  }
-
-  // Add set_pixel method to handle brightness values
-  private set_pixel(x: number, y: number, value: number): void {
-    if (x >= 0 && x < 5 && y >= 0 && y < 5 && value >= 0 && value <= 9) {
-      this.ledMatrix[y][x] = value;
-      this.eventEmitter.emit({ type: "led-change", x, y, value });
-    }
-  }
-
-  // Updated showImage method to use set_pixel
-  private showImage(image: any): void {
-    let pixels: number[][];
-
-    if (typeof image === "string") {
-      // Handle string images directly
-      const rows = image.split(":");
-      pixels = [];
-      for (let y = 0; y < 5; y++) {
-        pixels[y] = [];
-        const row = rows[y] || "";
-        for (let x = 0; x < 5; x++) {
-          const ch = row[x] ?? "0";
-          const v = parseInt(ch, 10);
-          pixels[y][x] = Number.isNaN(v) ? 0 : v;
-        }
-      }
-    } else if (image && typeof image === "object" && image.pixels) {
-      // Handle MicrobitImage object
-      pixels = image.pixels;
-    } else {
-      console.error("Invalid image format");
-      return;
-    }
-
-    // Display the image using set_pixel
-    for (let y = 0; y < 5; y++) {
-      for (let x = 0; x < 5; x++) {
-        const brightness = pixels[y][x] || 0;
-        this.set_pixel(x, y, brightness);
-      }
     }
   }
 
@@ -267,7 +248,7 @@ export class MicrobitSimulator {
       return;
     }
 
-    const scrollPattern: number[][] = [];
+    const scrollPattern: boolean[][] = [];
 
     validChars.forEach((char, index) => {
       const pattern = CHARACTER_PATTERNS[char];
@@ -275,16 +256,16 @@ export class MicrobitSimulator {
         if (!scrollPattern[rowIndex]) {
           scrollPattern[rowIndex] = [];
         }
-        scrollPattern[rowIndex].push(...row.map((v) => (v > 0 ? 9 : 0)));
+        scrollPattern[rowIndex].push(...row.map((v) => Boolean(v)));
         if (index < validChars.length - 1) {
-          scrollPattern[rowIndex].push(0);
+          scrollPattern[rowIndex].push(false);
         }
       });
     });
 
     for (let rowIndex = 0; rowIndex < 5; rowIndex++) {
       for (let i = 0; i < 5; i++) {
-        scrollPattern[rowIndex].push(0);
+        scrollPattern[rowIndex].push(false);
       }
     }
 
@@ -299,9 +280,9 @@ export class MicrobitSimulator {
           const patternCol = currentOffset + col;
           if (
             patternCol < scrollPattern[row].length &&
-            scrollPattern[row][patternCol] > 0
+            scrollPattern[row][patternCol]
           ) {
-            this.set_pixel(row, col, scrollPattern[row][patternCol]);
+            this.plot(row, col); // This should plot horizontally
           }
         }
       }
@@ -340,7 +321,7 @@ export class MicrobitSimulator {
   private clearDisplay() {
     for (let y = 0; y < 5; y++) {
       for (let x = 0; x < 5; x++) {
-        this.set_pixel(x, y, 0);
+        this.unplot(x, y);
       }
     }
   }
@@ -362,8 +343,79 @@ export class MicrobitSimulator {
       }
     }
     this.buttonStates = { A: false, B: false, AB: false };
+
+    // --- NEW: reset logo
+    this.logoTouched = false;
+    this.cleanupLogoHandlers();
+    // ---
+
     this.clearInputs();
     this.eventEmitter.emit({ type: "reset" });
+  }
+
+  // ----- NEW: LOGO TOUCH SUPPORT -----
+
+  // Python: input.on_logo_pressed(handler)
+  private onLogoPressed(handler: any) {
+    const { create_proxy } = this.pyodide.pyimport("pyodide.ffi");
+    const persistentHandler = create_proxy(handler);
+    const wrapperProxy = create_proxy(() => {
+      try {
+        return Promise.resolve(persistentHandler());
+      } catch (err) {
+        console.error("Error in logo pressed handler:", err);
+      }
+    });
+    this.logoPressedHandlers.push({ wrapperProxy, persistentHandler });
+  }
+
+  // Python: input.on_logo_released(handler)
+  private onLogoReleased(handler: any) {
+    const { create_proxy } = this.pyodide.pyimport("pyodide.ffi");
+    const persistentHandler = create_proxy(handler);
+    const wrapperProxy = create_proxy(() => {
+      try {
+        return Promise.resolve(persistentHandler());
+      } catch (err) {
+        console.error("Error in logo released handler:", err);
+      }
+    });
+    this.logoReleasedHandlers.push({ wrapperProxy, persistentHandler });
+  }
+
+  // Python: input.logo_is_touched()
+  private logoIsTouched(): boolean {
+    return this.logoTouched;
+  }
+
+  // JS API: programmatic press/release from UI
+  public async pressLogo() {
+    this.logoTouched = true;
+    for (const h of this.logoPressedHandlers) {
+      await h.wrapperProxy();
+    }
+    this.eventEmitter.emit({ type: "logo-touch", state: "pressed" });
+  }
+
+  public async releaseLogo() {
+    this.logoTouched = false;
+    for (const h of this.logoReleasedHandlers) {
+      await h.wrapperProxy();
+    }
+    this.eventEmitter.emit({ type: "logo-touch", state: "released" });
+  }
+
+  private cleanupLogoHandlers() {
+    this.logoPressedHandlers.forEach((h) => {
+      h.wrapperProxy.destroy?.();
+      h.persistentHandler.destroy?.();
+    });
+    this.logoReleasedHandlers.forEach((h) => {
+      h.wrapperProxy.destroy?.();
+      h.persistentHandler.destroy?.();
+    });
+    this.logoPressedHandlers = [];
+    this.logoReleasedHandlers = [];
   }
 
   private analogWritePin(pin: string, value: number) {
@@ -377,16 +429,23 @@ export class MicrobitSimulator {
   }
 
   private plot(x: number, y: number) {
-    this.set_pixel(x, y, 9);
+    this.ledMatrix[y][x] = 255;
+    this.eventEmitter.emit({ type: "led-change", x, y, value: 255 });
   }
 
   private unplot(x: number, y: number) {
-    this.set_pixel(x, y, 0);
+    this.ledMatrix[y][x] = 0;
+    this.eventEmitter.emit({ type: "led-change", x, y, value: 0 });
   }
 
   private toggle(x: number, y: number) {
-    const currentValue = this.ledMatrix[y][x];
-    this.set_pixel(x, y, currentValue > 0 ? 0 : 9);
+    this.ledMatrix[y][x] = this.ledMatrix[y][x] > 0 ? 0 : 255;
+    this.eventEmitter.emit({
+      type: "led-change",
+      x,
+      y,
+      value: this.ledMatrix[y][x],
+    });
   }
 
   private point(x: number, y: number) {
@@ -421,7 +480,7 @@ export class MicrobitSimulator {
   public async pressButton(button: ButtonInstance | "A" | "B" | "AB") {
     const buttonName = typeof button === "string" ? button : button.getName();
     this.buttonStates[buttonName] = true;
-    console.log(`Button ${buttonName} pressed`);
+
     for (const handlerProxy of this.inputHandlers[buttonName]) {
       await handlerProxy.wrapperProxy(); // Use the wrapper proxy
     }
@@ -439,7 +498,14 @@ export class MicrobitSimulator {
       handlerProxy.wrapperProxy.destroy?.();
       handlerProxy.persistentHandler.destroy?.();
     });
+    this.inputHandlers.AB.forEach((handlerProxy) => {
+      handlerProxy.wrapperProxy.destroy?.();
+      handlerProxy.persistentHandler.destroy?.();
+    });
     this.inputHandlers = { A: [], B: [], AB: [] };
+
+    // --- NEW: also clear logo handlers
+    this.cleanupLogoHandlers();
   }
 
   getStateSnapshot() {
@@ -447,104 +513,32 @@ export class MicrobitSimulator {
       pins: { ...this.pinStates },
       leds: this.ledMatrix.map((row) => [...row]),
       buttons: { ...this.buttonStates },
-    };
-  }
-
-  private createPinInstance(pinNumber: number) {
-    const pin = `P${pinNumber}`;
-    return {
-      read_digital: () => this.readDigitalPin(pin),
-      write_digital: (value: number) => this.digitalWritePin(pin, value),
-      read_analog: () => this.readAnalogPin(pin),
-      write_analog: (value: number) => this.analogWritePin(pin, value),
-      set_pull: () => {}, // Placeholder
-      get_pull: () => 0, // Placeholder
+      logo: this.logoTouched, // <-- NEW
     };
   }
 
   getPythonModule() {
-    const module: any = {
-      display: {
-        show: (image: any) => {
-          if (typeof image === "string") {
-            this.showImage(image);
-          } else if (image && typeof image === "object" && image.pixels) {
-            this.showImage(image);
-          } else if (typeof image === "function") {
-            // Handle function-based image creation
-            image({
-              set_pixel: (x: number, y: number, value: number) =>
-                this.set_pixel(x, y, value),
-            });
-          }
-        },
-        scroll: (text: string, interval: number = 150) => {
-          this.showString(text, interval);
-        },
-        clear: () => {
-          this.clearDisplay();
-        },
-        set_pixel: (x: number, y: number, value: number) => {
-          this.set_pixel(x, y, value);
-        },
-        get_pixel: (x: number, y: number) => {
-          return this.ledMatrix[y][x];
-        },
-        on: () => {}, // Placeholder
-        off: () => {}, // Placeholder
-        is_on: () => true, // Placeholder
-      },
-      // Add pin instances
-      pin0: this.createPinInstance(0),
-      pin1: this.createPinInstance(1),
-      pin2: this.createPinInstance(2),
-      pin3: this.createPinInstance(3),
-      pin4: this.createPinInstance(4),
-      pin5: this.createPinInstance(5),
-      pin6: this.createPinInstance(6),
-      pin7: this.createPinInstance(7),
-      pin8: this.createPinInstance(8),
-      pin9: this.createPinInstance(9),
-      pin10: this.createPinInstance(10),
-      pin11: this.createPinInstance(11),
-      pin12: this.createPinInstance(12),
-      pin13: this.createPinInstance(13),
-      pin14: this.createPinInstance(14),
-      pin15: this.createPinInstance(15),
-      pin16: this.createPinInstance(16),
-      pin19: this.createPinInstance(19),
-      pin20: this.createPinInstance(20),
-      button_a: {
-        is_pressed: () => this.buttonStates.A,
-        was_pressed: () => false, // Placeholder
-        get_presses: () => 0, // Placeholder
-      },
-      button_b: {
-        is_pressed: () => this.buttonStates.B,
-        was_pressed: () => false, // Placeholder
-        get_presses: () => 0, // Placeholder
-      },
-      // Add more components as needed
-      sleep: this.pause.bind(this),
-      running_time: () => Date.now() - this.startTime,
-      temperature: () => 20,
+    return {
+      pins: this.pins,
+      led: this.led,
+      input: this.input,
+      Button: this.Button,
+      DigitalPin: this.DigitalPin,
+      basic: this.basic,
     };
+  }
 
-    // Add Image constants as simple objects
-    module.Image = {
-      HEART: STANDARD_IMAGES.HEART,
-      HAPPY: STANDARD_IMAGES.HAPPY,
-      SAD: STANDARD_IMAGES.SAD,
-      YES: STANDARD_IMAGES.YES,
-      NO: STANDARD_IMAGES.NO,
-      ANGRY: STANDARD_IMAGES.ANGRY,
-      CONFUSED: STANDARD_IMAGES.CONFUSED,
-      SURPRISED: STANDARD_IMAGES.SURPRISED,
-      ASLEEP: STANDARD_IMAGES.ASLEEP,
-      TRIANGLE: STANDARD_IMAGES.TRIANGLE,
-      CHESSBOARD: STANDARD_IMAGES.CHESSBOARD,
-    };
-
-    return module;
+  private triggerPinHigh(pin: string) {
+    // Simulate ultrasonic trigger (for demo, emit event or log)
+    // Example: emit event to UI or set a flag
+    if (this.eventEmitter) {
+      this.eventEmitter.emit({
+        type: "pin-change",
+        pin,
+        value: 1,
+        pinType: "digital",
+      });
+    }
+    // You can also set a flag or perform other logic here
   }
 }
