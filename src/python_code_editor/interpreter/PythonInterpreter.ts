@@ -91,13 +91,13 @@ export class PythonInterpreter {
   }
 
   registerHardwareModule(name: string, module: Record<string, any>) {
-    if (!this.pyodide) throw new Error("Interpreter not initialized");
+    if (!this.pyodide) throw new Error("Interpreter not initialized at register hardware module.");
     this.hardwareModules[name] = module;
     this.pyodide.registerJsModule(name, module);
   }
 
   async run(code: string): Promise<string> {
-    if (!this.pyodide) throw new Error("Interpreter not initialized");
+    if (!this.pyodide) throw new Error("Interpreter not initialized at run pythoninterpreter.");
     code = this.transformCode(code);
     try {
       await this.injectPrintRedirect();
@@ -129,28 +129,25 @@ export class PythonInterpreter {
     return transformedLines.join("\n");
   }
 
-  // PythonInterpreter.ts - Update the injectPrintRedirect method
-private async injectPrintRedirect() {
-  await this.pyodide!.runPythonAsync(`
-    import builtins, sys
-    class DualOutput:
-        def __init__(self):
-            self._buffer = []
-        def write(self, text):
-            if text.strip():
-                import js
-                js.writeToConsole(text)
-            self._buffer.append(text)
-        def flush(self): pass
+  private async injectPrintRedirect() {
+    await this.pyodide!.runPythonAsync(`
+      import builtins, sys
+      class DualOutput:
+          def __init__(self):
+              self._buffer = []
+          def write(self, text):
+              if text.strip():
+                  import js
+                  js.writeToConsole(text)
+              self._buffer.append(text)
+          def flush(self): pass
 
-    sys.stdout = DualOutput()
-    sys.stderr = sys.stdout
-    builtins.print = lambda *args, **kwargs: sys.stdout.write(" ".join(map(str, args)) + "\\n")
-    
-    # Import microbit library
-    from microbit import *
-  `);
-}
+      sys.stdout = DualOutput()
+      sys.stderr = sys.stdout
+      builtins.print = lambda *args, **kwargs: sys.stdout.write(" ".join(map(str, args)) + "\\n")
+      from microbit import *
+      `);
+  }
 
   getPyodide(): PyodideInterface | null {
     return this.pyodide;

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Stage, Layer, Line, Circle } from "react-konva";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { CircuitElement, Wire } from "@/circuit_canvas/types/circuit";
@@ -28,7 +28,6 @@ import {
   FaRotateRight,
   FaRotateLeft,
 } from "react-icons/fa6";
-import { FaUndo, FaRedo } from "react-icons/fa";
 import { VscDebug } from "react-icons/vsc";
 import Loader from "@/circuit_canvas/utils/loadingCircuit";
 import {
@@ -38,7 +37,6 @@ import {
 import UnifiedEditor from "@/blockly_editor/components/UnifiedEditor";
 import { useViewport } from "@/circuit_canvas/hooks/useViewport";
 import HighPerformanceGrid from "./HighPerformanceGrid";
-import ElementRotationButtons from "../toolbar/customization/ElementRoationButtons";
 import { useMessage } from "@/common/components/ui/GenericMessagePopup";
 import { useWireManagement } from "@/circuit_canvas/hooks/useWireManagement";
 import { useCircuitHistory } from "@/circuit_canvas/hooks/useCircuitHistory";
@@ -75,7 +73,7 @@ export default function CircuitCanvas() {
 
   const [simulationRunning, setSimulationRunning] = useState(false);
   const simulationRunningRef = useRef(simulationRunning);
-  const { showMessage } = useMessage();
+  const [hoveredWireId, setHoveredWireId] = useState<string | null>(null);
 
   useEffect(() => {
     simulationRunningRef.current = simulationRunning;
@@ -101,11 +99,11 @@ export default function CircuitCanvas() {
 
   // (moved below where `wires` is declared)
 
-  function getNodeById(nodeId: string) {
+  const getNodeById = useCallback((nodeId: string) => {
     return elementsRef.current
       .flatMap((e) => e.nodes)
       .find((n) => n.id === nodeId);
-  }
+  }, []);
 
   const getElementById = React.useCallback(
     (elementId: string): CircuitElement | null => {
@@ -131,22 +129,12 @@ export default function CircuitCanvas() {
   );
 
   // Use the history hook
-  const {
-    history,
-    pushToHistory,
-    initializeHistory,
-    undo,
-    redo,
-    clearHistory,
-    canUndo,
-    canRedo,
-    syncProperties,
-  } = useCircuitHistory();
+  const { history, pushToHistory, initializeHistory, undo, redo, clearHistory, canUndo, canRedo, syncProperties } =
+    useCircuitHistory();
 
   // Initialize wire management hook
   const {
     wires,
-    wireCounter,
     selectedWireColor,
     creatingWireStartNode,
     creatingWireJoints,
@@ -156,10 +144,8 @@ export default function CircuitCanvas() {
     inProgressWireRef,
     animatedCircleRef,
     setWires,
-    setWireCounter,
     setSelectedWireColor,
     setCreatingWireStartNode,
-    setCreatingWireJoints,
     setEditingWire,
     getWirePoints,
     updateWiresDirect,
@@ -170,7 +156,6 @@ export default function CircuitCanvas() {
     getWireColor,
     resetWireState,
     loadWires,
-    sanitizeWireIds,
   } = useWireManagement({
     elements,
     stageRef,
@@ -185,10 +170,9 @@ export default function CircuitCanvas() {
   // fade out and close the Properties Panel gracefully.
   useEffect(() => {
     if (!showPropertiesPannel || !selectedElement) return;
-    const exists =
-      selectedElement.type === "wire"
-        ? wires.some((w) => w.id === selectedElement.id)
-        : elements.some((el) => el.id === selectedElement.id);
+    const exists = selectedElement.type === "wire"
+      ? wires.some((w) => w.id === selectedElement.id)
+      : elements.some((el) => el.id === selectedElement.id);
     if (!exists) {
       setPropertiesPanelClosing(true);
       const t = setTimeout(() => {
@@ -249,11 +233,11 @@ export default function CircuitCanvas() {
   }, []);
 
   function resetState() {
-    // Reset canvas and seed history with an initial empty state
-    setElements([]);
-    resetWireState();
-    clearHistory();
-    initializeHistory([], []);
+  // Reset canvas and seed history with an initial empty state
+  setElements([]);
+  resetWireState();
+  clearHistory();
+  initializeHistory([], []);
   }
 
   //changing the element state on element position change
@@ -291,6 +275,9 @@ export default function CircuitCanvas() {
           power: undefined,
           measurement: el.computed?.measurement ?? undefined,
         },
+        controller: el.controller
+        ? { ...el.controller, logoTouched: false } // NEW: clear logo state
+        : el.controller,
       }))
     );
     setControllerMap((prev) => {
@@ -300,6 +287,7 @@ export default function CircuitCanvas() {
   }
 
   function startSimulation() {
+    debugger;
     setSimulationRunning(true);
     computeCircuit(wires);
 
@@ -321,7 +309,8 @@ export default function CircuitCanvas() {
 
     // Run user code for all controllers
     elements.forEach((el) => {
-      if (el.type === "microbit") {
+      debugger;
+      if (el.type === "microbit" || el.type === "microbitWithBreakout") {
         const sim = controllerMap[el.id];
         const code = controllerCodeMap[el.id] ?? "";
         if (sim && code) {
@@ -390,22 +379,19 @@ export default function CircuitCanvas() {
     disabledSimulationOnnOff: stopDisabled,
   });
 
-  function handleStageMouseMove(e: KonvaEventObject<PointerEvent>) {
+  const handleStageMouseMove = useCallback((e: KonvaEventObject<PointerEvent>) => {
     const pos = e.target.getStage()?.getPointerPosition();
-    if (pos) {
-      // Only update React state if we're NOT creating a wire to avoid re-renders
-      if (!creatingWireStartNode) {
-        setMousePos(pos);
-      }
-
+    if (!pos) return;
+    // Only update React state if we're NOT creating a wire to avoid re-renders
+    if (!creatingWireStartNode) {
+      setMousePos(pos);
+    } else {
       // If creating a wire, update in-progress wire directly without React re-render
-      if (creatingWireStartNode) {
-        updateInProgressWire(pos);
-      }
+      updateInProgressWire(pos);
     }
-  }
+  }, [creatingWireStartNode, updateInProgressWire]);
 
-  function handleStageClick(e: KonvaEventObject<MouseEvent>) {
+  const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
     const pos = e.target.getStage()?.getPointerPosition();
     if (!pos) return;
 
@@ -429,10 +415,10 @@ export default function CircuitCanvas() {
     if (creatingWireStartNode) {
       handleStageClickForWire(pos);
     }
-  }
+  }, [creatingWireStartNode, editingWire, handleWireEdit, handleStageClickForWire]);
 
   // Optimized drag move handler - updates wires directly without React re-render
-  function handleElementDragMove(e: KonvaEventObject<DragEvent>) {
+  const handleElementDragMove = useCallback((e: KonvaEventObject<DragEvent>) => {
     e.cancelBubble = true;
     const id = e.target.id();
     const x = e.target.x();
@@ -442,9 +428,9 @@ export default function CircuitCanvas() {
 
     // Directly update wires in Konva without triggering React re-render
     updateWiresDirect();
-  }
+  }, [updateWiresDirect]);
 
-  function computeCircuit(wiresSnapshot: Wire[]) {
+  const computeCircuit = useCallback((wiresSnapshot: Wire[]) => {
     setElements((prevElements) => {
       const solved = solveCircuit(prevElements, wiresSnapshot);
 
@@ -459,10 +445,10 @@ export default function CircuitCanvas() {
         };
       });
     });
-  }
+  }, []);
 
   // handle resistance change for potentiometer
-  function handleRatioChange(elementId: string, ratio: number) {
+  const handleRatioChange = useCallback((elementId: string, ratio: number) => {
     setElements((prev) =>
       prev.map((el) =>
         el.id === elementId
@@ -476,9 +462,9 @@ export default function CircuitCanvas() {
     if (simulationRunning) {
       computeCircuit(wires);
     }
-  }
+  }, [simulationRunning, computeCircuit, wires]);
 
-  function handleModeChange(elementId: string, mode: "voltage" | "current") {
+  const handleModeChange = useCallback((elementId: string, mode: "voltage" | "current" | "resistance") => {
     setElements((prev) =>
       prev.map((el) =>
         el.id === elementId
@@ -490,9 +476,9 @@ export default function CircuitCanvas() {
       )
     );
     if (simulationRunning) computeCircuit(wires);
-  }
+  }, [simulationRunning, computeCircuit, wires]);
 
-  async function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+  const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (simulationRunning) {
       stopSimulation();
@@ -544,18 +530,18 @@ export default function CircuitCanvas() {
     setSelectedElement(newElement);
     setShowPropertiesPannel(true);
     setActiveControllerId(null);
-    if (newElement.type === "microbit") {
+    if (newElement.type === "microbit" || newElement.type === "microbitWithBreakout") {
       setActiveControllerId(newElement.id);
     }
 
-    if (newElement.type === "microbit") {
+    if (newElement.type === "microbit" || newElement.type === "microbitWithBreakout") {
       // Init simulator in the background (non-blocking)
+      const controllerType = newElement.type === "microbit" ? "microbit" : "microbitWithBreakout";
       void (async () => {
         const simulator = new Simulator({
           language: "python",
-          controller: "microbit",
-          onOutput: (line) =>
-            showMessage(`[${newElement.id}] ${line}`, "error"),
+          controller: controllerType,
+          onOutput: (line) => console.log(`[${newElement.id}]`, line),
           onEvent: async (event) => {
             if (event.type === "reset") {
               setElements((prev) =>
@@ -564,52 +550,51 @@ export default function CircuitCanvas() {
                     ? {
                         ...el,
                         controller: {
-                          leds: Array(5).fill(Array(5).fill(false)),
+                          leds: Array.from({ length: 5 }, () => Array(5).fill(0)),
                           pins: {},
+                          logoTouched: false, // NEW
                         },
                       }
                     : el
                 )
               );
             }
-            if (event.type === "led-change") {
+            if (event.type === "led-change" || event.type === "pin-change" || event.type === "logo-touch") {
+              // Use newElement.id, since this simulator instance is for this element
+              await updateControllerFromState(newElement.id);
               const state = await simulator.getStates();
               const leds = state.leds;
               const pins = state.pins;
+              const logo = state.logo;
               setElements((prev) =>
                 prev.map((el) =>
                   el.id === newElement.id
-                    ? { ...el, controller: { leds, pins } }
+                    ? { ...el, controller: { leds, pins, logoTouched: !!logo } }
                     : el
                 )
               );
-            }
-            if (event.type === "pin-change") {
-              const state = await simulator.getStates();
-              const pins = state.pins;
-              const leds = state.leds;
-              setElements((prev) =>
-                prev.map((el) =>
-                  el.id === newElement.id
-                    ? { ...el, controller: { leds, pins } }
-                    : el
-                )
-              );
-
-              if (simulationRunningRef.current) {
-                //showMessage("Simulation running, computing circuit...", "info");
-                computeCircuit(wiresRef.current);
-              } else {
-                showMessage(
-                  "Simulation not running, skipping circuit computation.",
-                  "info"
-                );
-              }
             }
           },
         });
 
         await simulator.initialize();
+
+        const updateControllerFromState = async (elementId: string) => {
+          // NEW
+          const state = await simulator.getStates();
+          const leds = state.leds;
+          const pins = state.pins;
+          const logo = state.logo; // boolean
+          setElements((prev) =>
+            prev.map((el) =>
+              el.id === elementId
+                ? { ...el, controller: { leds, pins, logoTouched: !!logo } } // NEW
+                : el
+            )
+          );
+        };
+
+
         const states = await simulator.getStates();
 
         // Update map and controller LED state
@@ -617,13 +602,13 @@ export default function CircuitCanvas() {
         setElements((prev) =>
           prev.map((el) =>
             el.id === newElement.id
-              ? { ...el, controller: { leds: states.leds, pins: states.pins } } // Initialize controller state
+              ? { ...el, controller: { leds: states.leds, pins: states.pins, logoTouched: !!states.logo } } // NEW
               : el
           )
         );
       })();
     }
-  }
+  }, [simulationRunning, stopSimulation, stageRef, createElement, pushToHistory, setElements, setActiveControllerId, setControllerMap, setElements]);
 
   // for canvas zoom in and zoom out
   const handleWheel = (e: Konva.KonvaEventObject<WheelEvent>) => {
@@ -723,6 +708,14 @@ export default function CircuitCanvas() {
     setShowPropertiesPannel(false);
   };
 
+  // Clear any selected wire/element when user begins creating a new wire
+  useEffect(() => {
+    if (creatingWireStartNode) {
+      if (selectedElement) setSelectedElement(null);
+      if (showPropertiesPannel) setShowPropertiesPannel(false);
+    }
+  }, [creatingWireStartNode]);
+
   return (
     <div
       className={styles.canvasContainer}
@@ -781,10 +774,7 @@ export default function CircuitCanvas() {
                   setElements((prev) => {
                     const next = prev.map((el) =>
                       el.id === selectedElement.id
-                        ? {
-                            ...el,
-                            rotation: ((el.rotation || 0) - 30 + 360) % 360,
-                          }
+                        ? { ...el, rotation: ((el.rotation || 0) - 30 + 360) % 360 }
                         : el
                     );
                     // Update ref immediately so wire math sees new rotation
@@ -930,7 +920,7 @@ export default function CircuitCanvas() {
               <span>Debugger</span>
             </button>
 
-            <CircuitStorage
+            {/* <CircuitStorage
               onCircuitSelect={(circuitId) => {
                 const data = getCircuitById(circuitId);
                 if (!data) return;
@@ -950,108 +940,103 @@ export default function CircuitCanvas() {
               currentElements={elements}
               currentWires={wires}
               getSnapshot={() => stageRef.current?.toDataURL() || ""}
-            />
+            /> */}
           </div>
         </div>
-        {selectedElement && showPropertiesPannel ? (
-          <div
-            className={`absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl transition-all duration-200 ${
-              propertiesPanelClosing
-                ? "opacity-0 translate-y-1"
-                : "opacity-100 translate-y-0"
-            }`}
-          >
-            <div className="p-1">
-              <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
-                <button
-                  onClick={handlePropertiesPannelClose}
-                  className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
-                  title="Close"
+    {selectedElement && showPropertiesPannel ? (
+      <div className={`absolute top-2 me-73 mt-12 right-3 z-40 rounded-xl border border-gray-300 w-[240px] max-h-[90%] overflow-y-auto backdrop-blur-sm bg-white/10 shadow-2xl transition-all duration-200 ${propertiesPanelClosing ? "opacity-0 translate-y-1" : "opacity-100 translate-y-0"}`}>
+              <div className="p-1">
+                <div className="flex items-center justify-start px-3 py-2 border-b border-gray-200">
+                  <button
+                    onClick={handlePropertiesPannelClose}
+                    className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-600 transition-all duration-150"
+                    title="Close"
+                  />
+                </div>
+                <PropertiesPanel
+                  selectedElement={selectedElement}
+                  wires={wires}
+                  getNodeById={getNodeById}
+                  onElementEdit={(updatedElement, deleteElement) => {
+                    if (deleteElement) {
+                      // Record deletion so it can be undone
+                      pushToHistory(elements, wiresRef.current);
+                      const updatedWires = wires.filter(
+                        (w) =>
+                          getNodeParent(w.fromNodeId)?.id !==
+                            updatedElement.id &&
+                          getNodeParent(w.toNodeId)?.id !== updatedElement.id
+                      );
+                      setWires(updatedWires);
+                      setElements((prev) =>
+                        prev.filter((el) => el.id !== updatedElement.id)
+                      );
+                      setSelectedElement(null);
+                      setCreatingWireStartNode(null);
+                      setEditingWire(null);
+                      stopSimulation();
+                    } else {
+                      // Property edits should NOT affect history; apply without push
+                      setElements((prev) => {
+                        const next = prev.map((el) =>
+                          el.id === updatedElement.id
+                            ? { ...el, ...updatedElement, x: el.x, y: el.y }
+                            : el
+                        );
+                        // Keep property cache in sync so undo/redo retains these values
+                        syncProperties(next);
+                        elementsRef.current = next;
+                        updateWiresDirect();
+                        return next;
+                      });
+                      stopSimulation();
+                      setSelectedElement(updatedElement);
+                      setCreatingWireStartNode(null);
+                    }
+                  }}
+                  onWireEdit={(updatedWire, deleteElement) => {
+                    if (deleteElement) {
+                      setWires((prev) => {
+                        const next = prev.filter((w) => w.id !== updatedWire.id);
+                        // Push AFTER delete for single-step undo
+                        pushToHistory(elements, next);
+                        return next;
+                      });
+                      setSelectedElement(null);
+                      setCreatingWireStartNode(null);
+                      setEditingWire(null);
+                      stopSimulation();
+                    } else {
+                      setWires((prev) => {
+                        const next = prev.map((w) =>
+                          w.id === updatedWire.id ? { ...w, ...updatedWire } : w
+                        );
+                        // Push AFTER edit
+                        pushToHistory(elements, next);
+                        return next;
+                      });
+                      stopSimulation();
+                      setSelectedElement(null);
+                      setEditingWire(null);
+                    }
+                  }}
+                  onEditWireSelect={(wire) => {
+                    setSelectedElement({
+                      id: wire.id,
+                      type: "wire",
+                      x: 0,
+                      y: 0,
+                      nodes: [],
+                    });
+                  }}
+                  setOpenCodeEditor={setOpenCodeEditor}
+                  wireColor={
+                    wires.find((w) => w.id === selectedElement.id)?.color
+                  }
                 />
               </div>
-              <PropertiesPanel
-                selectedElement={selectedElement}
-                wires={wires}
-                getNodeById={getNodeById}
-                onElementEdit={(updatedElement, deleteElement) => {
-                  if (deleteElement) {
-                    // Record deletion so it can be undone
-                    pushToHistory(elements, wiresRef.current);
-                    const updatedWires = wires.filter(
-                      (w) =>
-                        getNodeParent(w.fromNodeId)?.id !== updatedElement.id &&
-                        getNodeParent(w.toNodeId)?.id !== updatedElement.id
-                    );
-                    setWires(updatedWires);
-                    setElements((prev) =>
-                      prev.filter((el) => el.id !== updatedElement.id)
-                    );
-                    setSelectedElement(null);
-                    setCreatingWireStartNode(null);
-                    setEditingWire(null);
-                    stopSimulation();
-                  } else {
-                    // Property edits should NOT affect history; apply without push
-                    setElements((prev) => {
-                      const next = prev.map((el) =>
-                        el.id === updatedElement.id
-                          ? { ...el, ...updatedElement, x: el.x, y: el.y }
-                          : el
-                      );
-                      // Keep property cache in sync so undo/redo retains these values
-                      syncProperties(next);
-                      elementsRef.current = next;
-                      updateWiresDirect();
-                      return next;
-                    });
-                    stopSimulation();
-                    setSelectedElement(updatedElement);
-                    setCreatingWireStartNode(null);
-                  }
-                }}
-                onWireEdit={(updatedWire, deleteElement) => {
-                  if (deleteElement) {
-                    setWires((prev) => {
-                      const next = prev.filter((w) => w.id !== updatedWire.id);
-                      // Push AFTER delete for single-step undo
-                      pushToHistory(elements, next);
-                      return next;
-                    });
-                    setSelectedElement(null);
-                    setCreatingWireStartNode(null);
-                    setEditingWire(null);
-                    stopSimulation();
-                  } else {
-                    setWires((prev) => {
-                      const next = prev.map((w) =>
-                        w.id === updatedWire.id ? { ...w, ...updatedWire } : w
-                      );
-                      // Push AFTER edit
-                      pushToHistory(elements, next);
-                      return next;
-                    });
-                    stopSimulation();
-                    setSelectedElement(null);
-                    setEditingWire(null);
-                  }
-                }}
-                onEditWireSelect={(wire) => {
-                  setSelectedElement({
-                    id: wire.id,
-                    type: "wire",
-                    x: 0,
-                    y: 0,
-                    nodes: [],
-                  });
-                }}
-                setOpenCodeEditor={setOpenCodeEditor}
-                wireColor={
-                  wires.find((w) => w.id === selectedElement.id)?.color
-                }
-              />
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
         <div className="relative w-full flex-1 h-[460px] p-1 overflow-hidden">
           {/* Stage Canvas */}
@@ -1077,6 +1062,83 @@ export default function CircuitCanvas() {
               onWheel={handleWheel}
             >
               <HighPerformanceGrid viewport={viewport} gridSize={25} />
+              {/* Elements layer (no nodes) so bodies render below wires */}
+              <Layer>
+                {elements.map((element) => (
+                  <RenderElement
+                    key={element.id}
+                    isSimulationOn={simulationRunning}
+                    element={element}
+                    wires={wires}
+                    elements={elements}
+                    onDragMove={handleElementDragMove}
+                    handleNodeClick={handleNodeClick}
+                    handleRatioChange={handleRatioChange}
+                    handleModeChange={handleModeChange}
+                    onDragStart={() => {
+                      pushToHistory(elements, wires);
+                      setDraggingElement(element.id);
+                      stageRef.current?.draggable(false);
+                      if (!creatingWireStartNode) {
+                        const current = getElementById(element.id) || element;
+                        setSelectedElement(current);
+                        setShowPropertiesPannel(true);
+                        setActiveControllerId(null);
+                        if (element.type === "microbit" || element.type === "microbitWithBreakout") {
+                          setActiveControllerId(element.id);
+                        }
+                      }
+                    }}
+                    onDragEnd={(e) => {
+                      setDraggingElement(null);
+                      stageRef.current?.draggable(true);
+                      const id = e.target.id();
+                      const x = e.target.x();
+                      const y = e.target.y();
+                      setElements((prev) => {
+                        const next = prev.map((el) =>
+                          el.id === id ? { ...el, x, y } : el
+                        );
+                        pushToHistory(next, wires);
+                        return next;
+                      });
+                    }}
+                    onSelect={(id) => {
+                      if (creatingWireStartNode) return;
+                      const element = getElementById(id);
+                      setSelectedElement(element ?? null);
+                      setShowPropertiesPannel(true);
+                      setActiveControllerId(null);
+                      setOpenCodeEditor(false);
+                      if (element?.type === "microbit" || element?.type === "microbitWithBreakout") {
+                        setActiveControllerId(element.id);
+                      }
+                    }}
+                    selectedElementId={selectedElement?.id || null}
+                    onControllerInput={(elementId: string, input: any) => {
+  const sim = controllerMap[elementId];
+  if (!sim) return;
+  const anySim = sim as any;
+  if (input === "A" || input === "B" || input === "AB") {
+    anySim.simulateInput?.(input);
+    return;
+  }
+  if (typeof input === "object" && input?.type === "logo") {
+    if (input.state === "pressed") {
+      (anySim.pressLogo?.() ?? anySim.simulateInput?.(input));
+    } else if (input.state === "released") {
+      (anySim.releaseLogo?.() ?? anySim.simulateInput?.(input));
+    }
+  }
+}}
+                    // Hide node rendering in this layer
+                    showNodes={false}
+                    showBody={true}
+                  />
+                ))}
+              </Layer>
+
+              {/* Wires layer sits above element bodies */}
               <Layer ref={wireLayerRef}>
                 {wires.map((wire) => {
                   const points = getWirePoints(wire);
@@ -1086,8 +1148,29 @@ export default function CircuitCanvas() {
                     const midY = (y1 + y2) / 2;
                     points.splice(2, 0, midX, midY);
                   }
+                  const isSelected = selectedElement?.id === wire.id;
+                  const isHovered = !simulationRunning && !creatingWireStartNode && hoveredWireId === wire.id && !(selectedElement?.id === wire.id);
+                  const baseColor = getWireColor(wire) || "black";
 
-                  return (
+                  return [
+                    isHovered && (
+                      <Line
+                        key={`hover-outline-${wire.id}`}
+                        points={points}
+                        stroke={baseColor}
+                        strokeWidth={isSelected ? 7 : 6}
+                        lineCap="round"
+                        lineJoin="round"
+                        tension={0.1}
+                        bezier
+                        opacity={0.18}
+                        shadowColor={baseColor}
+                        shadowBlur={10}
+                        shadowOpacity={0}
+                        shadowEnabled
+                        listening={false}
+                      />
+                    ),
                     <Line
                       key={wire.id}
                       ref={(ref) => {
@@ -1098,23 +1181,17 @@ export default function CircuitCanvas() {
                         }
                       }}
                       points={points}
-                      stroke={getWireColor(wire) || "black"}
-                      strokeWidth={selectedElement?.id === wire.id ? 4 : 3}
-                      hitStrokeWidth={16}
+                      stroke={baseColor}
+                      strokeWidth={isSelected ? 4 : 3}
+                      hitStrokeWidth={18}
                       tension={0.1}
                       lineCap="round"
                       lineJoin="round"
                       bezier
-                      shadowColor={
-                        selectedElement?.id === wire.id
-                          ? "blue"
-                          : getWireColor(wire)
-                      }
-                      shadowEnabled={true}
-                      shadowBlur={selectedElement?.id === wire.id ? 5 : 2}
-                      shadowOpacity={
-                        selectedElement?.id === wire.id ? 0.9 : 0.25
-                      }
+                      shadowColor={isSelected ? "blue" : baseColor}
+                      shadowEnabled
+                      shadowBlur={isSelected ? 5 : 2}
+                      shadowOpacity={0}
                       opacity={0.95}
                       onClick={() => {
                         setSelectedElement({
@@ -1126,8 +1203,14 @@ export default function CircuitCanvas() {
                         });
                         setShowPropertiesPannel(true);
                       }}
-                    />
-                  );
+                      onMouseEnter={() => {
+                        if (!simulationRunning) setHoveredWireId(wire.id);
+                      }}
+                      onMouseLeave={() => {
+                        if (hoveredWireId === wire.id) setHoveredWireId(null);
+                      }}
+                    />,
+                  ];
                 })}
 
                 <Circle
@@ -1139,7 +1222,7 @@ export default function CircuitCanvas() {
                   radius={5}
                   fill="yellow"
                   shadowColor="yellow"
-                  shadowOpacity={2}
+                  shadowOpacity={0}
                   shadowForStrokeEnabled={true}
                   stroke="orange"
                   strokeWidth={3}
@@ -1178,15 +1261,16 @@ export default function CircuitCanvas() {
                   dash={[3, 3]}
                   shadowColor="blue"
                   shadowBlur={4}
-                  shadowOpacity={0.4}
+                  shadowOpacity={0}
                   visible={!!creatingWireStartNode}
                 />
               </Layer>
 
+              {/* Nodes overlay layer on top for visibility and interactions */}
               <Layer>
                 {elements.map((element) => (
                   <RenderElement
-                    key={element.id}
+                    key={`nodes-${element.id}`}
                     isSimulationOn={simulationRunning}
                     element={element}
                     wires={wires}
@@ -1195,58 +1279,14 @@ export default function CircuitCanvas() {
                     handleNodeClick={handleNodeClick}
                     handleRatioChange={handleRatioChange}
                     handleModeChange={handleModeChange}
-                    onDragStart={() => {
-                      pushToHistory(elements, wires);
-                      setDraggingElement(element.id);
-                      stageRef.current?.draggable(false);
-                      // Select element on drag start (Tinkercad-like behavior)
-                      if (!creatingWireStartNode) {
-                        const current = getElementById(element.id) || element;
-                        setSelectedElement(current);
-                        setShowPropertiesPannel(true);
-                        setActiveControllerId(null);
-                        if (element.type === "microbit") {
-                          setActiveControllerId(element.id);
-                        }
-                      }
-                    }}
-                    onDragEnd={(e) => {
-                      setDraggingElement(null);
-                      stageRef.current?.draggable(true);
-                      const id = e.target.id();
-                      const x = e.target.x();
-                      const y = e.target.y();
-                      setElements((prev) => {
-                        const next = prev.map((el) =>
-                          el.id === id ? { ...el, x, y } : el
-                        );
-                        // Push snapshot AFTER move so undo returns to the prior position
-                        pushToHistory(next, wires);
-                        return next;
-                      });
-                    }}
-                    onSelect={(id) => {
-                      if (creatingWireStartNode) return;
-                      const element = getElementById(id);
-                      setSelectedElement(element ?? null);
-                      setShowPropertiesPannel(true);
-                      setActiveControllerId(null);
-                      setOpenCodeEditor(false);
-                      if (element?.type === "microbit") {
-                        setActiveControllerId(element.id);
-                      }
-                    }}
+                    onDragStart={() => {}}
+                    onDragEnd={() => {}}
+                    onSelect={() => {}}
                     selectedElementId={selectedElement?.id || null}
-                    // @ts-ignore
-                    onControllerInput={(elementId, input) => {
-                      const sim = controllerMap[elementId];
-                      if (
-                        sim &&
-                        (input === "A" || input === "B" || input === "AB")
-                      ) {
-                        sim.simulateInput(input);
-                      }
-                    }}
+                    onControllerInput={() => {}}
+                    // Only render nodes in this layer
+                    showNodes={true}
+                    showBody={false}
                   />
                 ))}
               </Layer>

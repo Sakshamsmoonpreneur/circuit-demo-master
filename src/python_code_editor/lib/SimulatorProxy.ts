@@ -4,7 +4,7 @@ import type { MicrobitEvent } from "../mock/microbitInstance";
 import { Simulator } from "@/python_code_editor/lib/Simulator";
 
 type SupportedLanguage = "python";
-type SupportedController = "microbit";
+type SupportedController = "microbit" | "microbitWithBreakout";
 
 export interface SimulatorOptions {
   language: SupportedLanguage;
@@ -15,9 +15,13 @@ export interface SimulatorOptions {
 
 type State = {
   pins: Record<string, { digital: number; analog: number }>;
-  leds: boolean[][];
-  buttons: { A: boolean; B: boolean };
+  leds: number[][];
+  buttons: { A: boolean; B: boolean; AB: boolean }; // AB present in snapshot
+  logo: boolean; // <- NEW: logo touch state
 };
+
+type ButtonEvent = "A" | "B" | "AB";
+type LogoEvent = { type: "logo"; state: "pressed" | "released" };
 
 export class SimulatorProxy {
   private worker: Worker;
@@ -44,7 +48,6 @@ export class SimulatorProxy {
     const SimulatorConstructor = Comlink.wrap<typeof Simulator>(this.worker);
 
     const { language, controller } = this.options;
-
     this.simulatorRemoteInstance = await new SimulatorConstructor({
       language,
       controller,
@@ -61,41 +64,59 @@ export class SimulatorProxy {
   }
 
   async run(code: string): Promise<string> {
-    if (!this.simulatorRemoteInstance) throw new Error("Not initialized.");
+    if (!this.simulatorRemoteInstance) throw new Error("Not initialized at run.");
     return this.simulatorRemoteInstance.run(code);
   }
 
   async getStates(): Promise<State> {
-    if (!this.simulatorRemoteInstance) throw new Error("Not initialized.");
+    if (!this.simulatorRemoteInstance) throw new Error("Not initialized at get states.");
     return this.simulatorRemoteInstance.getStates();
   }
 
   async reset() {
-    if (!this.simulatorRemoteInstance) throw new Error("Not initialized.");
+    if (!this.simulatorRemoteInstance) throw new Error("Not initialized at reset.");
     return this.simulatorRemoteInstance.reset();
   }
 
   async disposeAndReload() {
-    // // Optional: Call remote dispose if you want to do any cleanup there
-    // try {
-    //   await this.simulatorRemoteInstance?.dispose?.();
-    // } catch (e) {
-    //   console.warn("Simulator remote dispose failed:", e);
-    // }
     this.simulatorRemoteInstance?.reset();
-
-    // Kill old worker
     this.worker.terminate();
-
-    // Create new worker and reinitialize
     this.worker = this.createWorker();
     this.simulatorRemoteInstance = null;
     await this.initialize();
   }
 
-  async simulateInput(event: "A" | "B" | "AB") {
+  // --- INPUT API ---
+
+  async simulateInput(event: ButtonEvent | LogoEvent) {
     if (!this.simulatorRemoteInstance) throw new Error("Not initialized.");
-    return this.simulatorRemoteInstance.simulateInput(event);
+
+    if (typeof event === "string") {
+      // Button A/B/AB
+      return this.simulatorRemoteInstance.simulateInput(event);
+    }
+
+    // Logo event
+    if (event.type === "logo") {
+      if (event.state === "pressed") {
+        return this.simulatorRemoteInstance.pressLogo();
+      } else {
+        return this.simulatorRemoteInstance.releaseLogo();
+      }
+    }
+
+    throw new Error("Unsupported input event");
+  }
+
+  // Convenience methods (optional)
+  async pressLogo() {
+    if (!this.simulatorRemoteInstance) throw new Error("Not initialized at press logo.");
+    return this.simulatorRemoteInstance.pressLogo();
+  }
+
+  async releaseLogo() {
+    if (!this.simulatorRemoteInstance) throw new Error("Not initialized at release logo.");
+    return this.simulatorRemoteInstance.releaseLogo();
   }
 
   dispose() {

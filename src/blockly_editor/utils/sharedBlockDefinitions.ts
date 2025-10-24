@@ -248,6 +248,111 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
     },
   },
   {
+    // Basic: show icon (predefined 5x5 patterns)
+    // We generate led.unplot for all pixels, then led.plot for the icon pixels
+    type: "show_icon",
+    category: "Basic",
+    blockDefinition: {
+      type: "show_icon",
+      message0: "show icon %1",
+      args0: [
+        {
+          type: "field_icon",
+          name: "ICON",
+          value: "HEART",
+        },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      tooltip: "Show a predefined icon on the LED matrix",
+    },
+    // Support parsing the MicroPython-like form: display.show(Image.ICON)
+    pythonPattern: /display\.show\(Image\.([A-Z_]+)\)/g,
+    pythonGenerator: (block) => {
+      const icon = (block.getFieldValue("ICON") || "HEART") as string;
+      const patterns: Record<string, string[]> = {
+        HEART: ["01010", "11111", "11111", "01110", "00100"],
+        SMALL_HEART: ["00000", "01010", "01110", "00100", "00000"],
+        HAPPY: ["00000", "01010", "00000", "10001", "01110"],
+        SAD: ["00000", "01010", "01110", "10001", "00000"],
+        YES: ["00001", "00010", "00100", "01000", "10000"],
+        NO: ["10001", "01010", "00100", "01010", "10001"],
+      };
+
+      const rows = patterns[icon] || patterns.HEART;
+      // Generate Python: clear entire 5x5 then plot icon pixels
+      const lines: string[] = [];
+      for (let y = 0; y < 5; y++) {
+        for (let x = 0; x < 5; x++) {
+          lines.push(`led.unplot(${x}, ${y})`);
+        }
+      }
+      for (let y = 0; y < 5; y++) {
+        const row = rows[y];
+        for (let x = 0; x < 5; x++) {
+          if (row.charAt(x) === "1") {
+            lines.push(`led.plot(${x}, ${y})`);
+          }
+        }
+      }
+      return lines.join("\n") + "\n";
+    },
+    pythonExtractor: (match) => ({
+      ICON: match[1]?.toUpperCase(),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("show_icon");
+      const valid = new Set([
+        "HEART",
+        "SMALL_HEART",
+        "HAPPY",
+        "SAD",
+        "YES",
+        "NO",
+      ]);
+      const picked = valid.has(values.ICON) ? values.ICON : "HEART";
+      block.setFieldValue(picked, "ICON");
+      return block;
+    },
+  },
+  {
+    // Led: plot with brightness (0..255)
+    type: "plot_led_brightness",
+    category: "Led",
+    blockDefinition: {
+      type: "plot_led_brightness",
+      message0: "plot x %1 y %2 brightness %3",
+      args0: [
+        { type: "field_number", name: "X", value: 0, min: 0, max: 4 },
+        { type: "field_number", name: "Y", value: 0, min: 0, max: 4 },
+        { type: "field_slider", name: "BRIGHTNESS", value: 255, min: 0, max: 255, precision: 1 },
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      tooltip: "Plot an LED at (x,y) with brightness 0-255",
+    },
+    // Custom Python mapping for our editor
+    pythonPattern: /led\.plot_brightness\((\d+),\s*(\d+),\s*(\d+)\)/g,
+    pythonGenerator: (block) => {
+      const x = block.getFieldValue("X");
+      const y = block.getFieldValue("Y");
+      const b = block.getFieldValue("BRIGHTNESS");
+      return `led.plot_brightness(${x}, ${y}, ${b})\n`;
+    },
+    pythonExtractor: (match) => ({
+      X: parseInt(match[1]),
+      Y: parseInt(match[2]),
+      BRIGHTNESS: parseInt(match[3]),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("plot_led_brightness");
+      block.setFieldValue(values.X, "X");
+      block.setFieldValue(values.Y, "Y");
+      block.setFieldValue(values.BRIGHTNESS, "BRIGHTNESS");
+      return block;
+    },
+  },
+  {
     type: "toggle_led",
     category: "Led",
     blockDefinition: {
@@ -350,12 +455,14 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
   },
 
   // input blocks
+
+  // --- NEW: on_button_pressed event block (A, B, A+B) ---
   {
-    type: "button_is_pressed",
+    type: "on_button_pressed",
     category: "Input",
     blockDefinition: {
-      type: "button_is_pressed",
-      message0: "button %1 is pressed",
+      type: "on_button_pressed",
+      message0: "on button %1 pressed %2",
       args0: [
         {
           type: "field_dropdown",
@@ -363,30 +470,39 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
           options: [
             ["A", "A"],
             ["B", "B"],
-            ["AB", "AB"],
+            ["A+B", "AB"],
           ],
         },
+        { type: "input_statement", name: "DO" },
       ],
-      output: "Boolean",
-      tooltip: "Check if button is pressed",
+      tooltip: "Run when a button is pressed",
+      nextStatement: null,
     },
-    pythonPattern: /button_([ab])\.is_pressed\(\)/gi,
+    // Matches a typical generated handler pattern like:
+    // def on_button_pressed_a():
+    //     ...
+    // input.on_button_pressed(Button.A, on_button_pressed_a)
+    pythonPattern: /def\s+on_button_pressed_(a|b|ab)\s*\(\s*\)\s*:([\s\S]*?)\n\s*input\.on_button_pressed\(\s*Button\.(A|B|AB)\s*,\s*([A-Za-z_]\w*)\s*\)/gi,
     pythonGenerator: (block, generator) => {
-      const button = block.getFieldValue("BUTTON").toLowerCase();
-      return [
-        `button_${button}.is_pressed()`,
-        (generator as any).ORDER_NONE || 0,
-      ];
+      const btn = block.getFieldValue("BUTTON");
+      const statements = generator.statementToCode(block, "DO");
+      const funcName = `on_button_pressed_${btn.toLowerCase()}`;
+      // Indent statements and register handler
+      const body = statements ? statements.replace(/^/gm, "    ") : "    pass\n";
+      return `def ${funcName}():\n${body}\ninput.on_button_pressed(Button.${btn}, ${funcName})\n`;
     },
     pythonExtractor: (match) => ({
-      BUTTON: match[1].toUpperCase(),
+      BUTTON: (match[3] || match[1]).toUpperCase(),
+      STATEMENTS: (match[2] || "").trim(),
     }),
     blockCreator: (workspace, values) => {
-      const block = workspace.newBlock("button_is_pressed");
-      block.setFieldValue(values.BUTTON, "BUTTON");
+      const block = workspace.newBlock("on_button_pressed");
+      // default to A if value missing
+      block.setFieldValue(values.BUTTON || "A", "BUTTON");
       return block;
     },
   },
+  
   {
     type: "forever",
     blockDefinition: {

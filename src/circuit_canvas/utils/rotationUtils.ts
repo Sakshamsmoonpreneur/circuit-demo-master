@@ -61,6 +61,8 @@ export function getElementCenter(element: CircuitElement): {
   switch (element.type) {
     case "battery":
       return { x: 80, y: 40 }; // Battery is 160x80, so center is 80x40
+    case "powersupply":
+      return { x: 80, y: 40 }; // Same footprint as battery asset
     case "lightbulb":
       return { x: 73, y: 70 }; // Approximate center of lightbulb
     case "resistor":
@@ -73,6 +75,10 @@ export function getElementCenter(element: CircuitElement): {
       return { x: 34, y: 30 }; // Approximate center of LED
     case "microbit":
       return { x: 111, y: 113 }; // Approximate center of microbit
+    case "microbitWithBreakout":
+      return { x: 111, y: 113 }; // Approximate center of microbit with breakout
+    case "ultrasonicsensor4p":
+      return { x: 60, y: 30 }; // Approximate center of ultrasonic sensor
     default:
       return { x: 0, y: 0 };
   }
@@ -88,6 +94,8 @@ export function getElementDimensions(element: CircuitElement): {
   switch (element.type) {
     case "battery":
       return { width: 160, height: 80 };
+    case "powersupply":
+      return { width: 160, height: 80 };
     case "lightbulb":
       return { width: 146, height: 140 };
     case "resistor":
@@ -100,6 +108,10 @@ export function getElementDimensions(element: CircuitElement): {
       return { width: 68, height: 60 };
     case "microbit":
       return { width: 222, height: 226 };
+    case "microbitWithBreakout":
+      return { width: 222, height: 226 };
+    case "ultrasonicsensor4p":
+      return { width: 120, height: 40 };
     default:
       return { width: 50, height: 50 };
   }

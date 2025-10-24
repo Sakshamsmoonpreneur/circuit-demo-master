@@ -1,5 +1,5 @@
 // using ids for connections to allow for easier serialization and deserialization
-
+// test
 export type CircuitElement = {
   id: string;
   x: number;
@@ -8,14 +8,16 @@ export type CircuitElement = {
   nodes: Node[];
   connecters?: ElementConnecter[];
   type: string;
+
   properties?: {
     voltage?: number; // for power sources like batteries
     resistance?: number; // all components can have resistance
     ratio?: number; // for potentiometers, the ratio of resistance
-    mode?: "voltage" | "current"; // for multimeters, can be voltage or current mode
+  mode?: "voltage" | "current" | "resistance"; // multimeter modes: V, A, Ω
     distance?: number; // cm
-    temperature?: number; 
+    temperature?: number;
     brightness?: number;
+    color?: string;
   };
   computed?: {
     current?: number; // computed current through the element
@@ -25,10 +27,11 @@ export type CircuitElement = {
   };
   controller?: {
     [key: string]: unknown;
-    leds?: boolean[][];
-    pins?: Record<string, { digital?: number }>;
+    leds?: number[][];
+    pins?: Record<string, { digital?: number; analog?: number }>; // <-- analog added
     temperature?: number;
     brightness?: number;
+    logoTouched?: boolean; // <-- optional snapshot of logo state
   };
   wires?: Wire[];
   displayProperties?: string[];
@@ -81,18 +84,21 @@ export type CircuitElementProps = {
     ratio?: number;
     temperature?: number;
     brightness?: number;
+    color?: string;
   };
 };
 
 export type PaletteElementType =
   | "lightbulb"
   | "battery"
+  | "powersupply"
   | "resistor"
   | "multimeter"
   | "potentiometer"
   | "led"
   | "microbit"
-  | "ultrasonicsensor4p";
+  | "ultrasonicsensor4p"
+  | "microbitWithBreakout";
 
 export type PropertiesPanelProps = {
   selectedElement: CircuitElement | null;
@@ -108,15 +114,31 @@ export type PropertiesPanelProps = {
   wireColor?: string;
 };
 
+// ----------------------
 // Microbit-specific types
+// ----------------------
+
+// Controller input now supports the logo touch sensor:
+export type ControllerInput =
+  | "A"
+  | "B"
+  | "AB"
+  | { type: "logo"; state: "pressed" | "released" };
+
 export interface MicrobitProps {
   id: string;
   x: number;
   y: number;
   selected?: boolean;
-  onControllerInput?: (input: "A" | "B" | "AB") => void;
-  leds: boolean[][];
-  pins: Record<string, { digital?: number }>;
+
+  // Accepts buttons and the logo touch sensor
+  onControllerInput?: (input: ControllerInput) => void;
+
+  leds: number[][] [];
+
+  // Allow analog alongside digital to match simulator capabilities
+  pins: Record<string, { digital?: number; analog?: number }>;
+
   isSimulationOn?: boolean;
 }
 

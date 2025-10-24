@@ -5,12 +5,15 @@ import { MicrobitSimulator } from "../mock/microbitInstance";
 import type { MicrobitEvent } from "../mock/microbitInstance";
 
 type SupportedLanguage = "python";
-type SupportedController = "microbit";
+type SupportedController = "microbit" | "microbitWithBreakout";
 
 interface SimulatorOptions {
   language: SupportedLanguage;
   controller: SupportedController;
 }
+
+type ButtonEvent = "A" | "B" | "AB";
+type LogoEvent = { type: "logo"; state: "pressed" | "released" };
 
 class Simulator {
   private interpreter: PythonInterpreter | null = null;
@@ -45,11 +48,11 @@ class Simulator {
 
     if (
       this.options.language === "python" &&
-      this.options.controller === "microbit"
+      (this.options.controller === "microbit" || this.options.controller === "microbitWithBreakout")
     ) {
       this.microbit = new MicrobitSimulator(this.interpreter.getPyodide()!);
       this.interpreter.registerHardwareModule(
-        "microbit",
+        "microbit", // <-- always use "microbit"
         this.microbit.getPythonModule()
       );
 
@@ -63,7 +66,6 @@ class Simulator {
 
   async dispose() {
     try {
-      // Stop any running tasks or clear state
       await this.interpreter?.run(`
       import asyncio
       for task in asyncio.all_tasks():
@@ -85,29 +87,48 @@ class Simulator {
 
   getStates() {
     if (!this.microbit) {
-      throw new Error("Microbit controller not initialized.");
+      throw new Error(this.options.controller + " controller not initialized at get states.");
     }
     return this.microbit.getStateSnapshot();
   }
 
   reset() {
     if (!this.microbit) {
-      throw new Error("Microbit controller not initialized.");
+      throw new Error(this.options.controller + " controller not initialized at reset.");
     }
-    ("Resetting microbit state");
     this.microbit.reset();
   }
 
-  async simulateInput(event: string) {
-  if (!this.microbit) {
-    throw new Error("Microbit controller not initialized.");
-  }
-  if (event !== "A" && event !== "B" && event !== "AB") {
-    throw new Error(`Unsupported input event: ${event}`);
-  }
-  await this.microbit.pressButton(event); // <- await here
-}
+  // --- INPUT API ---
 
+  async simulateInput(event: ButtonEvent | LogoEvent) {
+    if (!this.microbit) {
+      throw new Error(this.options.controller + " controller not initialized at simulate input.");
+    }
+
+    if (typeof event === "string") {
+      // A / B / AB
+      await this.microbit.pressButton(event);
+      return;
+    }
+
+    if (event.type === "logo") {
+      if (event.state === "pressed") return this.microbit.pressLogo();
+      if (event.state === "released") return this.microbit.releaseLogo();
+    }
+
+    throw new Error(`Unsupported input event: ${JSON.stringify(event)}`);
+  }
+
+  async pressLogo() {
+    if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at press logo.");
+    return this.microbit.pressLogo();
+  }
+
+  async releaseLogo() {
+    if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at release logo.");
+    return this.microbit.releaseLogo();
+  }
 }
 
 Comlink.expose(Simulator);
