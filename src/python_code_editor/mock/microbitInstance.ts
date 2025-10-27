@@ -208,7 +208,13 @@ export class MicrobitSimulator {
     on_logo_released: this.onLogoReleased.bind(this),
     logo_is_touched: this.logoIsTouched.bind(this),
     _clear: this.clearInputs.bind(this),
+    button_is_pressed: this.buttonIsPressed.bind(this),
   };
+  // Python: input.button_is_pressed(Button.A)
+  private buttonIsPressed(button: ButtonInstance): boolean {
+    const buttonName = button.getName();
+    return !!this.buttonStates[buttonName];
+  }
   public readonly basic = {
     show_string: this.showString.bind(this),
     forever: this.forever.bind(this),

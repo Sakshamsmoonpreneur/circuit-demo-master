@@ -502,7 +502,48 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       return block;
     },
   },
-  
+  {
+    type: "button_is_pressed",
+    category: "Input",
+    blockDefinition: {
+      type: "button_is_pressed",
+      message0: "button %1 is %2 pressed %3",
+      args0: [
+        {
+          type: "field_dropdown",
+          name: "BUTTON",
+          options: [
+            ["A", "A"],
+            ["B", "B"],
+            ["A+B", "AB"],
+          ],
+        },
+        { type: "input_statement", name: "DO" },
+      ],
+      tooltip: "Run if a button is pressed",
+      nextStatement: null,
+    },
+    pythonPattern: /def\s+button_is_pressed(a|b|ab)\s*\(\s*\)\s*:([\s\S]*?)\n\s*input\.button_is_pressed\(\s*Button\.(A|B|AB)\s*,\s*([A-Za-z_]\w*)\s*\)/gi,
+    pythonGenerator: (block, generator) => {
+      const btn = block.getFieldValue("BUTTON");
+      const statements = generator.statementToCode(block, "DO");
+      const funcName = `button_is_pressed_${btn.toLowerCase()}`;
+      // Indent statements and register handler
+      const body = statements ? statements.replace(/^/gm, "    ") : "    pass\n";
+      return `def ${funcName}():\n${body}\ninput.button_is_pressed(Button.${btn}, ${funcName})\n`;
+    },
+    pythonExtractor: (match) => ({
+      BUTTON: (match[3] || match[1]).toUpperCase(),
+      STATEMENTS: (match[2] || "").trim(),
+    }),
+    blockCreator: (workspace, values) => {
+      const block = workspace.newBlock("button_is_pressed");
+      // default to A if value missing
+      block.setFieldValue(values.BUTTON || "A", "BUTTON");
+      return block;
+    },
+  },
+
   {
     type: "forever",
     blockDefinition: {

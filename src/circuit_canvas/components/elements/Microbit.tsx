@@ -51,6 +51,7 @@ export default function Microbit({
   }, []);
 
   const handleButtonClick = (btn: "A" | "B" | "AB") => {
+    debugger;
     setBtnPressed(btn);
     // notify controller: pressed, then schedule release
     onControllerInput?.(btn as any);

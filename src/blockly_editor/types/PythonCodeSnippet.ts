@@ -267,6 +267,24 @@ export const CODE_SNIPPETS: CodeSnippet[] = [
       },
     ],
   },
+  {
+    id: "button_conditional_listener",
+    name: "Button Conditional",
+    description: "Listen for button is press",
+    code: "input.button_is_pressed(Button.{button})",
+    category: "Buttons",
+    parameters: [
+      {
+        id: "button",
+        name: "Button",
+        type: "dropdown",
+        options: ["A", "B", "AB"],
+        defaultValue: "A",
+        placeholder: "Button",
+      },
+    ],
+  },
+
   // Touch / Logo Sensor Section
   {
     id: "logo_pressed_listener",
