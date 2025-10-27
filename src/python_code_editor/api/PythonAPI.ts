@@ -47,10 +47,11 @@ export const API = {
     forever: {
       sig: "basic.forever(handler: () -> None) -> None",
       doc: "Run the given handler repeatedly with a short pause.",
-      snippet: "def loop():\n\t# your code\n\nbasic.forever(loop)\n",
+      snippet: "def on_forever():\n\t# your code\n\nbasic.forever(on_forever)\n",
     },
     pause: { sig: "basic.pause(ms: int) -> None", doc: "Pause execution for ms milliseconds." },
   },
+
   pins: {
     digital_write_pin: {
       sig: "pins.digital_write_pin(pin: DigitalPin, value: int) -> None",

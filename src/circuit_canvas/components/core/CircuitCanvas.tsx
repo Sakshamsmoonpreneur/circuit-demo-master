@@ -1122,6 +1122,11 @@ export default function CircuitCanvas() {
                         anySim.simulateInput?.(input);
                         return;
                       }
+                      if (typeof input === "object" && input?.type === "button") {
+                        // forward structured button press/release to simulator
+                        anySim.simulateInput?.(input);
+                        return;
+                      }
                       if (typeof input === "object" && input?.type === "logo") {
                         if (input.state === "pressed") {
                           (anySim.pressLogo?.() ?? anySim.simulateInput?.(input));

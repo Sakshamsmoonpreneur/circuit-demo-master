@@ -50,17 +50,14 @@ export default function Microbit({
     image.alt = "Microbit";
   }, []);
 
-  const handleButtonClick = (btn: "A" | "B" | "AB") => {
-    debugger;
+  // Button press/release handlers for hold logic
+  const handleButtonDown = (btn: "A" | "B" | "AB") => {
     setBtnPressed(btn);
-    // notify controller: pressed, then schedule release
-    onControllerInput?.(btn as any);
-    // Some controllers expect an object describing press/release; support both via proxy
-    try {
-      onControllerInput?.({ type: "button", button: btn, state: "pressed" } as any);
-    } catch (e) {
-      throw e;
-    }
+    onControllerInput?.({ type: "button", button: btn, state: "pressed" });
+  };
+  const handleButtonUp = (btn: "A" | "B" | "AB") => {
+    setBtnPressed(null);
+    onControllerInput?.({ type: "button", button: btn, state: "released" });
   };
 
   // Logo stroke color logic
@@ -139,6 +136,22 @@ export default function Microbit({
       window.removeEventListener("touchend", handleWindowUp);
     };
   }, [enableLogoInteraction, onControllerInput]);
+
+  // Global mouseup to handle releasing a button if pointer leaves the hit area
+  useEffect(() => {
+    const handleGlobalUp = () => {
+      if (btnPressed) {
+        // send a release for whichever button was pressed
+        handleButtonUp(btnPressed);
+      }
+    };
+    window.addEventListener("mouseup", handleGlobalUp);
+    window.addEventListener("touchend", handleGlobalUp);
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalUp);
+      window.removeEventListener("touchend", handleGlobalUp);
+    };
+  }, [btnPressed]);
 
   const onLogoClick = () => {
     // Hook for future logo touch event dispatch if needed
@@ -242,12 +255,12 @@ export default function Microbit({
 
         {/* Button AB */}
         <Group
-          onClick={(e) => {
-            e.cancelBubble = true;
-            handleButtonClick("AB");
-          }}
           x={164}
           y={96}
+          onMouseDown={() => handleButtonDown("AB")}
+          onMouseUp={() => handleButtonUp("AB")}
+          onTouchStart={() => handleButtonDown("AB")}
+          onTouchEnd={() => handleButtonUp("AB")}
         >
           {btnPressed === "AB" && (
             <Rect
@@ -267,12 +280,12 @@ export default function Microbit({
 
         {/* Button A */}
         <Group
-          onClick={(e) => {
-            e.cancelBubble = true;
-            handleButtonClick("A");
-          }}
           x={35}
           y={130}
+          onMouseDown={() => handleButtonDown("A")}
+          onMouseUp={() => handleButtonUp("A")}
+          onTouchStart={() => handleButtonDown("A")}
+          onTouchEnd={() => handleButtonUp("A")}
         >
           {btnPressed === "A" && (
             <Rect
@@ -292,12 +305,12 @@ export default function Microbit({
 
         {/* Button B */}
         <Group
-          onClick={(e) => {
-            e.cancelBubble = true;
-            handleButtonClick("B");
-          }}
           x={165}
           y={130}
+          onMouseDown={() => handleButtonDown("B")}
+          onMouseUp={() => handleButtonUp("B")}
+          onTouchStart={() => handleButtonDown("B")}
+          onTouchEnd={() => handleButtonUp("B")}
         >
           {btnPressed === "B" && (
             <Rect

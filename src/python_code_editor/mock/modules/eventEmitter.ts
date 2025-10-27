@@ -7,6 +7,7 @@ export type MicrobitEvent =
     }
     | { type: "led-change"; x: number; y: number; value: number }
     | { type: "button-press"; button: "A" | "B" | "AB" }
+    | { type: "button-release"; button: "A" | "B" | "AB" }
     | { type: "logo-touch"; state: "pressed" | "released" }
     | { type: "reset" };
 
