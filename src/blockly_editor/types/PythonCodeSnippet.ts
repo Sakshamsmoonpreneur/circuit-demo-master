@@ -361,7 +361,7 @@ while True:
     id: "forever_loop",
     name: "Forever Loop",
     description: "Run code continuously",
-    code: `basic.forever(lambda: None)`,
+    code: `def on_forever():\n    # your code\n\nbasic.forever(on_forever)`,
     category: "Loops",
   },
   {

@@ -49,6 +49,8 @@ export class ButtonModule {
 
             if (typeof button === "string") {
                 const name = button as "A" | "B" | "AB";
+                // Debug: record calls from Python or other callers
+                try { console.debug(`[ButtonModule] buttonIsPressed(${String(name)}) => ${!!this.buttonStates[name]}`); } catch (e) { }
                 return !!this.buttonStates[name];
             }
 
@@ -96,12 +98,20 @@ export class ButtonModule {
     async pressButton(button: ButtonInstance | "A" | "B" | "AB") {
         const buttonName = typeof button === "string" ? button : button.getName();
         this.buttonStates[buttonName] = true;
+        try { console.debug(`[ButtonModule] pressButton(${buttonName})`); } catch (e) { }
 
         for (const handlerProxy of this.inputHandlers[buttonName]) {
             await handlerProxy.wrapperProxy();
         }
 
         this.eventEmitter.emit({ type: "button-press", button: buttonName });
+    }
+
+    async releaseButton(button: ButtonInstance | "A" | "B" | "AB") {
+        const buttonName = typeof button === "string" ? button : button.getName();
+        this.buttonStates[buttonName] = false;
+        try { console.debug(`[ButtonModule] releaseButton(${buttonName})`); } catch (e) { }
+        this.eventEmitter.emit({ type: "button-release", button: buttonName });
     }
 
     clearInputs() {

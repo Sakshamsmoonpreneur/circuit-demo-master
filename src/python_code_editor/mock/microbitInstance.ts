@@ -73,6 +73,10 @@ export class MicrobitSimulator {
     return this.buttonModule.pressButton(button);
   }
 
+  public async releaseButton(button: any): Promise<void> {
+    return this.buttonModule.releaseButton(button);
+  }
+
   public async pressLogo(): Promise<void> {
     return this.logoTouchModule.pressLogo();
   }

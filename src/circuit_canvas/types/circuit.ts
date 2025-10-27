@@ -123,7 +123,8 @@ export type ControllerInput =
   | "A"
   | "B"
   | "AB"
-  | { type: "logo"; state: "pressed" | "released" };
+  | { type: "logo"; state: "pressed" | "released" }
+  | { type: "button"; button: "A" | "B" | "AB"; state: "pressed" | "released" };
 
 export interface MicrobitProps {
   id: string;

@@ -14,7 +14,7 @@ interface SimulatorOptions {
 
 type ButtonEvent = "A" | "B" | "AB";
 type LogoEvent = { type: "logo"; state: "pressed" | "released" };
-type ButtonObject = { type: "button"; button: ButtonEvent; state: "pressed" };
+type ButtonObject = { type: "button"; button: ButtonEvent; state: "pressed" | "released" };
 
 class Simulator {
   private interpreter: PythonInterpreter | null = null;
@@ -106,6 +106,11 @@ class Simulator {
     if (!this.microbit) {
       throw new Error(this.options.controller + " controller not initialized at simulate input.");
     }
+    try {
+      // Debug: log incoming input events
+      // eslint-disable-next-line no-console
+      console.debug("Simulator.simulateInput event:", event);
+    } catch (e) { }
 
     if (typeof event === "string") {
       // A / B / AB
@@ -116,6 +121,7 @@ class Simulator {
     if ((event as ButtonObject).type === "button") {
       const be = event as ButtonObject;
       if (be.state === "pressed") return this.microbit.pressButton(be.button);
+      if (be.state === "released") return this.microbit.releaseButton(be.button);
     }
 
     if (event.type === "logo") {
