@@ -1,6 +1,6 @@
 // src/lib/code/SimulatorProxy.ts
 import * as Comlink from "comlink";
-import type { MicrobitEvent } from "../mock/microbitInstance";
+import type { MicrobitEvent } from "../mock/types";
 import { Simulator } from "@/python_code_editor/lib/Simulator";
 
 type SupportedLanguage = "python";

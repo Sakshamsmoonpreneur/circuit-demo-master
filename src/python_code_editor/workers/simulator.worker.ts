@@ -2,7 +2,7 @@
 import * as Comlink from "comlink";
 import { PythonInterpreter } from "../interpreter/PythonInterpreter";
 import { MicrobitSimulator } from "../mock/microbitInstance";
-import type { MicrobitEvent } from "../mock/microbitInstance";
+import type { MicrobitEvent } from "../mock//types";
 
 type SupportedLanguage = "python";
 type SupportedController = "microbit" | "microbitWithBreakout";
