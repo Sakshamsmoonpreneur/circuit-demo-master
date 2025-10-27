@@ -211,9 +211,42 @@ export class MicrobitSimulator {
     button_is_pressed: this.buttonIsPressed.bind(this),
   };
   // Python: input.button_is_pressed(Button.A)
-  private buttonIsPressed(button: ButtonInstance): boolean {
-    const buttonName = button.getName();
-    return !!this.buttonStates[buttonName];
+  private buttonIsPressed(button: any): boolean {
+    try {
+      // Accept multiple shapes: string, JS ButtonInstance, PyProxy wrapper
+      if (!button && button !== 0) return false;
+
+      // If caller passed a string like "A"
+      if (typeof button === "string") {
+        const name = button as "A" | "B" | "AB";
+        return !!this.buttonStates[name];
+      }
+
+      // If object has getName() (JS ButtonInstance)
+      if (typeof button.getName === "function") {
+        const name = button.getName();
+        return !!this.buttonStates[name as "A" | "B" | "AB"];
+      }
+
+      // If object can be stringified (PyProxy may implement toString)
+      if (typeof button.toString === "function") {
+        const s = String(button.toString());
+        // normalize from 'A' or "Button.A" etc.
+        const m = s.match(/A|B|AB/);
+        if (m) return !!this.buttonStates[m[0] as "A" | "B" | "AB"];
+      }
+
+      // Fallback: look for a name property
+      if (button.name && typeof button.name === "string") {
+        const name = button.name;
+        return !!this.buttonStates[name as "A" | "B" | "AB"];
+      }
+
+      return false;
+    } catch (err) {
+      console.warn("buttonIsPressed error:", err);
+      return false;
+    }
   }
   public readonly basic = {
     show_string: this.showString.bind(this),
