@@ -52,8 +52,14 @@ export default function Microbit({
 
   const handleButtonClick = (btn: "A" | "B" | "AB") => {
     setBtnPressed(btn);
-    onControllerInput?.(btn);
-    setTimeout(() => setBtnPressed(null), 150);
+    // notify controller: pressed, then schedule release
+    onControllerInput?.(btn as any);
+    // Some controllers expect an object describing press/release; support both via proxy
+    try {
+      onControllerInput?.({ type: "button", button: btn, state: "pressed" } as any);
+    } catch (e) {
+      throw e;
+    }
   };
 
   // Logo stroke color logic
@@ -96,7 +102,7 @@ export default function Microbit({
     setLogoState("pressed");
     setCursor("pointer", e);
 
-     // --- NEW: notify controller (pressed)
+    // --- NEW: notify controller (pressed)
     onControllerInput?.({ type: "logo", state: "pressed" });
   };
 

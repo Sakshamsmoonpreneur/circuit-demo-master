@@ -14,6 +14,7 @@ interface SimulatorOptions {
 
 type ButtonEvent = "A" | "B" | "AB";
 type LogoEvent = { type: "logo"; state: "pressed" | "released" };
+type ButtonObject = { type: "button"; button: ButtonEvent; state: "pressed" };
 
 class Simulator {
   private interpreter: PythonInterpreter | null = null;
@@ -101,7 +102,7 @@ class Simulator {
 
   // --- INPUT API ---
 
-  async simulateInput(event: ButtonEvent | LogoEvent) {
+  async simulateInput(event: ButtonEvent | LogoEvent | ButtonObject) {
     if (!this.microbit) {
       throw new Error(this.options.controller + " controller not initialized at simulate input.");
     }
@@ -110,6 +111,11 @@ class Simulator {
       // A / B / AB
       await this.microbit.pressButton(event);
       return;
+    }
+
+    if ((event as ButtonObject).type === "button") {
+      const be = event as ButtonObject;
+      if (be.state === "pressed") return this.microbit.pressButton(be.button);
     }
 
     if (event.type === "logo") {
@@ -128,6 +134,11 @@ class Simulator {
   async releaseLogo() {
     if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at release logo.");
     return this.microbit.releaseLogo();
+  }
+
+  async pressButton(button: ButtonEvent) {
+    if (!this.microbit) throw new Error(this.options.controller + " controller not initialized at press button.");
+    return this.microbit.pressButton(button);
   }
 }
 
