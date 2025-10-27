@@ -13,7 +13,7 @@ export type CircuitElement = {
     voltage?: number; // for power sources like batteries
     resistance?: number; // all components can have resistance
     ratio?: number; // for potentiometers, the ratio of resistance
-  mode?: "voltage" | "current" | "resistance"; // multimeter modes: V, A, Ω
+    mode?: "voltage" | "current" | "resistance"; // multimeter modes: V, A, Ω
     distance?: number; // cm
     temperature?: number;
     brightness?: number;
@@ -134,7 +134,7 @@ export interface MicrobitProps {
   // Accepts buttons and the logo touch sensor
   onControllerInput?: (input: ControllerInput) => void;
 
-  leds: number[][] [];
+  leds: number[][][];
 
   // Allow analog alongside digital to match simulator capabilities
   pins: Record<string, { digital?: number; analog?: number }>;
