@@ -20,6 +20,12 @@ export const API = {
         `\t\${2:# your code}\n\n` +
         `input.on_button_pressed(Button.\${3|A,B,AB|}, \${1})\n`,
     },
+    button_is_pressed: {
+      sig: "input.button_is_pressed(button: Button) -> bool",
+      doc: "Register a handler that runs if the button is pressed.",
+      snippet:
+        `button_is_pressed(Button.\${3|A,B,AB|})\n`,
+    },
     on_logo_pressed: {
       sig: "input.on_logo_pressed(on_logo_down: () -> None) -> None",
       doc: "Register a handler that runs when the logo is pressed.",

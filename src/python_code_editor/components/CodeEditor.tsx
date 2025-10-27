@@ -34,6 +34,7 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
     if (/^class\s+\w+.*:\s*$/.test(t)) return "top-level";
     if (/^(from\s+[^\s]+\s+import\s+.+|import\s+.+)$/.test(t)) return "top-level";
     if (/^input\.on_button_pressed\s*\(/.test(t)) return "top-level";
+    if (/^input\.button_is_pressed\s*\(/.test(t)) return "top-level";
     return "block";
   };
 
@@ -82,7 +83,7 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
     e.dataTransfer.dropEffect = "copy";
     setIsDragOver(true);
 
-  // Show a green guideline where the snippet will be inserted
+    // Show a green guideline where the snippet will be inserted
     try {
       const editor = editorRef.current;
       if (!editor) return;
@@ -95,10 +96,10 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
       const pos = target?.position || editor.getPosition?.();
       if (!pos) return;
 
-  // Compute indentation for preview based on context
-  const opts = model.getOptions?.();
-  const indentSize: number = (opts?.indentSize as number) || 4;
-  const indentUnit = " ".repeat(Math.max(1, indentSize));
+      // Compute indentation for preview based on context
+      const opts = model.getOptions?.();
+      const indentSize: number = (opts?.indentSize as number) || 4;
+      const indentUnit = " ".repeat(Math.max(1, indentSize));
       const dragged = e.dataTransfer.getData("text/plain");
       const kind = classifySnippet(dragged);
       const effectiveIndent = kind === "top-level" ? "" : computeEffectiveIndent(model, pos, indentUnit);
@@ -113,8 +114,8 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
         lineNumber: pos.lineNumber,
         column: Math.max(1, effectiveIndent.length + 1),
       });
-  // Place guideline on current line start, at computed indent
-  const top = baseCoord.top;
+      // Place guideline on current line start, at computed indent
+      const top = baseCoord.top;
       const left = indentCoord ? indentCoord.left : baseCoord.left;
 
       const hostRect = (dom.querySelector('.monaco-scrollable-element') as HTMLElement | null)?.getBoundingClientRect?.() ?? dom.getBoundingClientRect();
@@ -143,23 +144,23 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
     setIsDragOver(false);
     setDragPreview((p) => ({ ...p, visible: false }));
 
-  const codeSnippet = e.dataTransfer.getData("text/plain");
+    const codeSnippet = e.dataTransfer.getData("text/plain");
     if (codeSnippet && editorRef.current) {
       const editor = editorRef.current;
       const model = editor.getModel?.();
       const position = editor.getPosition();
       if (!model || !position) return;
 
-  // Determine indentation context for the insertion
-  const lineContent: string = model.getLineContent(position.lineNumber) ?? "";
-  const currentIndent = (lineContent.match(/^\s*/) || [""])[0];
-  const isCursorAtLineStart = position.column <= (currentIndent.length + 1);
+      // Determine indentation context for the insertion
+      const lineContent: string = model.getLineContent(position.lineNumber) ?? "";
+      const currentIndent = (lineContent.match(/^\s*/) || [""])[0];
+      const isCursorAtLineStart = position.column <= (currentIndent.length + 1);
 
-  const opts = model.getOptions?.();
-  const indentSize: number = (opts?.indentSize as number) || 4;
-  const indentUnit = " ".repeat(Math.max(1, indentSize));
-  const kind = classifySnippet(codeSnippet);
-  const effectiveIndent = kind === "top-level" ? "" : computeEffectiveIndent(model, position, indentUnit);
+      const opts = model.getOptions?.();
+      const indentSize: number = (opts?.indentSize as number) || 4;
+      const indentUnit = " ".repeat(Math.max(1, indentSize));
+      const kind = classifySnippet(codeSnippet);
+      const effectiveIndent = kind === "top-level" ? "" : computeEffectiveIndent(model, position, indentUnit);
 
       // Prepare snippet with indentation applied to each line
       const normalizeNewlines = (s: string) => s.replace(/\r\n?/g, "\n");
@@ -170,7 +171,7 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
         .join("\n");
 
       // If dropping in the middle or end of a non-empty line, start on a new line first
-  const needLeadingNewline = !isCursorAtLineStart || /\S/.test(lineContent);
+      const needLeadingNewline = !isCursorAtLineStart || /\S/.test(lineContent);
       const textToInsert = (needLeadingNewline ? "\n" : "") + indented + "\n";
 
       const range = {
@@ -208,16 +209,16 @@ export default function CodeEditor({ code, onChange }: StandaloneEditorProps) {
         backdrop-blur-2xl m-1 mt-0.5 ${isDragOver ? 'ring-2 ring-indigo-400 ring-opacity-60' : ''}
       `}
       style={{
-  boxShadow: "0 8px 40px rgba(0, 41, 100, 0.28)",
-  // Allow horizontal scrollbar from Monaco to be visible
-  overflow: "hidden", // keep rounded corners for content, Monaco manages its own scrollbars
+        boxShadow: "0 8px 40px rgba(0, 41, 100, 0.28)",
+        // Allow horizontal scrollbar from Monaco to be visible
+        overflow: "hidden", // keep rounded corners for content, Monaco manages its own scrollbars
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-  {/* Removed blue overlay; rely on precise guideline */}
-      
+      {/* Removed blue overlay; rely on precise guideline */}
+
       {/* Toolbar */}
       <div
         className="
