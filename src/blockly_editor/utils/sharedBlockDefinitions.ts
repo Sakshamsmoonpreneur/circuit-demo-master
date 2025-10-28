@@ -415,42 +415,64 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
   },
 
   // logic blocks
-  // if statement
+
+  // MakeCode-style if/else/else if with dynamic arms (uses Blockly's built-in mutator)
   {
-    type: "if_statement",
+    type: "controls_if",
     category: "Logic",
     blockDefinition: {
-      type: "if_statement",
+      type: "controls_if",
       message0: "if %1 %2",
       args0: [
-        {
-          type: "input_value",
-          name: "CONDITION",
-          check: "Boolean",
-        },
-        {
-          type: "input_statement",
-          name: "DO",
-        },
+        { type: "input_value", name: "IF0", check: "Boolean" },
+        { type: "input_statement", name: "DO0" },
       ],
       previousStatement: null,
       nextStatement: null,
-      tooltip: "If statement",
+      tooltip: "If / else if / else",
+      mutator: "controls_if_mutator",
     },
-    pythonPattern: /if\s+(.*?)\s*:\s*([\s\S]*?)(?=\n(?:\S|$))/g,
+    // Note: Parsing full Python if/elif/else into a single block line-by-line is non-trivial.
+    // We use a broad pattern so text->blocks can at least place an if block; edits remain block-first.
+    pythonPattern: /\bif\b[\s\S]*?:/g,
     pythonGenerator: (block, generator) => {
-      const condition = generator.valueToCode(block, "CONDITION", Order.NONE);
-      const statements = generator.statementToCode(block, "DO");
-      return `if ${condition}:\n${statements.replace(/^/gm, "    ")}`;
+      let n = 0;
+      let code = "";
+      const IND = ((generator as any)?.INDENT ?? "    ") as string;
+      const ensureBody = (s: string) => {
+        // Use generator-provided indentation; do NOT re-indent existing lines.
+        if (s && s.trim().length > 0) return s;
+        return IND + "# your code here\n";
+      };
+
+      // First arm
+      const condition0 =
+        generator.valueToCode(block, "IF0", (generator as any).ORDER_NONE) ||
+        "True";
+      const branch0 = generator.statementToCode(block, "DO0");
+      code += `if ${condition0}:\n${ensureBody(branch0)}`;
+
+      // Else-if arms
+      for (n = 1; block.getInput("IF" + n); n++) {
+        const cond =
+          generator.valueToCode(block, "IF" + n, (generator as any).ORDER_NONE) ||
+          "False";
+        const branch = generator.statementToCode(block, "DO" + n);
+        code += `elif ${cond}:\n${ensureBody(branch)}`;
+      }
+
+      // Else arm
+      if (block.getInput("ELSE")) {
+        const elseBranch = generator.statementToCode(block, "ELSE");
+        code += `else:\n${ensureBody(elseBranch)}`;
+      }
+      // Ensure trailing newline for cleaner concatenation
+      if (!code.endsWith("\n")) code += "\n";
+      return code;
     },
-    pythonExtractor: (match) => ({
-      CONDITION: match[1].trim(),
-      STATEMENTS: match[2].trim(),
-    }),
-    blockCreator: (workspace, values) => {
-      const block = workspace.newBlock("if_statement");
-      block.setFieldValue(values.CONDITION, "CONDITION");
-      return block;
+    pythonExtractor: () => ({}),
+    blockCreator: (workspace) => {
+      return createAndInitializeBlock(workspace, "controls_if");
     },
   },
 
@@ -548,13 +570,20 @@ export const SHARED_MICROBIT_BLOCKS: SharedBlockDefinition[] = [
       nextStatement: null,
       tooltip: "Runs code forever",
     },
-    pythonPattern: /while\s+True\s*:([\s\S]*?)(?=\n(?:\S|$))/g,
+    // Support recognizing either the classic while True: form or
+    // the handler registration style we generate below
+    // - def on_forever():\n    ...\n    basic.forever(on_forever)
+    pythonPattern: /(def\s+on_forever\(\s*\)\s*:|basic\.forever\(\s*on_forever\s*\)|while\s+True\s*:)/g,
     pythonGenerator: (block, generator) => {
       const statements = generator.statementToCode(block, "DO");
-      return `while True:\n${statements.replace(/^/gm, "    ")}\n`;
+      const IND = ((generator as any)?.INDENT ?? "    ") as string;
+      const body = statements && statements.trim().length > 0
+        ? statements // already correctly indented by Blockly for a nested statement
+        : IND + "# your code here\n";
+      return `def on_forever():\n${body}basic.forever(on_forever)\n`;
     },
-    pythonExtractor: (match) => ({
-      STATEMENTS: match[1].trim(),
+    pythonExtractor: (_match) => ({
+      STATEMENTS: "",
     }),
     blockCreator: (workspace, values) => {
       const block = workspace.newBlock("forever");
