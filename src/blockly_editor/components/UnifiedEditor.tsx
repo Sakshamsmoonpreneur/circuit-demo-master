@@ -50,6 +50,8 @@ export default function UnifiedEditor({
   const [conversionType, setConversionType] = useState<
     "toBlocks" | "toText" | null
   >(null); // Type of conversion happening
+  // Confirmation modal when switching to blocks (clears text)
+  const [showBlockModeConfirm, setShowBlockModeConfirm] = useState(false);
   
   // State for blocks palette
   const [showCodePalette, setShowCodePalette] = useState(false);
@@ -520,52 +522,10 @@ export default function UnifiedEditor({
     const latestCode = flushPendingChanges();
 
     if (newMode === "block") {
-      // Converting to block mode - validate the code first
-      ("🔄 Validating code before switching to block mode...");
-
-      // Validate that all code can be converted to blocks
-      const validation =
-        BlocklyPythonIntegration.validateFullConversion(latestCode);
-
-      if (!validation.isValid) {
-        // Code cannot be fully converted - show error and prevent mode switch
-        console.warn("❌ Code validation failed:", validation.errorMessage);
-        setValidationError(
-          validation.errorMessage || "Some lines cannot be converted to blocks"
-        );
-        return; // Don't switch modes
-      }
-
-      ("✅ Code validation passed - proceeding with mode switch");
-
-      // Set loading state for conversion to blocks
-      setIsConverting(true);
-      setConversionType("toBlocks");
-
-      setEditorMode(newMode);
-
-      // Always reinitialize workspace when switching to block mode
-      // This ensures a clean state and prevents stale workspace issues
-      ("🔄 Switching to block mode - reinitializing workspace...");
-      setWorkspaceReady(false);
-
-      // Clean up existing workspace first
-      if (workspaceRef.current) {
-        try {
-          workspaceRef.current.dispose();
-        } catch (error) {
-          console.warn(
-            "⚠️ Error disposing workspace during mode switch:",
-            error
-          );
-        }
-        workspaceRef.current = null;
-      }
-
-      // Wait for the container to be visible, then initialize
-      setTimeout(() => {
-        initializeWorkspace();
-      }, 100);
+      // New behavior: don't convert text to blocks. Ask user for confirmation
+      // that switching to blocks will clear text code, then show default blocks.
+      setShowBlockModeConfirm(true);
+      return;
     } else {
       // Converting to text mode - convert blocks to Python code first
       ("🔄 Switching to text mode - converting blocks to code...");
@@ -605,6 +565,48 @@ export default function UnifiedEditor({
       }, 300);
     }
   };
+
+  // Confirm and perform switch to Block mode clearing text
+  const confirmSwitchToBlock = useCallback(() => {
+    if (!activeControllerId) {
+      setShowBlockModeConfirm(false);
+      return;
+    }
+    // Clear code for this controller
+    setControllerCodeMap((prev) => ({ ...prev, [activeControllerId]: "" }));
+    setLocalCode("");
+    localCodeRef.current = "";
+    lastCodeRef.current = "";
+
+    // Prepare and switch mode
+    setIsConverting(true);
+    setConversionType("toBlocks");
+    setEditorMode("block");
+    setValidationError(null);
+
+    // Dispose existing workspace and re-init so a default block is shown
+    setWorkspaceReady(false);
+    if (workspaceRef.current) {
+      try {
+        workspaceRef.current.dispose();
+      } catch (error) {
+        console.warn("⚠️ Error disposing workspace during confirm switch:", error);
+      }
+      workspaceRef.current = null;
+    }
+    // Initialize fresh workspace; since code is empty, init will add the default block
+    setTimeout(() => {
+      initializeWorkspace();
+      setIsConverting(false);
+      setConversionType(null);
+    }, 100);
+
+    setShowBlockModeConfirm(false);
+  }, [activeControllerId, initializeWorkspace, setControllerCodeMap]);
+
+  const cancelSwitchToBlock = useCallback(() => {
+    setShowBlockModeConfirm(false);
+  }, []);
 
   // Handle workspace resize when container becomes visible
   useEffect(() => {
@@ -906,6 +908,32 @@ export default function UnifiedEditor({
               transition: "margin-left 300ms",
             }}
           >
+            {/* Confirm: Switch to Block clears text */}
+            {showBlockModeConfirm && (
+              <div className="absolute inset-0 bg-black/30 z-50 flex items-center justify-center">
+                <div className="bg-white rounded-lg shadow-xl border w-[520px] max-w-[90%] p-5">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Are you sure?</h3>
+                  <p className="text-sm text-gray-700">
+                    Enabling the blocks editor will clear any code you have in the text
+                    editor. Are you sure you want to continue?
+                  </p>
+                  <div className="mt-5 flex justify-end gap-3">
+                    <button
+                      onClick={cancelSwitchToBlock}
+                      className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmSwitchToBlock}
+                      className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Loading Overlay */}
             {isConverting && (
               <div className="absolute inset-0 bg-white bg-opacity-80 backdrop-blur-sm z-50 flex items-center justify-center">
