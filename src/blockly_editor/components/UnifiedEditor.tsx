@@ -52,7 +52,7 @@ export default function UnifiedEditor({
   >(null); // Type of conversion happening
   // Confirmation modal when switching to blocks (clears text)
   const [showBlockModeConfirm, setShowBlockModeConfirm] = useState(false);
-  
+
   // State for blocks palette
   const [showCodePalette, setShowCodePalette] = useState(false);
 
@@ -646,105 +646,105 @@ export default function UnifiedEditor({
   }, [editorMode, workspaceReady]);
 
   const handleCodeInsert = useCallback((code: string) => {
-  if (!activeControllerId) return;
-  
-  // Get current code
-  const currentCode = localCode;
-  let newCode = currentCode;
-  
-  // Determine the category based on code content
-  const isImport = code.trim().startsWith('import ') || code.trim().startsWith('from ');
-  const isFunction = code.trim().startsWith('def ') || code.trim().startsWith('async def ');
-  
-  // Handle different insertion strategies based on code type
-  if (isImport) {
-    // Import statements should be at the top
-    const lines = currentCode.split('\n');
-    
-    // Find the last import statement or the top of the file
-    let lastImportIndex = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].trim().startsWith('import ') || lines[i].trim().startsWith('from ')) {
-        lastImportIndex = i;
-      } else if (lines[i].trim().length > 0 && !lines[i].trim().startsWith('#')) {
-        // Found a non-import, non-comment line - stop searching
-        break;
+    if (!activeControllerId) return;
+
+    // Get current code
+    const currentCode = localCode;
+    let newCode = currentCode;
+
+    // Determine the category based on code content
+    const isImport = code.trim().startsWith('import ') || code.trim().startsWith('from ');
+    const isFunction = code.trim().startsWith('def ') || code.trim().startsWith('async def ');
+
+    // Handle different insertion strategies based on code type
+    if (isImport) {
+      // Import statements should be at the top
+      const lines = currentCode.split('\n');
+
+      // Find the last import statement or the top of the file
+      let lastImportIndex = -1;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().startsWith('import ') || lines[i].trim().startsWith('from ')) {
+          lastImportIndex = i;
+        } else if (lines[i].trim().length > 0 && !lines[i].trim().startsWith('#')) {
+          // Found a non-import, non-comment line - stop searching
+          break;
+        }
       }
-    }
-    
-    // Insert after the last import or at the beginning
-    if (lastImportIndex >= 0) {
-      lines.splice(lastImportIndex + 1, 0, code);
+
+      // Insert after the last import or at the beginning
+      if (lastImportIndex >= 0) {
+        lines.splice(lastImportIndex + 1, 0, code);
+      } else {
+        // No imports found, add at the top
+        lines.unshift(code);
+      }
+
+      // Ensure there's a blank line after imports if there are other statements
+      if (lines.length > lastImportIndex + 2 && lines[lastImportIndex + 2].trim().length > 0) {
+        lines.splice(lastImportIndex + 2, 0, '');
+      }
+
+      newCode = lines.join('\n');
+    } else if (isFunction) {
+      // Function definitions should be at the top level, after imports
+      const lines = currentCode.split('\n');
+      let insertIndex = lines.length;
+
+      // Find the end of imports and any top-level code
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.startsWith('def ') || line.startsWith('async def ') || line.startsWith('class ')) {
+          insertIndex = i;
+          break;
+        }
+      }
+
+      // Add a blank line before the function if needed
+      if (insertIndex > 0 && lines[insertIndex - 1].trim() !== '') {
+        lines.splice(insertIndex, 0, '');
+        insertIndex++;
+      }
+
+      lines.splice(insertIndex, 0, code);
+      newCode = lines.join('\n');
     } else {
-      // No imports found, add at the top
-      lines.unshift(code);
+      // For other code, just append with proper indentation
+      const lines = currentCode.split('\n');
+      const lastLine = lines[lines.length - 1] || '';
+
+      // Calculate current indentation level
+      const indentMatch = lastLine.match(/^(\s*)/);
+      const currentIndent = indentMatch ? indentMatch[1] : '';
+
+      // Add indentation to the new code if it's not a top-level statement
+      const codeLines = code.split('\n');
+      const formattedCode = codeLines.map(line => {
+        // Don't add extra indentation to empty lines or comments
+        if (line.trim() === '' || line.trim().startsWith('#')) return line;
+
+        // Check if this line should be at the top level
+        const isTopLevel = line.trim().startsWith('import ') ||
+          line.trim().startsWith('from ') ||
+          line.trim().startsWith('def ') ||
+          line.trim().startsWith('async def ') ||
+          line.trim().startsWith('class ') ||
+          line.trim().startsWith('while ') ||
+          line.trim().startsWith('for ') ||
+          line.trim().startsWith('if ') ||
+          line.trim().startsWith('elif ') ||
+          line.trim().startsWith('else:');
+
+        return isTopLevel ? line : currentIndent + line;
+      }).join('\n');
+
+      // Add a blank line if the current code doesn't end with one
+      const separator = currentCode.trim() === '' ? '' : '\n\n';
+      newCode = currentCode + separator + formattedCode;
     }
-    
-    // Ensure there's a blank line after imports if there are other statements
-    if (lines.length > lastImportIndex + 2 && lines[lastImportIndex + 2].trim().length > 0) {
-      lines.splice(lastImportIndex + 2, 0, '');
-    }
-    
-    newCode = lines.join('\n');
-  } else if (isFunction) {
-    // Function definitions should be at the top level, after imports
-    const lines = currentCode.split('\n');
-    let insertIndex = lines.length;
-    
-    // Find the end of imports and any top-level code
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith('def ') || line.startsWith('async def ') || line.startsWith('class ')) {
-        insertIndex = i;
-        break;
-      }
-    }
-    
-    // Add a blank line before the function if needed
-    if (insertIndex > 0 && lines[insertIndex - 1].trim() !== '') {
-      lines.splice(insertIndex, 0, '');
-      insertIndex++;
-    }
-    
-    lines.splice(insertIndex, 0, code);
-    newCode = lines.join('\n');
-  } else {
-    // For other code, just append with proper indentation
-    const lines = currentCode.split('\n');
-    const lastLine = lines[lines.length - 1] || '';
-    
-    // Calculate current indentation level
-    const indentMatch = lastLine.match(/^(\s*)/);
-    const currentIndent = indentMatch ? indentMatch[1] : '';
-    
-    // Add indentation to the new code if it's not a top-level statement
-    const codeLines = code.split('\n');
-    const formattedCode = codeLines.map(line => {
-      // Don't add extra indentation to empty lines or comments
-      if (line.trim() === '' || line.trim().startsWith('#')) return line;
-      
-      // Check if this line should be at the top level
-      const isTopLevel = line.trim().startsWith('import ') || 
-                        line.trim().startsWith('from ') || 
-                        line.trim().startsWith('def ') || 
-                        line.trim().startsWith('async def ') || 
-                        line.trim().startsWith('class ') || 
-                        line.trim().startsWith('while ') || 
-                        line.trim().startsWith('for ') || 
-                        line.trim().startsWith('if ') || 
-                        line.trim().startsWith('elif ') || 
-                        line.trim().startsWith('else:');
-      
-      return isTopLevel ? line : currentIndent + line;
-    }).join('\n');
-    
-    // Add a blank line if the current code doesn't end with one
-    const separator = currentCode.trim() === '' ? '' : '\n\n';
-    newCode = currentCode + separator + formattedCode;
-  }
-  
-  handleCodeChange(newCode);
-}, [activeControllerId, localCode, handleCodeChange]);
+
+    handleCodeChange(newCode);
+  }, [activeControllerId, localCode, handleCodeChange]);
 
   return (
     <div className="flex flex-col h-full w-full bg-white rounded-xl shadow-sm overflow-hidden relative">
@@ -800,13 +800,12 @@ export default function UnifiedEditor({
             {/* Toggle */}
             <div className="flex items-center gap-3">
               <span
-                className={`text-sm transition-colors ${
-                  editorMode === "text"
+                className={`text-sm transition-colors ${editorMode === "text"
                     ? "font-semibold text-blue-600"
                     : isConverting
-                    ? "text-gray-400"
-                    : "text-gray-500"
-                }`}
+                      ? "text-gray-400"
+                      : "text-gray-500"
+                  }`}
               >
                 Text
               </span>
@@ -815,31 +814,28 @@ export default function UnifiedEditor({
                   handleModeChange(editorMode === "text" ? "block" : "text")
                 }
                 disabled={isConverting}
-                className={`relative w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-                  isConverting
+                className={`relative w-10 h-5 flex items-center rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-400 ${isConverting
                     ? "bg-gray-300 cursor-not-allowed opacity-60"
                     : editorMode === "block"
-                    ? "bg-blue-600"
-                    : "bg-gray-300"
-                }`}
+                      ? "bg-blue-600"
+                      : "bg-gray-300"
+                  }`}
                 role="switch"
                 aria-checked={editorMode === "block"}
                 aria-disabled={isConverting}
               >
                 <span
-                  className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${
-                    editorMode === "block" ? "translate-x-5" : "translate-x-0"
-                  }`}
+                  className={`h-4 w-4 bg-white rounded-full shadow-md transform transition-transform duration-200 ${editorMode === "block" ? "translate-x-5" : "translate-x-0"
+                    }`}
                 />
               </button>
               <span
-                className={`text-sm transition-colors ${
-                  editorMode === "block"
+                className={`text-sm transition-colors ${editorMode === "block"
                     ? "font-semibold text-blue-600"
                     : isConverting
-                    ? "text-gray-400"
-                    : "text-gray-500"
-                }`}
+                      ? "text-gray-400"
+                      : "text-gray-500"
+                  }`}
               >
                 Block
               </span>
@@ -947,7 +943,7 @@ export default function UnifiedEditor({
                       {conversionType === "toBlocks"
                         ? "Converting to Blocks..."
                         : "Converting to Text..."
-                    }</h3>
+                      }</h3>
                     <p className="text-sm text-gray-600">
                       {conversionType === "toBlocks"
                         ? "Transforming your Python code into visual blocks"
